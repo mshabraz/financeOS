@@ -26,12 +26,15 @@ jobs:
 
       - name: Deploy to C:\FinanceOS\app
         shell: powershell
+        env:
+          PATH: C:\Program Files\Git\cmd;C:\Program Files\nodejs;${{ env.PATH }}
         run: |
+          $env:Path = "C:\Program Files\Git\cmd;C:\Program Files\nodejs;" + $env:Path
           $deployScript = 'C:\FinanceOS\app\scripts\windows\Deploy-FinanceOS.ps1'
           if (-not (Test-Path $deployScript)) {
             Write-Error "Install App Server first: $deployScript not found"
           }
-          & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $deployScript
+          & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $deployScript -RepoPath 'C:\FinanceOS\app'
 
       - name: Deployment summary
         if: always()

@@ -5,15 +5,17 @@
 param(
     [switch]$SkipPull,
     [string]$FinanceOsRoot = 'C:\FinanceOS',
+    [string]$RepoPath = 'C:\FinanceOS\app',
     [string]$ServiceName = 'FinanceOS'
 )
 
 $ErrorActionPreference = 'Stop'
 
-$RepoPath = if ($PSScriptRoot -match 'scripts\\windows') {
-    (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
-} else {
-    'C:\FinanceOS\app'
+if ($PSScriptRoot -match 'scripts\\windows' -and (Test-Path (Join-Path $PSScriptRoot '..\..'))) {
+    $RepoPath = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
+}
+if (-not (Test-Path $RepoPath)) {
+    throw "Repo path not found: $RepoPath"
 }
 
 $logsDir = Join-Path $FinanceOsRoot 'logs'
@@ -31,11 +33,44 @@ function Write-DeployLog([string]$Message) {
     Write-Host $line
 }
 
+function Initialize-DeployEnvironment {
+    $extra = @(
+        'C:\Program Files\Git\cmd',
+        'C:\Program Files\nodejs',
+        "${env:ProgramFiles}\Git\cmd",
+        "${env:ProgramFiles(x86)}\Git\cmd"
+    )
+    foreach ($dir in $extra) {
+        if ((Test-Path $dir) -and ($env:Path -notlike "*$dir*")) {
+            $env:Path = "$dir;$env:Path"
+        }
+    }
+    $git = Get-Command git -ErrorAction SilentlyContinue
+    $node = Get-Command node -ErrorAction SilentlyContinue
+    if (-not $git) { throw 'git not found in PATH (install Git for Windows)' }
+    if (-not $node) { throw 'node not found in PATH' }
+    Write-DeployLog "using git: $($git.Source)"
+    Write-DeployLog "using node: $($node.Source)"
+    Write-DeployLog "repo: $RepoPath"
+}
+
+function Get-GitCommit([string]$Ref = 'HEAD') {
+    $prev = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    $hash = git -C $RepoPath rev-parse $Ref 2>$null
+    $code = $LASTEXITCODE
+    $ErrorActionPreference = $prev
+    if ($code -ne 0 -or -not $hash) {
+        throw "git rev-parse $Ref failed in $RepoPath (exit $code)"
+    }
+    return $hash.ToString().Trim()
+}
+
 # Git writes progress to stderr; PowerShell must not treat that as a terminating error
 function Invoke-Git([string[]]$GitArgs) {
     $prev = $ErrorActionPreference
     $ErrorActionPreference = 'Continue'
-    $out = & git @GitArgs 2>&1
+    $out = & git -C $RepoPath @GitArgs 2>&1
     $code = $LASTEXITCODE
     $ErrorActionPreference = $prev
     foreach ($line in $out) {
@@ -110,11 +145,12 @@ $success = $false
 $previousCommit = $null
 
 try {
+    Initialize-DeployEnvironment
     Set-Location $RepoPath
     Write-DeployLog '=== deploy start ==='
 
     if (-not $SkipPull) {
-        $previousCommit = (git rev-parse HEAD).Trim()
+        $previousCommit = Get-GitCommit 'HEAD'
         Save-Json $lastGoodFile @{ commit = $previousCommit; savedAt = (Get-Date).ToString('o') }
         Write-DeployLog "last-good commit: $previousCommit"
 
@@ -122,14 +158,15 @@ try {
         node (Join-Path $RepoPath 'scripts\backup-db.mjs') -- --label=pre-deploy
         if ($LASTEXITCODE -ne 0) { throw 'backup failed' }
 
+        Set-Location $RepoPath
         Invoke-Git fetch origin main | Out-Null
-        $local = (git rev-parse HEAD).Trim()
+        $local = Get-GitCommit 'HEAD'
         $remote = ''
         $prev = $ErrorActionPreference
         $ErrorActionPreference = 'Continue'
-        $remote = (git rev-parse origin/main 2>$null)
+        $remoteRaw = git -C $RepoPath rev-parse origin/main 2>$null
         $ErrorActionPreference = $prev
-        if ($remote) { $remote = $remote.ToString().Trim() }
+        if ($remoteRaw) { $remote = $remoteRaw.ToString().Trim() }
         if ($remote -and $local -eq $remote) {
             Write-DeployLog 'no git changes - skipping pull'
         } else {
@@ -159,7 +196,8 @@ try {
     Start-Sleep -Seconds 3
     if (-not (Test-Health)) { throw 'health check failed' }
 
-    $newCommit = (git rev-parse HEAD).Trim()
+    Set-Location $RepoPath
+    $newCommit = Get-GitCommit 'HEAD'
     Save-Json $lastGoodFile @{ commit = $newCommit; savedAt = (Get-Date).ToString('o') }
     Write-DeployLog "deploy OK - commit $newCommit"
     $success = $true
@@ -187,7 +225,7 @@ try {
         success = $success
         durationSec = [math]::Round($duration, 1)
         finishedAt = (Get-Date).ToString('o')
-        commit = try { (git -C $RepoPath rev-parse HEAD).Trim() } catch { $null }
+        commit = try { Get-GitCommit 'HEAD' } catch { $null }
     }
     Write-DeployLog '=== deploy end ==='
 }
