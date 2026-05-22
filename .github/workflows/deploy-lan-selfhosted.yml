@@ -1,0 +1,39 @@
+# Deploy to your LAN App Server when you push to main.
+#
+# Setup (once on the App Server PC):
+#   GitHub → Repo → Settings → Actions → Runners → New self-hosted runner (Windows)
+#   Label the runner: financeos-lan
+#
+# No SSH secrets required — the job runs directly on the second PC.
+
+name: Deploy to LAN App Server
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: [self-hosted, Windows, financeos-lan]
+    steps:
+      - name: Checkout (runner workspace)
+        uses: actions/checkout@v4
+        with:
+          path: _runner_checkout
+
+      - name: Deploy to C:\FinanceOS\app
+        shell: powershell
+        run: |
+          $deployScript = 'C:\FinanceOS\app\scripts\windows\Deploy-FinanceOS.ps1'
+          if (-not (Test-Path $deployScript)) {
+            Write-Error "Install App Server first: $deployScript not found"
+          }
+          & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $deployScript
+
+      - name: Deployment summary
+        if: always()
+        shell: powershell
+        run: |
+          $state = 'C:\FinanceOS\state\last-deploy.json'
+          if (Test-Path $state) { Get-Content $state }

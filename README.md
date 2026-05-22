@@ -49,6 +49,8 @@ Open **http://localhost:5173**
 | Git for beginners | [docs/GIT-BEGINNER-GUIDE.md](docs/GIT-BEGINNER-GUIDE.md) |
 | Git workflow | [docs/GIT-WORKFLOW.md](docs/GIT-WORKFLOW.md) |
 | LAN / HTTPS | [docs/LAN.md](docs/LAN.md) |
+| **Cloud hosting (free)** | [docs/CLOUD-MIGRATION.md](docs/CLOUD-MIGRATION.md) |
+| **Second PC on home Wi‑Fi (LAN server)** | [docs/LAN-SERVER.md](docs/LAN-SERVER.md) |
 
 ---
 
