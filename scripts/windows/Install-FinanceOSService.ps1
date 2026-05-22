@@ -4,7 +4,8 @@
 
 param(
     [string]$FinanceOsRoot = 'C:\FinanceOS',
-    [string]$ServiceName = 'FinanceOS'
+    [string]$ServiceName = 'FinanceOS',
+    [string]$NssmPath = ''
 )
 
 $ErrorActionPreference = 'Stop'
@@ -15,13 +16,28 @@ $RepoPath = if ($PSScriptRoot -match 'scripts\\windows') {
     Join-Path $FinanceOsRoot 'app'
 }
 
-$nssm = Get-Command nssm -ErrorAction SilentlyContinue
-if (-not $nssm) {
-    Write-Host 'NSSM not found. Install from https://nssm.cc/download' -ForegroundColor Red
-    Write-Host 'Or: choco install nssm' -ForegroundColor Yellow
+function Resolve-Nssm {
+    if ($NssmPath -and (Test-Path $NssmPath)) { return $NssmPath }
+    $cmd = Get-Command nssm -ErrorAction SilentlyContinue
+    if ($cmd) { return $cmd.Source }
+    $candidates = @(
+        'C:\Tools\nssm\nssm.exe',
+        "$env:ProgramFiles\nssm\nssm.exe",
+        "${env:ProgramFiles(x86)}\nssm\nssm.exe"
+    )
+    foreach ($p in $candidates) { if (Test-Path $p) { return $p } }
+    return $null
+}
+
+$nssmExe = Resolve-Nssm
+if (-not $nssmExe) {
+    Write-Host 'NSSM not found.' -ForegroundColor Red
+    Write-Host 'Run first (PowerShell):' -ForegroundColor Yellow
+    Write-Host '  powershell -ExecutionPolicy Bypass -File C:\FinanceOS\app\scripts\windows\Install-NSSM.ps1' -ForegroundColor Gray
+    Write-Host 'Or download: https://nssm.cc/download' -ForegroundColor Yellow
     exit 1
 }
-$nssmExe = $nssm.Source
+Write-Host "[service] Using NSSM: $nssmExe"
 
 $nodeExe = (Get-Command node -ErrorAction SilentlyContinue).Source
 if (-not $nodeExe) { $nodeExe = "$env:ProgramFiles\nodejs\node.exe" }
