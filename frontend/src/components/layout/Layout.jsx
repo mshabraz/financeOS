@@ -7,6 +7,7 @@ import {
 import { useTheme } from '../../hooks/useTheme';
 import { useAuth } from '../../context/AuthContext';
 import clsx from 'clsx';
+import FinanceLogo from '../ui/FinanceLogo';
 
 const PRIMARY_NAV = [
   { to: '/',             icon: LayoutDashboard, label: 'Home' },
@@ -73,7 +74,7 @@ export default function Layout({ children }) {
       <aside className="hidden lg:flex w-56 flex-shrink-0 flex-col border-r border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
         <div className="h-14 flex items-center px-5 border-b border-gray-200 dark:border-gray-800">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-brand-600 flex items-center justify-center text-white text-sm font-bold">F</div>
+            <FinanceLogo size={32} />
             <span className="font-semibold text-gray-900 dark:text-white">FinanceOS</span>
           </div>
         </div>

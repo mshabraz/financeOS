@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Lock, Wifi, Server } from 'lucide-react';
+import { Wifi, Server } from 'lucide-react';
+import FinanceLogo from '../components/ui/FinanceLogo';
 import { useAuth } from '../context/AuthContext';
 import { getNetworkInfo } from '../api/client';
 import { useQuery } from '@tanstack/react-query';
@@ -43,9 +44,7 @@ export default function Login() {
     <div className="min-h-[100dvh] flex items-center justify-center p-4 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))] bg-gray-100 dark:bg-gray-950">
       <div className="w-full max-w-md card p-6 sm:p-8 shadow-xl">
         <div className="flex items-center gap-3 mb-6">
-          <div className="p-2 rounded-xl bg-brand-600 text-white">
-            <Lock size={22} />
-          </div>
+          <FinanceLogo size={48} />
           <div>
             <h1 className="text-xl font-bold text-gray-900 dark:text-white">FinanceOS</h1>
             <p className="text-sm text-gray-500 dark:text-gray-400">
