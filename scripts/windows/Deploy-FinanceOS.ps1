@@ -31,6 +31,22 @@ function Write-DeployLog([string]$Message) {
     Write-Host $line
 }
 
+# Git writes progress to stderr; PowerShell must not treat that as a terminating error
+function Invoke-Git([string[]]$GitArgs) {
+    $prev = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    $out = & git @GitArgs 2>&1
+    $code = $LASTEXITCODE
+    $ErrorActionPreference = $prev
+    foreach ($line in $out) {
+        if ($line) { Write-DeployLog "git $($GitArgs -join ' '): $line" }
+    }
+    if ($code -ne 0) {
+        throw "git $($GitArgs -join ' ') failed (exit $code)"
+    }
+    return $out
+}
+
 function Save-Json([string]$Path, [object]$Obj) {
     $Obj | ConvertTo-Json -Depth 5 | Set-Content -Path $Path -Encoding utf8
 }
@@ -78,9 +94,14 @@ function Test-Health {
 function Invoke-Rollback([string]$Commit, [string]$Reason) {
     Write-DeployLog "[rollback] $Reason - resetting to $Commit"
     Set-Location $RepoPath
-    git reset --hard $Commit
+    $prev = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    git reset --hard $Commit 2>&1 | ForEach-Object { Write-DeployLog "git reset: $_" }
+    if ($LASTEXITCODE -ne 0) { throw "git reset failed (exit $LASTEXITCODE)" }
     Set-Location (Join-Path $RepoPath 'frontend')
-    npm run build 2>&1 | Out-Null
+    npm run build 2>&1 | ForEach-Object { Write-DeployLog "build: $_" }
+    if ($LASTEXITCODE -ne 0) { throw 'rollback frontend build failed' }
+    $ErrorActionPreference = $prev
     Restart-FinanceService
 }
 
@@ -101,15 +122,19 @@ try {
         node (Join-Path $RepoPath 'scripts\backup-db.mjs') -- --label=pre-deploy
         if ($LASTEXITCODE -ne 0) { throw 'backup failed' }
 
-        git fetch origin main 2>&1 | Out-Null
+        Invoke-Git fetch origin main | Out-Null
         $local = (git rev-parse HEAD).Trim()
-        $remote = (git rev-parse origin/main 2>$null).Trim()
+        $remote = ''
+        $prev = $ErrorActionPreference
+        $ErrorActionPreference = 'Continue'
+        $remote = (git rev-parse origin/main 2>$null)
+        $ErrorActionPreference = $prev
+        if ($remote) { $remote = $remote.ToString().Trim() }
         if ($remote -and $local -eq $remote) {
             Write-DeployLog 'no git changes - skipping pull'
         } else {
             Write-DeployLog 'git pull...'
-            git pull origin main
-            if ($LASTEXITCODE -ne 0) { throw 'git pull failed' }
+            Invoke-Git pull origin main | Out-Null
         }
     }
 
@@ -140,6 +165,9 @@ try {
     $success = $true
 } catch {
     Write-DeployLog "[error] $($_.Exception.Message)"
+    if ($_.Exception.InnerException) {
+        Write-DeployLog "[error] inner: $($_.Exception.InnerException.Message)"
+    }
     if ($previousCommit) {
         try {
             Invoke-Rollback $previousCommit 'deploy failure'
