@@ -52,6 +52,8 @@ Open **http://localhost:5173**
 | **Cloud hosting (free)** | [docs/CLOUD-MIGRATION.md](docs/CLOUD-MIGRATION.md) |
 | **Second PC on home Wi‑Fi (LAN server)** | [docs/LAN-SERVER.md](docs/LAN-SERVER.md) |
 
+<!-- deploy-test: 2026-05-22 -->
+
 ---
 
 ## NPM scripts (project root)
