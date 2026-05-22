@@ -1,0 +1,5 @@
+{
+  "_comment": "Copy to config/local.json for machine-specific overrides (local.json is gitignored).",
+  "watchedFolderPath": "C:\\Users\\You\\Documents\\FinanceOS-Imports",
+  "notes": "Optional. Most settings belong in .env — see .env.example"
+}

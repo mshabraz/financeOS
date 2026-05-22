@@ -1,0 +1,119 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --radius: 0.5rem;
+  }
+
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    @apply bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-100;
+    font-family: 'Inter', system-ui, sans-serif;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) 0 env(safe-area-inset-left);
+  }
+
+  * {
+    @apply border-gray-200 dark:border-gray-800;
+  }
+
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-gray-300 dark:bg-gray-700 rounded-full;
+  }
+}
+
+@layer components {
+  .card {
+    @apply bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm;
+  }
+
+  .btn-primary {
+    @apply bg-brand-600 hover:bg-brand-700 active:bg-brand-700 text-white px-4 py-2.5 rounded-lg text-sm font-medium
+           transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed
+           min-h-[44px] inline-flex items-center justify-center touch-manipulation;
+  }
+
+  .btn-secondary {
+    @apply bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700
+           active:bg-gray-300 dark:active:bg-gray-600 text-gray-700 dark:text-gray-300 px-4 py-2.5 rounded-lg text-sm font-medium
+           transition-colors duration-150 min-h-[44px] inline-flex items-center justify-center touch-manipulation;
+  }
+
+  .btn-ghost {
+    @apply hover:bg-gray-100 dark:hover:bg-gray-800 active:bg-gray-200 dark:active:bg-gray-700
+           text-gray-600 dark:text-gray-400 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors duration-150
+           min-h-[44px] inline-flex items-center justify-center touch-manipulation;
+  }
+
+  .input {
+    @apply w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700
+           rounded-lg px-3 py-2.5 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-brand-500
+           focus:border-transparent transition-colors min-h-[44px];
+  }
+
+  .page-header {
+    @apply flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4 mb-4 sm:mb-6;
+  }
+
+  .page-title {
+    @apply text-xl sm:text-2xl font-bold text-gray-900 dark:text-white truncate;
+  }
+
+  .page-subtitle {
+    @apply text-sm text-gray-500 dark:text-gray-400 mt-0.5;
+  }
+
+  .page-actions {
+    @apply flex flex-wrap items-center gap-2 w-full sm:w-auto flex-shrink-0;
+  }
+
+  .scroll-x {
+    @apply flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 snap-x snap-mandatory scrollbar-hide;
+  }
+
+  .scroll-x > * {
+    @apply snap-start flex-shrink-0;
+  }
+
+  .table-scroll {
+    @apply overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0;
+  }
+
+  .modal-overlay {
+    @apply fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 p-0 sm:p-4;
+  }
+
+  .modal-panel {
+    @apply bg-white dark:bg-gray-900 w-full sm:max-w-lg rounded-t-2xl sm:rounded-xl shadow-2xl
+           max-h-[92dvh] overflow-y-auto p-5 sm:p-6;
+  }
+
+  .chart-h {
+    @apply w-full h-[200px] sm:h-[220px] min-h-[180px];
+  }
+
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  .badge {
+    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium;
+  }
+}

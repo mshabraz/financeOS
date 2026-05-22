@@ -1,0 +1,94 @@
+{
+  "timestamp": "2026-05-15T09:46:44.815Z",
+  "overall": "healthy",
+  "host": "0.0.0.0",
+  "port": 3001,
+  "lanMode": true,
+  "serveFrontend": true,
+  "platform": "win32",
+  "hostname": "12FA004795",
+  "primaryLanIp": "192.168.1.34",
+  "addresses": [
+    {
+      "name": "Wi-Fi",
+      "address": "192.168.1.34",
+      "netmask": "255.255.255.0"
+    }
+  ],
+  "urls": [
+    {
+      "label": "This PC (localhost)",
+      "url": "http://localhost:3001"
+    },
+    {
+      "label": "Hostname (12FA004795)",
+      "url": "http://12FA004795:3001"
+    },
+    {
+      "label": "Wi-Fi — 192.168.1.34",
+      "url": "http://192.168.1.34:3001"
+    }
+  ],
+  "checks": [
+    {
+      "id": "bind_host",
+      "ok": true,
+      "level": "ok",
+      "message": "Server binds to all interfaces (0.0.0.0)",
+      "fix": null
+    },
+    {
+      "id": "lan_mode",
+      "ok": true,
+      "level": "ok",
+      "message": "LAN mode enabled",
+      "fix": null
+    },
+    {
+      "id": "serve_frontend",
+      "ok": true,
+      "level": "ok",
+      "message": "Single port 3001 (UI + API) — best for phones",
+      "fix": null
+    },
+    {
+      "id": "frontend_dist",
+      "ok": true,
+      "level": "ok",
+      "message": "Frontend build found",
+      "fix": null
+    },
+    {
+      "id": "firewall_policy",
+      "ok": true,
+      "level": "ok",
+      "message": "Windows Firewall allows inbound exceptions",
+      "fix": null
+    },
+    {
+      "id": "lan_reachability",
+      "ok": true,
+      "level": "ok",
+      "message": "LAN self-test OK via 192.168.1.34:3001",
+      "fix": null,
+      "details": [
+        {
+          "ip": "192.168.1.34",
+          "url": "http://192.168.1.34:3001/api/health",
+          "ok": true,
+          "statusCode": 200,
+          "body": "{\"status\":\"ok\",\"transactions\":642,\"timestamp\":\"2026-05-15T09:46:44.810Z\",\"lanMode\":true,\"authRequired\":true}"
+        }
+      ],
+      "primaryIp": "192.168.1.34"
+    }
+  ],
+  "firewallHints": [
+    "Ping works but browser does not = Windows Firewall blocking TCP port 3001",
+    "Double-click OPEN-FIREWALL.bat and click Yes on the Administrator (UAC) prompt",
+    "Windows Settings → Network → Wi-Fi → your network → Private network",
+    "Windows Security → Firewall → Advanced → uncheck \"Block all incoming connections\" on Private/Public",
+    "Disable VPN on phone and PC while testing",
+    "Router guest Wi-Fi / AP isolation blocks access — use main Wi-Fi (ping can still work on some routers)"
+  ]
+}

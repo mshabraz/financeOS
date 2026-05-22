@@ -1,0 +1,27 @@
+{
+  "name": "financeos",
+  "version": "1.0.0",
+  "private": true,
+  "description": "FinanceOS — local-first personal finance manager",
+  "scripts": {
+    "setup": "node scripts/setup.mjs",
+    "postinstall": "node scripts/setup.mjs --deps-only",
+    "dev": "node scripts/run-dev.mjs",
+    "dev:backend": "npm run dev --prefix backend",
+    "dev:frontend": "npm run dev --prefix frontend",
+    "start": "npm run start --prefix backend",
+    "start:lan": "npm run start:lan --prefix backend",
+    "build": "npm run build --prefix frontend",
+    "db:migrate": "node scripts/migrate.mjs",
+    "db:backup": "node scripts/backup-db.mjs",
+    "db:restore": "node scripts/restore-db.mjs",
+    "db:status": "node scripts/migrate.mjs --status",
+    "certs": "node scripts/generate-certs.mjs",
+    "test": "node scripts/test.mjs",
+    "docker:up": "docker compose -f docker/docker-compose.yml up --build",
+    "docker:down": "docker compose -f docker/docker-compose.yml down"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

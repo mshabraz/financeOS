@@ -1,0 +1,110 @@
+# ── Dependencies ─────────────────────────────────────────────────────────────
+node_modules/
+.pnp
+.pnp.js
+
+# ── Build output ───────────────────────────────────────────────────────────────
+frontend/dist/
+frontend/dist-ssr/
+*.tsbuildinfo
+
+# ── Local environment & secrets (never commit) ─────────────────────────────────
+.env
+.env.local
+.env.*.local
+backend/.env
+frontend/.env.local
+!.env.example
+!.env.*.example
+!**/.env.example
+!**/.env.*.example
+
+# Session secrets & auth (generated locally)
+backend/data/.session-secret
+backend/data/auth.json
+**/data/.session-secret
+**/data/auth.json
+
+# ── SQLite & local data (your finance data stays on this machine) ─────────────
+backend/data/*.db
+backend/data/*.db-journal
+backend/data/*.db-wal
+backend/data/*.db-shm
+backend/data/*.db.tmp
+backend/data/backups/
+*.sqlite
+*.sqlite3
+
+# Keep directory structure in Git
+!backend/data/.gitkeep
+!backend/data/README.md
+!backend/data/certs/.gitkeep
+
+# TLS certs (generate locally: npm run certs)
+backend/data/certs/*.pem
+backend/data/certs/*.key
+!backend/data/certs/.gitkeep
+
+# ── Uploads, imports, watched folders ──────────────────────────────────────────
+uploads/
+imports/
+import/
+backend/uploads/
+**/import-staging/
+*.csv
+!examples/**/*.csv
+!docs/**/*.csv
+
+# ── Logs & caches ──────────────────────────────────────────────────────────────
+backend/logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.cache/
+.parcel-cache/
+.vite/
+frontend/node_modules/.vite/
+
+# Yahoo / fund metadata cache (stored in DB; optional file caches)
+.fund-cache/
+
+# ── Runtime-generated local files ──────────────────────────────────────────────
+OPEN-ON-YOUR-PHONE.txt
+.lan-url
+
+# Local config overrides
+config/local.json
+config/local.override.json
+**/local.config.json
+
+# ── OS & editor ────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+Desktop.ini
+ehthumbs.db
+*.swp
+*.swo
+*~
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json.example
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+# ── Test / coverage ────────────────────────────────────────────────────────────
+coverage/
+.nyc_output/
+
+# ── Docker local overrides ─────────────────────────────────────────────────────
+docker/certs/
+docker/.env
+
+# ── Misc ───────────────────────────────────────────────────────────────────────
+*.bak
+*.tmp
+.temp/

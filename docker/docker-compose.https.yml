@@ -1,0 +1,13 @@
+# HTTPS overlay — generate certs on host first:
+#   node scripts/generate-certs.mjs
+#   copy backend/data/certs to docker/certs/
+
+services:
+  financeos:
+    environment:
+      HTTPS: "true"
+      COOKIE_SECURE: "true"
+      TLS_KEY_PATH: "/certs/key.pem"
+      TLS_CERT_PATH: "/certs/cert.pem"
+    volumes:
+      - ../backend/data/certs:/certs:ro

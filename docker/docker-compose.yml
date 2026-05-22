@@ -1,0 +1,37 @@
+# FinanceOS — Docker Compose (LAN-ready)
+# Usage:
+#   cd docker
+#   docker compose up --build
+# Then open http://<host-ip>:3001 from any device on your LAN.
+
+services:
+  financeos:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: financeos
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      HOST: "0.0.0.0"
+      PORT: "3001"
+      LAN_MODE: "true"
+      AUTH_ENABLED: "true"
+      SERVE_FRONTEND: "true"
+      DATA_DIR: "/data"
+      HTTPS: "false"
+      COOKIE_SECURE: "false"
+      MDNS_ENABLED: "false"
+    volumes:
+      - financeos-data:/data
+    networks:
+      - lan
+
+volumes:
+  financeos-data:
+    name: financeos-data
+
+networks:
+  lan:
+    driver: bridge
