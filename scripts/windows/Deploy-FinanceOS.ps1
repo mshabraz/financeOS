@@ -50,7 +50,16 @@ function Get-Nssm() {
 function Restart-FinanceService {
     $nssm = Get-Nssm
     if ($nssm) {
+        $prev = $ErrorActionPreference
+        $ErrorActionPreference = 'Continue'
         & $nssm restart $ServiceName 2>&1 | Out-Null
+        if ($LASTEXITCODE -ne 0) {
+            Write-DeployLog '[warn] nssm restart failed — try running deploy as Administrator'
+            & $nssm stop $ServiceName 2>&1 | Out-Null
+            Start-Sleep -Seconds 2
+            & $nssm start $ServiceName 2>&1 | Out-Null
+        }
+        $ErrorActionPreference = $prev
         Start-Sleep -Seconds 4
         return
     }

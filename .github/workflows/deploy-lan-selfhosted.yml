@@ -2,7 +2,8 @@
 #
 # Setup (once on the App Server PC):
 #   GitHub → Repo → Settings → Actions → Runners → New self-hosted runner (Windows)
-#   Label the runner: financeos-lan
+#   Default labels are usually: self-hosted, Windows, X64
+#   Optional: add label financeos-lan in runner config
 #
 # No SSH secrets required — the job runs directly on the second PC.
 
@@ -15,7 +16,8 @@ on:
 
 jobs:
   deploy:
-    runs-on: [self-hosted, Windows, financeos-lan]
+    # Matches default GitHub Windows self-hosted runner labels
+    runs-on: self-hosted
     steps:
       - name: Checkout (runner workspace)
         uses: actions/checkout@v4
