@@ -1,4 +1,4 @@
-# FinanceOS — deploy / update on App Server (backup → pull → build → migrate → restart)
+# FinanceOS - deploy / update on App Server (backup → pull → build → migrate → restart)
 # Usage: powershell -ExecutionPolicy Bypass -File scripts\windows\Deploy-FinanceOS.ps1
 #        Deploy-FinanceOS.ps1 -SkipPull   (rebuild only, after manual git checkout)
 
@@ -54,7 +54,7 @@ function Restart-FinanceService {
         $ErrorActionPreference = 'Continue'
         & $nssm restart $ServiceName 2>&1 | Out-Null
         if ($LASTEXITCODE -ne 0) {
-            Write-DeployLog '[warn] nssm restart failed — try running deploy as Administrator'
+            Write-DeployLog '[warn] nssm restart failed - run deploy as Administrator'
             & $nssm stop $ServiceName 2>&1 | Out-Null
             Start-Sleep -Seconds 2
             & $nssm start $ServiceName 2>&1 | Out-Null
@@ -63,7 +63,7 @@ function Restart-FinanceService {
         Start-Sleep -Seconds 4
         return
     }
-    Write-DeployLog '[warn] nssm not found — stop/start Node manually or install service'
+    Write-DeployLog '[warn] nssm not found - stop/start Node manually or install service'
 }
 
 function Test-Health {
@@ -76,7 +76,7 @@ function Test-Health {
 }
 
 function Invoke-Rollback([string]$Commit, [string]$Reason) {
-    Write-DeployLog "[rollback] $Reason — resetting to $Commit"
+    Write-DeployLog "[rollback] $Reason - resetting to $Commit"
     Set-Location $RepoPath
     git reset --hard $Commit
     Set-Location (Join-Path $RepoPath 'frontend')
@@ -105,7 +105,7 @@ try {
         $local = (git rev-parse HEAD).Trim()
         $remote = (git rev-parse origin/main 2>$null).Trim()
         if ($remote -and $local -eq $remote) {
-            Write-DeployLog 'no git changes — skipping pull'
+            Write-DeployLog 'no git changes - skipping pull'
         } else {
             Write-DeployLog 'git pull...'
             git pull origin main
@@ -136,7 +136,7 @@ try {
 
     $newCommit = (git rev-parse HEAD).Trim()
     Save-Json $lastGoodFile @{ commit = $newCommit; savedAt = (Get-Date).ToString('o') }
-    Write-DeployLog "deploy OK — commit $newCommit"
+    Write-DeployLog "deploy OK - commit $newCommit"
     $success = $true
 } catch {
     Write-DeployLog "[error] $($_.Exception.Message)"
@@ -144,9 +144,9 @@ try {
         try {
             Invoke-Rollback $previousCommit 'deploy failure'
             if (Test-Health) {
-                Write-DeployLog 'rollback OK — service healthy on previous commit'
+                Write-DeployLog 'rollback OK - service healthy on previous commit'
             } else {
-                Write-DeployLog '[critical] rollback completed but health check still failing — check logs and DB backup'
+                Write-DeployLog '[critical] rollback completed but health check still failing - check logs and DB backup'
             }
         } catch {
             Write-DeployLog "[critical] rollback failed: $($_.Exception.Message)"
