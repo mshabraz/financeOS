@@ -56,13 +56,28 @@ if (Test-Path $envFile) {
 
 Set-Location $RepoPath
 
+function Install-Npm([string]$Dir) {
+    Set-Location $Dir
+    $legacy = if (Test-Path (Join-Path $Dir '.npmrc')) { '--legacy-peer-deps' } else { '' }
+    if (Test-Path 'node_modules') {
+        Write-Host "[install] npm install $Dir (refresh)..."
+    } else {
+        Write-Host "[install] npm install $Dir..."
+    }
+    if ($legacy) {
+        npm install --legacy-peer-deps
+    } else {
+        npm install
+    }
+    if ($LASTEXITCODE -ne 0) { throw "npm install failed in $Dir" }
+}
+
 Write-Host '[install] npm dependencies...'
-Set-Location (Join-Path $RepoPath 'backend')
-if (-not (Test-Path 'node_modules')) { npm install }
-Set-Location (Join-Path $RepoPath 'frontend')
-if (-not (Test-Path 'node_modules')) { npm install }
+Install-Npm (Join-Path $RepoPath 'backend')
+Install-Npm (Join-Path $RepoPath 'frontend')
 
 Write-Host '[install] building frontend...'
+Set-Location (Join-Path $RepoPath 'frontend')
 npm run build
 if ($LASTEXITCODE -ne 0) { throw 'frontend build failed' }
 

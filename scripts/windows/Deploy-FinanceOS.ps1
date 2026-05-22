@@ -110,7 +110,7 @@ try {
 
     Set-Location (Join-Path $RepoPath 'frontend')
     Write-DeployLog 'npm install + build frontend...'
-    npm install 2>&1 | Out-Null
+    npm install --legacy-peer-deps 2>&1 | Out-Null
     npm run build
     if ($LASTEXITCODE -ne 0) { throw 'frontend build failed' }
 
