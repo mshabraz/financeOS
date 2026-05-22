@@ -53,13 +53,18 @@ $dataDir = Join-Path $FinanceOsRoot 'data'
 $logsDir = Join-Path $FinanceOsRoot 'logs'
 New-Item -ItemType Directory -Force -Path $logsDir | Out-Null
 
-# Stop existing
-& $nssmExe stop $ServiceName 2>$null | Out-Null
-& $nssmExe remove $ServiceName confirm 2>$null | Out-Null
+# Stop/remove existing service (ignore "service does not exist" on first install)
+$prevEap = $ErrorActionPreference
+$ErrorActionPreference = 'Continue'
+& $nssmExe stop $ServiceName 2>&1 | Out-Null
+& $nssmExe remove $ServiceName confirm 2>&1 | Out-Null
+$ErrorActionPreference = $prevEap
 
 Write-Host "[service] Installing $ServiceName ..." -ForegroundColor Cyan
 
-& $nssmExe install $ServiceName $nodeExe $appJs '--lan'
+# AppParameters: script path + --lan (install only takes executable + optional single arg block)
+& $nssmExe install $ServiceName $nodeExe
+& $nssmExe set $ServiceName AppParameters "`"$appJs`" --lan"
 & $nssmExe set $ServiceName AppDirectory $backendDir
 & $nssmExe set $ServiceName DisplayName 'FinanceOS Personal Finance'
 & $nssmExe set $ServiceName Description 'LAN finance app — API and UI on port 3001'
