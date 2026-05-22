@@ -351,7 +351,17 @@ On App Server:
 
 Push workflow from Dev PC (already in repo): `.github/workflows/deploy-lan-selfhosted.yml`
 
-Test: make a small commit on `main` → **Actions** tab → job runs on self-hosted runner → site updates.
+5. **Register deploy task** (Admin PowerShell, logged in as the same user who cloned the repo and can run manual deploy):
+
+```powershell
+cd C:\FinanceOS\app
+git pull origin main
+powershell -ExecutionPolicy Bypass -File scripts\windows\Register-ActionsDeployTask.ps1
+```
+
+The runner service account cannot `git pull` or restart NSSM; Actions syncs the repo with `GITHUB_TOKEN`, then runs this task as **your user** (same as manual deploy).
+
+Test: push to `main` → **Actions** → green → `C:\FinanceOS\logs\deploy.log` shows `deploy OK`.
 
 #### A8. Scheduled backup
 

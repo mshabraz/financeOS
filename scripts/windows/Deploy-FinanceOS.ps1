@@ -202,7 +202,9 @@ try {
     Write-DeployLog "deploy OK - commit $newCommit"
     $success = $true
 } catch {
-    Write-DeployLog "[error] $($_.Exception.Message)"
+    $msg = $_.Exception.Message
+    Write-DeployLog "[error] $msg"
+    Write-Host "::error::$msg"
     if ($_.Exception.InnerException) {
         Write-DeployLog "[error] inner: $($_.Exception.InnerException.Message)"
     }
