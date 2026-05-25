@@ -18,6 +18,7 @@ import {
 } from '../api/client';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 import SettlementSharePanel from '../components/shared/SettlementSharePanel';
+import { transferToPayload, transferRowId, isValidTransfer } from '../utils/sharedTransfer';
 import clsx from 'clsx';
 
 const fmt = (n, currency = 'EUR') =>
@@ -101,7 +102,7 @@ export default function SharedExpenseEvent() {
   const [newPerson, setNewPerson] = useState('');
   const [importSourceId, setImportSourceId] = useState('');
   const [importMessage, setImportMessage] = useState('');
-  const [selectedTransferKeys, setSelectedTransferKeys] = useState(() => new Set());
+  const [selectedTransferRows, setSelectedTransferRows] = useState(() => new Set());
   const [showExpenseForm, setShowExpenseForm] = useState(false);
   const [editExpenseId, setEditExpenseId] = useState(null);
   const [expenseForm, setExpenseForm] = useState(null);
@@ -179,30 +180,31 @@ export default function SharedExpenseEvent() {
     onError: (err) => setImportMessage(err.message || 'Import failed'),
   });
 
-  const transferToPayload = (t) => ({
-    fromParticipantId: t.fromId,
-    toParticipantId: t.toId,
-    amount: t.amount,
-  });
+  const [settleError, setSettleError] = useState('');
 
   const applySettledMut = useMutation({
     mutationFn: ({ transfers, settled }) =>
       setSharedTransfersSettledBatch(id, transfers, settled),
-    onSuccess: () => {
-      setSelectedTransferKeys(new Set());
+    onSuccess: (updated) => {
+      setSettleError('');
+      setSelectedTransferRows(new Set());
+      qc.setQueryData(['sharedEvent', id], (old) => (
+        old ? { ...old, settlement: updated } : old
+      ));
       qc.invalidateQueries({ queryKey: ['sharedEvent', id] });
     },
+    onError: (err) => setSettleError(err.message || 'Could not update settlement'),
   });
 
   useEffect(() => {
-    if (tab !== 'settlement') setSelectedTransferKeys(new Set());
+    if (tab !== 'settlement') setSelectedTransferRows(new Set());
   }, [tab]);
 
-  const toggleTransferSelect = (key) => {
-    setSelectedTransferKeys((prev) => {
+  const toggleTransferSelect = (rowId) => {
+    setSelectedTransferRows((prev) => {
       const next = new Set(prev);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
+      if (next.has(rowId)) next.delete(rowId);
+      else next.add(rowId);
       return next;
     });
   };
@@ -242,6 +244,15 @@ export default function SharedExpenseEvent() {
 
   const summary = data?.summary;
   const settlement = data?.settlement;
+
+  const getSelectedTransfers = () => {
+    const list = settlement?.transfers ?? [];
+    return list
+      .map((t, index) => ({ t, index }))
+      .filter(({ index }) => selectedTransferRows.has(transferRowId(index)))
+      .map(({ t }) => transferToPayload(t))
+      .filter((p) => p.fromParticipantId && p.toParticipantId && p.amount > 0);
+  };
 
   if (eventQ.isLoading) return <LoadingSpinner />;
   if (!data?.event) {
@@ -650,9 +661,9 @@ export default function SharedExpenseEvent() {
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-sm px-1">
                 <span className="text-gray-500">
                   {settlement.settledCount ?? 0} of {settlement.transfers.length} marked paid
-                  {selectedTransferKeys.size > 0 && (
+                  {selectedTransferRows.size > 0 && (
                     <span className="text-brand-600 dark:text-brand-400">
-                      {' '}· {selectedTransferKeys.size} selected
+                      {' '}· {selectedTransferRows.size} selected
                     </span>
                   )}
                 </span>
@@ -664,17 +675,16 @@ export default function SharedExpenseEvent() {
                 )}
               </div>
 
+              {settleError && (
+                <p className="text-sm text-red-600 dark:text-red-400 px-1">{settleError}</p>
+              )}
+
               <div className="card p-3 flex flex-wrap gap-2">
                 <button
                   type="button"
                   className="btn-primary text-sm py-1.5"
-                  disabled={selectedTransferKeys.size === 0 || applySettledMut.isPending}
-                  onClick={() => {
-                    const transfers = settlement.transfers
-                      .filter((t) => selectedTransferKeys.has(t.key))
-                      .map(transferToPayload);
-                    applySettledMut.mutate({ transfers, settled: true });
-                  }}
+                  disabled={selectedTransferRows.size === 0 || applySettledMut.isPending}
+                  onClick={() => applySettledMut.mutate({ transfers: getSelectedTransfers(), settled: true })}
                 >
                   <Check size={14} />
                   Mark selected as paid
@@ -682,13 +692,8 @@ export default function SharedExpenseEvent() {
                 <button
                   type="button"
                   className="btn-secondary text-sm py-1.5"
-                  disabled={selectedTransferKeys.size === 0 || applySettledMut.isPending}
-                  onClick={() => {
-                    const transfers = settlement.transfers
-                      .filter((t) => selectedTransferKeys.has(t.key))
-                      .map(transferToPayload);
-                    applySettledMut.mutate({ transfers, settled: false });
-                  }}
+                  disabled={selectedTransferRows.size === 0 || applySettledMut.isPending}
+                  onClick={() => applySettledMut.mutate({ transfers: getSelectedTransfers(), settled: false })}
                 >
                   Mark selected as unpaid
                 </button>
@@ -696,8 +701,12 @@ export default function SharedExpenseEvent() {
                   type="button"
                   className="btn-secondary text-sm py-1.5"
                   onClick={() => {
-                    setSelectedTransferKeys(
-                      new Set(settlement.transfers.filter((t) => !t.settled).map((t) => t.key))
+                    setSelectedTransferRows(
+                      new Set(
+                        settlement.transfers
+                          .map((t, index) => (!t.settled ? transferRowId(index) : null))
+                          .filter(Boolean)
+                      )
                     );
                   }}
                 >
@@ -706,30 +715,33 @@ export default function SharedExpenseEvent() {
                 <button
                   type="button"
                   className="btn-secondary text-sm py-1.5"
-                  disabled={selectedTransferKeys.size === 0}
-                  onClick={() => setSelectedTransferKeys(new Set())}
+                  disabled={selectedTransferRows.size === 0}
+                  onClick={() => setSelectedTransferRows(new Set())}
                 >
                   Clear selection
                 </button>
               </div>
 
               <ul className="space-y-2">
-                {(settlement.transfers ?? []).map((t) => (
+                {(settlement.transfers ?? []).map((t, index) => {
+                  const rowId = transferRowId(index);
+                  const rowSelected = selectedTransferRows.has(rowId);
+                  return (
                   <li
-                    key={t.key}
+                    key={rowId}
                     className={clsx(
                       'card p-4 flex flex-col sm:flex-row sm:items-center gap-3',
                       t.settled && 'border-green-200 dark:border-green-900/50 bg-green-50/30 dark:bg-green-900/10',
-                      selectedTransferKeys.has(t.key) && 'ring-2 ring-brand-500/40'
+                      rowSelected && 'ring-2 ring-brand-500/40'
                     )}
                   >
                     <label className="flex items-start gap-3 flex-1 min-w-0 cursor-pointer">
                       <input
                         type="checkbox"
                         className="mt-1 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
-                        checked={selectedTransferKeys.has(t.key)}
+                        checked={rowSelected}
                         disabled={applySettledMut.isPending}
-                        onChange={() => toggleTransferSelect(t.key)}
+                        onChange={() => toggleTransferSelect(rowId)}
                       />
                       <div className="min-w-0">
                         <p className="text-gray-900 dark:text-white">
@@ -766,7 +778,7 @@ export default function SharedExpenseEvent() {
                         <button
                           type="button"
                           className="text-xs font-medium text-brand-600 dark:text-brand-400 hover:underline"
-                          disabled={applySettledMut.isPending}
+                          disabled={applySettledMut.isPending || !isValidTransfer(t)}
                           onClick={() => applySettledMut.mutate({
                             transfers: [transferToPayload(t)],
                             settled: true,
@@ -778,7 +790,7 @@ export default function SharedExpenseEvent() {
                         <button
                           type="button"
                           className="text-xs font-medium text-gray-500 hover:underline"
-                          disabled={applySettledMut.isPending}
+                          disabled={applySettledMut.isPending || !isValidTransfer(t)}
                           onClick={() => applySettledMut.mutate({
                             transfers: [transferToPayload(t)],
                             settled: false,
@@ -789,7 +801,8 @@ export default function SharedExpenseEvent() {
                       )}
                     </div>
                   </li>
-                ))}
+                  );
+                })}
               </ul>
             </>
           )}

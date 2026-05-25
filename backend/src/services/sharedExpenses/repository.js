@@ -111,11 +111,16 @@ function getSettlement(eventId) {
   if (!summary) return null;
   const raw = minimizeTransfers(summary.balances);
   const settledMap = getSettledMap(eventId);
-  const transfers = raw.map((t) => {
+  const transfers = raw.map((t, index) => {
     const key = transferKey(t.fromId, t.toId, t.amount);
     const settledAt = settledMap.get(key) || null;
     return {
-      ...t,
+      fromId: t.fromId,
+      toId: t.toId,
+      fromName: t.fromName,
+      toName: t.toName,
+      amount: roundMoney(t.amount),
+      index,
       key,
       settled: !!settledAt,
       settledAt,

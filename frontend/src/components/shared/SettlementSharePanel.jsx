@@ -70,9 +70,9 @@ export default function SettlementSharePanel({
                 Everyone is settled up!
               </p>
             ) : (
-              shareRows.map((t) => (
+              shareRows.map((t, index) => (
                 <div
-                  key={t.key ?? `${t.fromId}-${t.toId}-${t.amount}`}
+                  key={`share-${index}-${t.fromId ?? t.from_id}-${t.toId ?? t.to_id}`}
                   className={`flex items-center justify-between gap-2 rounded-lg px-3 py-2.5 text-sm ${
                     t.settled
                       ? 'bg-green-50 dark:bg-green-900/20'
