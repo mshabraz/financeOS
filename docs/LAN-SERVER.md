@@ -351,15 +351,9 @@ On App Server:
 
 Push workflow from Dev PC (already in repo): `.github/workflows/deploy-lan-selfhosted.yml`
 
-5. **Register deploy task** (Admin PowerShell, logged in as the same user who cloned the repo and can run manual deploy):
+5. **No extra deploy task required.** On push to `main`, Actions syncs `C:\FinanceOS\app` with `GITHUB_TOKEN`, then runs `Invoke-GithubActionsDeploy.ps1` (SYSTEM scheduled task if registered, else inline build/migrate/restart).
 
-```powershell
-cd C:\FinanceOS\app
-git pull origin main
-powershell -ExecutionPolicy Bypass -File scripts\windows\Register-ActionsDeployTask.ps1
-```
-
-The runner service account cannot `git pull` or restart NSSM; Actions syncs the repo with `GITHUB_TOKEN`, then runs this task as **your user** (same as manual deploy).
+Optional (Admin, once — improves NSSM restart from Actions): `Register-GithubDeployTasks.ps1` (also run from `Install-FinanceOSServer.ps1`).
 
 Test: push to `main` → **Actions** → green → `C:\FinanceOS\logs\deploy.log` shows `deploy OK`.
 

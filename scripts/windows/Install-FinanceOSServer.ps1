@@ -94,6 +94,12 @@ if (Test-Path $fw) {
     & $fw -NodeExe $nodeExe -Port 3001
 }
 
+$ghTasks = Join-Path $RepoPath 'scripts\windows\Register-GithubDeployTasks.ps1'
+if (Test-Path $ghTasks) {
+    Write-Host '[install] Registering GitHub Actions deploy tasks (SYSTEM)...' -ForegroundColor Cyan
+    & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $ghTasks -RepoPath $RepoPath -FinanceOsRoot $FinanceOsRoot
+}
+
 Write-Host ''
 Write-Host '[install] Done. Next steps:' -ForegroundColor Green
 Write-Host "  1. Copy finance.db + auth.json to $dataDir"

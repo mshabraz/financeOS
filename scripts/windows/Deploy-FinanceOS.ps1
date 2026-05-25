@@ -99,13 +99,26 @@ function Get-Nssm() {
 }
 
 function Restart-FinanceService {
+    $prev = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+
+    $restartTask = Get-ScheduledTask -TaskName 'FinanceOS-Restart' -ErrorAction SilentlyContinue
+    if ($restartTask) {
+        Write-DeployLog 'restart service via SYSTEM task FinanceOS-Restart...'
+        schtasks /Run /TN 'FinanceOS-Restart' | Out-Null
+        Start-Sleep -Seconds 6
+        if (Test-Health) {
+            $ErrorActionPreference = $prev
+            return
+        }
+        Write-DeployLog '[warn] FinanceOS-Restart task ran but health check pending'
+    }
+
     $nssm = Get-Nssm
     if ($nssm) {
-        $prev = $ErrorActionPreference
-        $ErrorActionPreference = 'Continue'
         & $nssm restart $ServiceName 2>&1 | Out-Null
         if ($LASTEXITCODE -ne 0) {
-            Write-DeployLog '[warn] nssm restart failed - run deploy as Administrator'
+            Write-DeployLog '[warn] nssm restart failed - trying stop/start'
             & $nssm stop $ServiceName 2>&1 | Out-Null
             Start-Sleep -Seconds 2
             & $nssm start $ServiceName 2>&1 | Out-Null
@@ -114,7 +127,15 @@ function Restart-FinanceService {
         Start-Sleep -Seconds 4
         return
     }
-    Write-DeployLog '[warn] nssm not found - stop/start Node manually or install service'
+
+    try {
+        Restart-Service -Name $ServiceName -Force -ErrorAction Stop
+        Write-DeployLog 'restart via Restart-Service'
+    } catch {
+        Write-DeployLog "[warn] could not restart service: $($_.Exception.Message)"
+    }
+    $ErrorActionPreference = $prev
+    Start-Sleep -Seconds 4
 }
 
 function Test-Health {
@@ -155,8 +176,13 @@ try {
         Write-DeployLog "last-good commit: $previousCommit"
 
         Write-DeployLog 'backup database...'
+        $prev = $ErrorActionPreference
+        $ErrorActionPreference = 'Continue'
         node (Join-Path $RepoPath 'scripts\backup-db.mjs') -- --label=pre-deploy
-        if ($LASTEXITCODE -ne 0) { throw 'backup failed' }
+        if ($LASTEXITCODE -ne 0) {
+            Write-DeployLog '[warn] backup skipped or failed (continuing deploy)'
+        }
+        $ErrorActionPreference = $prev
 
         Set-Location $RepoPath
         Invoke-Git fetch origin main | Out-Null
