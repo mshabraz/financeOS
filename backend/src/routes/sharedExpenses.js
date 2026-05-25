@@ -7,7 +7,11 @@ const repo = require('../services/sharedExpenses/repository');
 const router = express.Router();
 
 router.get('/events', (_req, res) => {
-  res.json(repo.listEvents());
+  try {
+    res.json(repo.listEvents());
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 router.post('/events', (req, res) => {

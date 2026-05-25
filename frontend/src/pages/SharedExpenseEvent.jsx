@@ -151,7 +151,7 @@ export default function SharedExpenseEvent() {
   const startEdit = (exp) => {
     const payMap = Object.fromEntries(participants.map((p) => [p.id, '']));
     for (const pay of exp.payments) payMap[pay.participant_id] = String(pay.amount);
-    const shareIds = exp.shares.map((s) => s.participant_id);
+    const shareIds = (exp.shares ?? []).map((s) => s.participant_id);
     const customMap = Object.fromEntries(participants.map((p) => [p.id, '']));
     for (const sh of exp.shares) customMap[sh.participant_id] = String(sh.amount);
 
@@ -463,7 +463,7 @@ export default function SharedExpenseEvent() {
                       {exp.expense_date?.slice?.(0, 10)} · {exp.category || 'General'} · {exp.split_type.replace(/_/g, ' ')}
                     </p>
                     <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                      Paid: {exp.payments.map((p) => `${p.participant_name} ${fmt(p.amount, currency)}`).join(', ')}
+                      Paid: {(exp.payments ?? []).map((p) => `${p.participant_name} ${fmt(p.amount, currency)}`).join(', ')}
                     </p>
                   </div>
                   <div className="text-right shrink-0">
@@ -515,7 +515,7 @@ export default function SharedExpenseEvent() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                {summary.balances.map((b) => (
+                {(summary.balances ?? []).map((b) => (
                   <tr key={b.id}>
                     <td className="px-4 py-2.5 font-medium">{b.name}</td>
                     <td className="px-4 py-2.5 text-right">{fmt(b.paid, currency)}</td>
@@ -544,7 +544,7 @@ export default function SharedExpenseEvent() {
             <div className="card p-6 text-center text-gray-500">Everyone is settled up.</div>
           ) : (
             <ul className="space-y-2">
-              {settlement.transfers.map((t, i) => (
+              {(settlement.transfers ?? []).map((t, i) => (
                 <li key={i} className="card p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                   <p className="text-gray-900 dark:text-white">
                     <span className="font-semibold">{t.fromName}</span>

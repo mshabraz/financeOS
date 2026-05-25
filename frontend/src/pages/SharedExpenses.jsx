@@ -31,6 +31,26 @@ export default function SharedExpenses() {
 
   if (events.isLoading) return <LoadingSpinner />;
 
+  if (events.isError) {
+    return (
+      <div className="space-y-4 max-w-3xl mx-auto">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Shared Expenses</h1>
+        <div className="card p-6 border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-200 text-sm">
+          <p className="font-medium">Could not load shared events.</p>
+          <p className="mt-1 opacity-90">{events.error?.message || 'Unknown error'}</p>
+          <p className="mt-2 text-xs opacity-80">
+            If this mentions a missing table, run database migration on the server (<code>npm run db:migrate</code>).
+          </p>
+          <button type="button" className="btn-secondary text-xs mt-3" onClick={() => events.refetch()}>
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const eventList = Array.isArray(events.data) ? events.data : [];
+
   return (
     <div className="space-y-6 max-w-3xl mx-auto">
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
@@ -66,14 +86,14 @@ export default function SharedExpenses() {
         </div>
       )}
 
-      {events.data?.length === 0 ? (
+      {eventList.length === 0 ? (
         <div className="card p-8 text-center text-gray-500 dark:text-gray-400">
           <Users size={40} className="mx-auto mb-3 opacity-40" />
           <p>No events yet. Create one for a trip or group expense.</p>
         </div>
       ) : (
         <ul className="space-y-2">
-          {events.data.map((ev) => (
+          {eventList.map((ev) => (
             <li key={ev.id}>
               <div className="card p-4 flex items-center gap-3">
                 <Link to={`/shared/${ev.id}`} className="flex-1 min-w-0 flex items-center gap-3 group">

@@ -241,7 +241,10 @@ export const bulkUpdateCategory = (ids, categoryId) =>
   api.patch('/transactions/bulk', { ids, categoryId });
 
 // --- Shared expenses (standalone) ---
-export const getSharedEvents = () => api.get('/shared/events');
+export const getSharedEvents = async () => {
+  const data = await api.get('/shared/events');
+  return Array.isArray(data) ? data : [];
+};
 export const createSharedEvent = (body) => api.post('/shared/events', body);
 export const getSharedEvent = (id) => api.get(`/shared/events/${id}`);
 export const updateSharedEvent = (id, body) => api.patch(`/shared/events/${id}`, body);
