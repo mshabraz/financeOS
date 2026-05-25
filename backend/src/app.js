@@ -66,6 +66,7 @@ function createApp() {
         timestamp: new Date().toISOString(),
         lanMode: config.LAN_MODE,
         authRequired: config.AUTH_ENABLED && !req.session?.authenticated,
+        sharedExpensesApi: true,
       };
 
       // Yahoo probe only when caller has a session (e.g. logged-in browser tab)

@@ -154,6 +154,63 @@ function Test-Health {
     }
 }
 
+function Get-HttpStatus([string]$Url) {
+    try {
+        $r = Invoke-WebRequest -Uri $Url -UseBasicParsing -TimeoutSec 15
+        return [int]$r.StatusCode
+    } catch {
+        if ($_.Exception.Response) { return [int]$_.Exception.Response.StatusCode }
+        return 0
+    }
+}
+
+/** 401/200 = route exists; 404 = old Node process still running without new backend code */
+function Test-SharedApiRoute {
+    $code = Get-HttpStatus 'http://127.0.0.1:3001/api/shared/events'
+    if ($code -eq 404) { return $false }
+    if ($code -eq 401 -or $code -eq 200) { return $true }
+    Write-DeployLog "[warn] /api/shared/events returned HTTP $code"
+    return $true
+}
+
+function Stop-ListenerOnPort([int]$Port = 3001) {
+    $prev = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    $conns = @(Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue)
+    foreach ($c in $conns) {
+        $procId = $c.OwningProcess
+        if ($procId) {
+            Write-DeployLog "stopping PID $procId on port $Port"
+            Stop-Process -Id $procId -Force -ErrorAction SilentlyContinue
+        }
+    }
+    $ErrorActionPreference = $prev
+    Start-Sleep -Seconds 2
+}
+
+function Ensure-BackendReloaded {
+    $sharedRoute = Join-Path $RepoPath 'backend\src\routes\sharedExpenses.js'
+    if (-not (Test-Path $sharedRoute)) { return }
+    if (Test-SharedApiRoute) {
+        Write-DeployLog 'shared API routes OK'
+        return
+    }
+    Write-DeployLog '[warn] /api/shared/events is 404 — forcing process restart on port 3001'
+    Stop-ListenerOnPort 3001
+    $nssm = Get-Nssm
+    if ($nssm) {
+        & $nssm start $ServiceName 2>&1 | Out-Null
+    } else {
+        Start-Service -Name $ServiceName -ErrorAction SilentlyContinue
+    }
+    Start-Sleep -Seconds 6
+    if (-not (Test-Health)) { throw 'health check failed after forced restart' }
+    if (-not (Test-SharedApiRoute)) {
+        throw 'Backend still returns 404 for /api/shared/events — restart FinanceOS service on the server (services.msc)'
+    }
+    Write-DeployLog 'shared API routes OK after forced restart'
+}
+
 function Invoke-Rollback([string]$Commit, [string]$Reason) {
     Write-DeployLog "[rollback] $Reason - resetting to $Commit"
     Set-Location $RepoPath
@@ -228,6 +285,7 @@ try {
 
     Start-Sleep -Seconds 3
     if (-not (Test-Health)) { throw 'health check failed' }
+    Ensure-BackendReloaded
 
     Set-Location $RepoPath
     $newCommit = Get-GitCommit 'HEAD'
