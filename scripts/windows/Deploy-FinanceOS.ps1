@@ -40,7 +40,11 @@ function Initialize-DeployEnvironment {
         "${env:ProgramFiles}\Git\cmd",
         "${env:ProgramFiles(x86)}\Git\cmd"
     )
-    foreach ($dir in $extra) {
+    $systemPaths = @(
+        "$env:SystemRoot\System32",
+        "$env:SystemRoot\System32\WindowsPowerShell\v1.0"
+    )
+    foreach ($dir in ($systemPaths + $extra)) {
         if ((Test-Path $dir) -and ($env:Path -notlike "*$dir*")) {
             $env:Path = "$dir;$env:Path"
         }
