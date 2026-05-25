@@ -9,7 +9,7 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$env:Path = "C:\Program Files\Git\cmd;C:\Program Files\nodejs;" + $env:Path
+$env:Path = "$env:SystemRoot\System32;$env:SystemRoot\System32\WindowsPowerShell\v1.0;C:\Program Files\Git\cmd;C:\Program Files\nodejs;$env:Path"
 $financeRoot = Split-Path $RepoPath -Parent
 
 function Write-Step([string]$Msg) { Write-Host $Msg }
@@ -20,7 +20,7 @@ if (Test-Path $grant) {
     $prev = $ErrorActionPreference
     $ErrorActionPreference = 'Continue'
     Write-Step 'Ensuring runner access to FinanceOS folders...'
-    & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $grant -FinanceOsRoot $financeRoot 2>&1 | ForEach-Object { Write-Host $_ }
+    & $grant -FinanceOsRoot $financeRoot 2>&1 | ForEach-Object { Write-Host $_ }
     $ErrorActionPreference = $prev
 }
 
@@ -53,7 +53,7 @@ if (Test-Path $reg) {
     $prev = $ErrorActionPreference
     $ErrorActionPreference = 'Continue'
     Write-Step 'Ensuring GitHub deploy scheduled tasks exist...'
-    & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $reg -RepoPath $RepoPath 2>&1 | ForEach-Object { Write-Host $_ }
+    & $reg -RepoPath $RepoPath 2>&1 | ForEach-Object { Write-Host $_ }
     $ErrorActionPreference = $prev
 }
 
@@ -96,7 +96,7 @@ Write-Step 'Running inline deploy (SkipPull)...'
 $deployScript = Join-Path $RepoPath 'scripts\windows\Deploy-FinanceOS.ps1'
 if (-not (Test-Path $deployScript)) { throw "Missing $deployScript" }
 
-& powershell.exe -NoProfile -ExecutionPolicy Bypass -File $deployScript -RepoPath $RepoPath -SkipPull
+& $deployScript -RepoPath $RepoPath -SkipPull
 if ($LASTEXITCODE -ne 0) {
     Show-LogTail
     throw "Inline deploy failed (exit $LASTEXITCODE)"
