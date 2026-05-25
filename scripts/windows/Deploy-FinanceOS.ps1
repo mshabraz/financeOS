@@ -173,6 +173,23 @@ function Test-SharedApiRoute {
     return $true
 }
 
+# 400/401 = route exists; 404 = settlement mark-paid API missing on running backend
+function Test-SettlementSettledRoute {
+    try {
+        $body = '{"transfers":[]}'
+        Invoke-WebRequest -Uri 'http://127.0.0.1:3001/api/shared/events/1/settlement/settled' `
+            -Method POST -Body $body -ContentType 'application/json' -UseBasicParsing -TimeoutSec 10 | Out-Null
+        return $true
+    } catch {
+        if ($_.Exception.Response) {
+            $code = [int]$_.Exception.Response.StatusCode
+            if ($code -eq 404) { return $false }
+            if ($code -eq 400 -or $code -eq 401) { return $true }
+        }
+        return $false
+    }
+}
+
 function Stop-ListenerOnPort([int]$Port = 3001) {
     $prev = $ErrorActionPreference
     $ErrorActionPreference = 'Continue'
@@ -191,8 +208,8 @@ function Stop-ListenerOnPort([int]$Port = 3001) {
 function Ensure-BackendReloaded {
     $sharedRoute = Join-Path $RepoPath 'backend\src\routes\sharedExpenses.js'
     if (-not (Test-Path $sharedRoute)) { return }
-    if (Test-SharedApiRoute) {
-        Write-DeployLog 'shared API routes OK'
+    if (Test-SharedApiRoute -and (Test-SettlementSettledRoute)) {
+        Write-DeployLog 'shared API routes OK (including settlement/settled)'
         return
     }
     Write-DeployLog '[warn] /api/shared/events is 404 — forcing process restart on port 3001'
@@ -207,6 +224,9 @@ function Ensure-BackendReloaded {
     if (-not (Test-Health)) { throw 'health check failed after forced restart' }
     if (-not (Test-SharedApiRoute)) {
         throw 'Backend still returns 404 for /api/shared/events — restart FinanceOS service on the server (services.msc)'
+    }
+    if (-not (Test-SettlementSettledRoute)) {
+        throw 'Backend missing POST /api/shared/events/:id/settlement/settled — restart FinanceOS service (services.msc)'
     }
     Write-DeployLog 'shared API routes OK after forced restart'
 }

@@ -193,7 +193,13 @@ export default function SharedExpenseEvent() {
       ));
       qc.invalidateQueries({ queryKey: ['sharedEvent', id] });
     },
-    onError: (err) => setSettleError(err.message || 'Could not update settlement'),
+    onError: (err) => {
+      const raw = err.message || 'Could not update settlement';
+      const msg = raw.includes('404')
+        ? 'Settlement save API not found — the server needs a restart after the latest deploy (FinanceOS service).'
+        : raw;
+      setSettleError(msg);
+    },
   });
 
   useEffect(() => {

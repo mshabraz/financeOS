@@ -24,6 +24,30 @@ router.post('/events', (req, res) => {
   }
 });
 
+function handleSettlementSettled(req, res) {
+  const eventId = Number(req.params.id);
+  if (!repo.getEvent(eventId)) return res.status(404).json({ error: 'Event not found' });
+  try {
+    const { transfers, fromParticipantId, toParticipantId, amount, settled } = req.body;
+    if (Array.isArray(transfers) && transfers.length > 0) {
+      return res.json(repo.setTransfersSettledBatch(eventId, transfers, settled !== false));
+    }
+    if (!fromParticipantId || !toParticipantId || amount == null) {
+      return res.status(400).json({ error: 'transfers array or fromParticipantId/toParticipantId/amount required' });
+    }
+    repo.setTransferSettled(
+      eventId,
+      Number(fromParticipantId),
+      Number(toParticipantId),
+      Number(amount),
+      settled !== false
+    );
+    res.json(repo.getSettlement(eventId));
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+}
+
 router.get('/events/:id', (req, res) => {
   const data = repo.getEvent(Number(req.params.id));
   if (!data) return res.status(404).json({ error: 'Event not found' });
@@ -31,6 +55,16 @@ router.get('/events/:id', (req, res) => {
   const settlement = repo.getSettlement(data.event.id);
   res.json({ ...data, summary, settlement });
 });
+
+router.get('/events/:id/settlement', (req, res) => {
+  const settlement = repo.getSettlement(Number(req.params.id));
+  if (!settlement) return res.status(404).json({ error: 'Event not found' });
+  res.json(settlement);
+});
+
+// Before /events/:id PATCH — mark settlement transfers paid/unpaid
+router.post('/events/:id/settlement/settled', handleSettlementSettled);
+router.patch('/events/:id/settlement/settled', handleSettlementSettled);
 
 router.patch('/events/:id', (req, res) => {
   const id = Number(req.params.id);
@@ -53,12 +87,6 @@ router.get('/events/:id/summary', (req, res) => {
   const summary = repo.computeSummary(Number(req.params.id));
   if (!summary) return res.status(404).json({ error: 'Event not found' });
   res.json(summary);
-});
-
-router.get('/events/:id/settlement', (req, res) => {
-  const settlement = repo.getSettlement(Number(req.params.id));
-  if (!settlement) return res.status(404).json({ error: 'Event not found' });
-  res.json(settlement);
 });
 
 router.post('/events/:id/participants', (req, res) => {
@@ -96,30 +124,6 @@ router.post('/events/:id/participants/import', (req, res) => {
   try {
     const result = repo.importParticipantsFromEvent(targetId, sourceEventId);
     res.json(result);
-  } catch (err) {
-    res.status(400).json({ error: err.message });
-  }
-});
-
-router.patch('/events/:id/settlement/settled', (req, res) => {
-  const eventId = Number(req.params.id);
-  if (!repo.getEvent(eventId)) return res.status(404).json({ error: 'Event not found' });
-  try {
-    const { transfers, fromParticipantId, toParticipantId, amount, settled } = req.body;
-    if (Array.isArray(transfers) && transfers.length > 0) {
-      return res.json(repo.setTransfersSettledBatch(eventId, transfers, settled !== false));
-    }
-    if (!fromParticipantId || !toParticipantId || amount == null) {
-      return res.status(400).json({ error: 'fromParticipantId, toParticipantId, and amount are required' });
-    }
-    repo.setTransferSettled(
-      eventId,
-      Number(fromParticipantId),
-      Number(toParticipantId),
-      Number(amount),
-      settled !== false
-    );
-    res.json(repo.getSettlement(eventId));
   } catch (err) {
     res.status(400).json({ error: err.message });
   }

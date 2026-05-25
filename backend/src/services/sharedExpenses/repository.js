@@ -136,22 +136,33 @@ function getSettlement(eventId) {
   };
 }
 
+function wrapDbError(err) {
+  if (err.message?.includes('no such table: shared_settlement_settled')) {
+    throw new Error('Database migration v22 required — run npm run db:migrate on the server');
+  }
+  throw err;
+}
+
 function setTransferSettled(eventId, fromId, toId, amount, settled) {
   const db = getDb();
   const amt = roundMoney(amount);
-  if (settled) {
-    db.prepare(`
-      INSERT OR REPLACE INTO shared_settlement_settled
-        (event_id, from_participant_id, to_participant_id, amount, settled_at)
-      VALUES (?, ?, ?, ?, datetime('now'))
-    `).run(eventId, fromId, toId, amt);
-  } else {
-    db.prepare(`
-      DELETE FROM shared_settlement_settled
-      WHERE event_id = ? AND from_participant_id = ? AND to_participant_id = ? AND amount = ?
-    `).run(eventId, fromId, toId, amt);
+  try {
+    if (settled) {
+      db.prepare(`
+        INSERT OR REPLACE INTO shared_settlement_settled
+          (event_id, from_participant_id, to_participant_id, amount, settled_at)
+        VALUES (?, ?, ?, ?, datetime('now'))
+      `).run(eventId, fromId, toId, amt);
+    } else {
+      db.prepare(`
+        DELETE FROM shared_settlement_settled
+        WHERE event_id = ? AND from_participant_id = ? AND to_participant_id = ? AND amount = ?
+      `).run(eventId, fromId, toId, amt);
+    }
+    db.prepare("UPDATE shared_events SET updated_at = datetime('now') WHERE id = ?").run(eventId);
+  } catch (err) {
+    wrapDbError(err);
   }
-  db.prepare("UPDATE shared_events SET updated_at = datetime('now') WHERE id = ?").run(eventId);
 }
 
 function setTransfersSettledBatch(eventId, transfers, settled) {
