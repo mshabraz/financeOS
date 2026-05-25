@@ -164,7 +164,7 @@ function Get-HttpStatus([string]$Url) {
     }
 }
 
-/** 401/200 = route exists; 404 = old Node process still running without new backend code */
+# 401/200 = route exists; 404 = old Node process still running without new backend code
 function Test-SharedApiRoute {
     $code = Get-HttpStatus 'http://127.0.0.1:3001/api/shared/events'
     if ($code -eq 404) { return $false }
