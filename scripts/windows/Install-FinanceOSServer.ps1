@@ -97,7 +97,7 @@ if (Test-Path $fw) {
 $ghTasks = Join-Path $RepoPath 'scripts\windows\Register-GithubDeployTasks.ps1'
 if (Test-Path $ghTasks) {
     Write-Host '[install] Registering GitHub Actions deploy tasks (SYSTEM)...' -ForegroundColor Cyan
-    & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $ghTasks -RepoPath $RepoPath -FinanceOsRoot $FinanceOsRoot
+    & $ghTasks -RepoPath $RepoPath -FinanceOsRoot $FinanceOsRoot -Strict
 }
 
 Write-Host ''

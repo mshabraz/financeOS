@@ -47,14 +47,15 @@ function Show-LogTail {
     }
 }
 
-# Try register SYSTEM tasks (works when runner is SYSTEM or elevated; harmless if not)
+# Try register SYSTEM tasks (Admin only; must not fail the workflow)
 $reg = Join-Path $RepoPath 'scripts\windows\Register-GithubDeployTasks.ps1'
 if (Test-Path $reg) {
-    $prev = $ErrorActionPreference
-    $ErrorActionPreference = 'Continue'
-    Write-Step 'Ensuring GitHub deploy scheduled tasks exist...'
-    & $reg -RepoPath $RepoPath 2>&1 | ForEach-Object { Write-Host $_ }
-    $ErrorActionPreference = $prev
+    Write-Step 'Ensuring GitHub deploy scheduled tasks exist (best-effort)...'
+    try {
+        & $reg -RepoPath $RepoPath 2>&1 | ForEach-Object { Write-Host $_ }
+    } catch {
+        Write-Step "[skip] Could not register tasks: $($_.Exception.Message)"
+    }
 }
 
 $task = Get-ScheduledTask -TaskName 'FinanceOS-GitHubDeploy' -ErrorAction SilentlyContinue

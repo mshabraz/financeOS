@@ -2,17 +2,24 @@
 # Run once elevated — called automatically from Install-FinanceOSServer.ps1
 #
 #   powershell -ExecutionPolicy Bypass -File scripts\windows\Register-GithubDeployTasks.ps1
+#
+# From GitHub Actions (non-admin runner): registration is best-effort; script exits 0.
 
 param(
     [string]$RepoPath = 'C:\FinanceOS\app',
-    [string]$FinanceOsRoot = 'C:\FinanceOS'
+    [string]$FinanceOsRoot = 'C:\FinanceOS',
+    [switch]$Strict
 )
 
-$ErrorActionPreference = 'Stop'
+$ErrorActionPreference = 'Continue'
 
 $deployScript = Join-Path $RepoPath 'scripts\windows\Deploy-FinanceOS.ps1'
 $restartScript = Join-Path $RepoPath 'scripts\windows\Restart-FinanceOSService.ps1'
-if (-not (Test-Path $deployScript)) { throw "Not found: $deployScript" }
+if (-not (Test-Path $deployScript)) {
+    if ($Strict) { throw "Not found: $deployScript" }
+    Write-Host "[skip] Not found: $deployScript" -ForegroundColor Yellow
+    exit 0
+}
 
 # Ensure restart helper exists (created by repo)
 if (-not (Test-Path $restartScript)) {
@@ -32,24 +39,36 @@ if ($nssm) {
 }
 
 function Register-Task([string]$Name, [string]$Argument, [string]$Description) {
-    $action = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument $Argument -WorkingDirectory $RepoPath
-    $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -MultipleInstances IgnoreNew
-    $principal = New-ScheduledTaskPrincipal -UserId 'SYSTEM' -LogonType ServiceAccount -RunLevel Highest
-    Unregister-ScheduledTask -TaskName $Name -Confirm:$false -ErrorAction SilentlyContinue
-    Register-ScheduledTask -TaskName $Name -Action $action -Settings $settings -Principal $principal -Description $Description | Out-Null
-    Write-Host "[ok] Task: $Name (SYSTEM)" -ForegroundColor Green
+    try {
+        $action = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument $Argument -WorkingDirectory $RepoPath
+        $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -MultipleInstances IgnoreNew
+        $principal = New-ScheduledTaskPrincipal -UserId 'SYSTEM' -LogonType ServiceAccount -RunLevel Highest
+        Unregister-ScheduledTask -TaskName $Name -Confirm:$false -ErrorAction SilentlyContinue
+        Register-ScheduledTask -TaskName $Name -Action $action -Settings $settings -Principal $principal -Description $Description -ErrorAction Stop | Out-Null
+        Write-Host "[ok] Task: $Name (SYSTEM)" -ForegroundColor Green
+        return $true
+    } catch {
+        Write-Host "[skip] Task $Name : $($_.Exception.Message)" -ForegroundColor Yellow
+        return $false
+    }
 }
 
 $deployArg = "-NoProfile -ExecutionPolicy Bypass -File `"$deployScript`" -RepoPath `"$RepoPath`" -SkipPull"
 $restartArg = "-NoProfile -ExecutionPolicy Bypass -File `"$restartScript`""
 
-Register-Task 'FinanceOS-GitHubDeploy' $deployArg 'FinanceOS deploy for GitHub Actions (build, migrate, restart)'
-Register-Task 'FinanceOS-Restart' $restartArg 'FinanceOS NSSM restart (SYSTEM)'
+$okDeploy = Register-Task 'FinanceOS-GitHubDeploy' $deployArg 'FinanceOS deploy for GitHub Actions (build, migrate, restart)'
+$okRestart = Register-Task 'FinanceOS-Restart' $restartArg 'FinanceOS NSSM restart (SYSTEM)'
 
-# ACL: allow runner service accounts to write logs/state and trigger tasks
 $grantScript = Join-Path $RepoPath 'scripts\windows\Grant-FinanceOSRunnerAccess.ps1'
 if (Test-Path $grantScript) {
-    & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $grantScript -FinanceOsRoot $FinanceOsRoot
+    & $grantScript -FinanceOsRoot $FinanceOsRoot 2>&1 | ForEach-Object { Write-Host $_ }
 }
 
-Write-Host '[ok] GitHub deploy tasks ready. Actions workflow can trigger FinanceOS-GitHubDeploy.' -ForegroundColor Green
+if ($okDeploy -and $okRestart) {
+    Write-Host '[ok] GitHub deploy tasks ready. Actions workflow can trigger FinanceOS-GitHubDeploy.' -ForegroundColor Green
+    exit 0
+}
+
+Write-Host '[info] SYSTEM tasks not registered (need Admin once). Actions will use inline deploy.' -ForegroundColor Yellow
+if ($Strict) { exit 1 }
+exit 0
