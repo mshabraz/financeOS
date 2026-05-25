@@ -64,7 +64,7 @@ export default function SettlementSharePanel({
             )}
           </div>
 
-          <div className="border-t border-gray-100 dark:border-gray-800 pt-3 space-y-2">
+          <div className="border-t border-gray-100 dark:border-gray-800 pt-3 space-y-2 max-h-80 overflow-y-auto">
             {shareRows.length === 0 ? (
               <p className="text-green-600 dark:text-green-400 text-sm font-medium">
                 Everyone is settled up!

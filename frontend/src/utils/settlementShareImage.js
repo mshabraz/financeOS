@@ -14,7 +14,7 @@ function roundRect(ctx, x, y, w, h, r) {
 }
 
 function wrapText(ctx, text, maxWidth) {
-  const words = text.split(' ');
+  const words = String(text).split(' ');
   const lines = [];
   let line = '';
   for (const word of words) {
@@ -27,30 +27,68 @@ function wrapText(ctx, text, maxWidth) {
     }
   }
   if (line) lines.push(line);
-  return lines;
+  return lines.length ? lines : [''];
+}
+
+function measureLayout(ctx, opts) {
+  const width = 1080;
+  const pad = 48;
+  const innerPad = 40;
+  const innerW = width - pad * 2 - innerPad * 2;
+
+  const pending = (opts.transfers ?? []).filter((t) => !t.settled);
+  const rows = pending.length ? pending : (opts.transfers ?? []);
+  const compact = rows.length > 10;
+  const lineH = compact ? 50 : 68;
+  const rowGap = compact ? 6 : 10;
+
+  ctx.font = 'bold 48px system-ui, Segoe UI, sans-serif';
+  const titleLines = wrapText(ctx, opts.eventName, innerW);
+
+  let bodyH = innerPad;
+  bodyH += 44; // Settlement label
+  bodyH += titleLines.length * (compact ? 42 : 50);
+  if (opts.totalSpend != null) bodyH += compact ? 36 : 40;
+  bodyH += 24 + 28; // divider + "Who pays whom"
+  bodyH += rows.length * (lineH + rowGap);
+  if (rows.length === 0) bodyH += 48;
+  bodyH += innerPad;
+
+  const cardH = bodyH;
+  const height = cardH + pad * 2;
+
+  return {
+    width,
+    height,
+    pad,
+    innerPad,
+    innerW,
+    cardH,
+    titleLines,
+    rows,
+    compact,
+    lineH,
+    rowGap,
+    pending,
+  };
 }
 
 /**
  * @param {{ eventName: string, currency: string, transfers: Array<{ fromName: string, toName: string, amount: number, settled?: boolean }>, totalSpend?: number }} opts
  */
 export function downloadSettlementShareImage(opts) {
-  const {
-    eventName,
-    currency = 'EUR',
-    transfers = [],
-    totalSpend,
-  } = opts;
+  const { eventName, currency = 'EUR', totalSpend } = opts;
 
   const fmt = (n) =>
     new Intl.NumberFormat('et-EE', { style: 'currency', currency, maximumFractionDigits: 2 }).format(n ?? 0);
 
-  const width = 1080;
-  const pad = 48;
-  const lineH = 72;
-  const headerH = 200;
-  const pending = transfers.filter((t) => !t.settled);
-  const rows = pending.length ? pending : transfers;
-  const height = headerH + Math.max(rows.length, 1) * lineH + pad + 32;
+  const measureCanvas = document.createElement('canvas');
+  measureCanvas.width = 1080;
+  measureCanvas.height = 1;
+  const measureCtx = measureCanvas.getContext('2d');
+
+  const layout = measureLayout(measureCtx, opts);
+  const { width, height, pad, innerPad, innerW, cardH, titleLines, rows, compact, lineH, rowGap, pending } = layout;
 
   const canvas = document.createElement('canvas');
   canvas.width = width;
@@ -63,71 +101,87 @@ export function downloadSettlementShareImage(opts) {
   ctx.fillStyle = bg;
   ctx.fillRect(0, 0, width, height);
 
-  roundRect(ctx, pad, pad, width - pad * 2, height - pad * 2, 24);
+  roundRect(ctx, pad, pad, width - pad * 2, cardH, 24);
   ctx.fillStyle = '#ffffff';
   ctx.fill();
 
-  let y = pad + 56;
-  ctx.fillStyle = '#0f766e';
-  ctx.font = 'bold 40px system-ui, Segoe UI, sans-serif';
-  ctx.fillText('💸 Settlement', pad + 40, y);
+  const cardLeft = pad + innerPad;
+  const cardRight = width - pad - innerPad;
+  let y = pad + innerPad;
 
-  y += 52;
+  ctx.fillStyle = '#0f766e';
+  ctx.font = `bold ${compact ? 32 : 36}px system-ui, Segoe UI, sans-serif`;
+  ctx.fillText('Settlement', cardLeft, y + 28);
+  y += compact ? 40 : 44;
+
   ctx.fillStyle = '#111827';
-  ctx.font = 'bold 48px system-ui, Segoe UI, sans-serif';
-  const titleLines = wrapText(ctx, eventName, width - pad * 2 - 80);
+  ctx.font = `bold ${compact ? 40 : 48}px system-ui, Segoe UI, sans-serif`;
   for (const line of titleLines) {
-    ctx.fillText(line, pad + 40, y);
-    y += 54;
+    ctx.fillText(line, cardLeft, y + (compact ? 36 : 42));
+    y += compact ? 42 : 50;
   }
 
   if (totalSpend != null) {
-    y += 8;
+    y += compact ? 6 : 8;
     ctx.fillStyle = '#6b7280';
-    ctx.font = '32px system-ui, Segoe UI, sans-serif';
-    ctx.fillText(`Total: ${fmt(totalSpend)}`, pad + 40, y);
-    y += 44;
+    ctx.font = `${compact ? 26 : 30}px system-ui, Segoe UI, sans-serif`;
+    ctx.fillText(`Total: ${fmt(totalSpend)}`, cardLeft, y + 24);
+    y += compact ? 32 : 36;
   }
 
-  y += 16;
+  y += 12;
   ctx.strokeStyle = '#e5e7eb';
   ctx.lineWidth = 2;
   ctx.beginPath();
-  ctx.moveTo(pad + 40, y);
-  ctx.lineTo(width - pad - 40, y);
+  ctx.moveTo(cardLeft, y);
+  ctx.lineTo(cardRight, y);
   ctx.stroke();
-  y += 40;
+  y += compact ? 24 : 28;
 
   if (rows.length === 0) {
     ctx.fillStyle = '#059669';
-    ctx.font = '36px system-ui, Segoe UI, sans-serif';
-    ctx.fillText('✓ Everyone is settled up!', pad + 40, y + 20);
+    ctx.font = `${compact ? 28 : 32}px system-ui, Segoe UI, sans-serif`;
+    ctx.fillText('Everyone is settled up!', cardLeft, y + 24);
   } else {
     ctx.fillStyle = '#374151';
-    ctx.font = '28px system-ui, Segoe UI, sans-serif';
+    ctx.font = `${compact ? 22 : 26}px system-ui, Segoe UI, sans-serif`;
     const label = pending.length ? 'Who pays whom' : 'Payments (all done)';
-    ctx.fillText(label, pad + 40, y);
-    y += 48;
+    ctx.fillText(label, cardLeft, y + 20);
+    y += compact ? 32 : 36;
+
+    const rowH = lineH;
+    const nameFont = `bold ${compact ? 26 : 30}px system-ui, Segoe UI, sans-serif`;
+    const amtFont = `bold ${compact ? 28 : 32}px system-ui, Segoe UI, sans-serif`;
 
     for (const t of rows) {
-      roundRect(ctx, pad + 32, y - 36, width - pad * 2 - 64, lineH - 12, 14);
+      const boxTop = y;
+      roundRect(ctx, cardLeft - 8, boxTop, cardRight - cardLeft + 16, rowH, 12);
       ctx.fillStyle = t.settled ? '#ecfdf5' : '#fff7ed';
       ctx.fill();
       ctx.strokeStyle = t.settled ? '#6ee7b7' : '#fed7aa';
-      ctx.lineWidth = 2;
+      ctx.lineWidth = 1.5;
       ctx.stroke();
 
       ctx.fillStyle = '#111827';
-      ctx.font = 'bold 34px system-ui, Segoe UI, sans-serif';
+      ctx.font = nameFont;
       const who = `${t.fromName}  →  ${t.toName}`;
-      ctx.fillText(who, pad + 56, y + 8);
+      const maxNameW = cardRight - cardLeft - 140;
+      let displayWho = who;
+      if (ctx.measureText(who).width > maxNameW) {
+        displayWho = `${t.fromName} → ${t.toName}`;
+        while (displayWho.length > 3 && ctx.measureText(`${displayWho}…`).width > maxNameW) {
+          displayWho = displayWho.slice(0, -1);
+        }
+        displayWho = `${displayWho}…`;
+      }
+      ctx.fillText(displayWho, cardLeft + 4, boxTop + rowH / 2 + 10);
 
       ctx.fillStyle = '#0d9488';
-      ctx.font = 'bold 38px system-ui, Segoe UI, sans-serif';
+      ctx.font = amtFont;
       const amt = fmt(t.amount);
-      ctx.fillText(amt, width - pad - 56 - ctx.measureText(amt).width, y + 8);
+      ctx.fillText(amt, cardRight - ctx.measureText(amt).width - 4, boxTop + rowH / 2 + 10);
 
-      y += lineH;
+      y += rowH + rowGap;
     }
   }
 
