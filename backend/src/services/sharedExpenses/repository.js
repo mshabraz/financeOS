@@ -89,11 +89,87 @@ function computeSummary(eventId) {
   };
 }
 
+function transferKey(fromId, toId, amount) {
+  return `${fromId}-${toId}-${roundMoney(amount)}`;
+}
+
+function getSettledMap(eventId) {
+  const db = getDb();
+  const rows = db.prepare(`
+    SELECT from_participant_id, to_participant_id, amount, settled_at
+    FROM shared_settlement_settled WHERE event_id = ?
+  `).all(eventId);
+  const map = new Map();
+  for (const r of rows) {
+    map.set(transferKey(r.from_participant_id, r.to_participant_id, r.amount), r.settled_at);
+  }
+  return map;
+}
+
 function getSettlement(eventId) {
   const summary = computeSummary(eventId);
   if (!summary) return null;
-  const transfers = minimizeTransfers(summary.balances);
-  return { balances: summary.balances, transfers };
+  const raw = minimizeTransfers(summary.balances);
+  const settledMap = getSettledMap(eventId);
+  const transfers = raw.map((t) => {
+    const key = transferKey(t.fromId, t.toId, t.amount);
+    const settledAt = settledMap.get(key) || null;
+    return {
+      ...t,
+      key,
+      settled: !!settledAt,
+      settledAt,
+    };
+  });
+  const settledCount = transfers.filter((t) => t.settled).length;
+  return {
+    balances: summary.balances,
+    transfers,
+    settledCount,
+    pendingCount: transfers.length - settledCount,
+    allSettled: transfers.length > 0 && settledCount === transfers.length,
+  };
+}
+
+function setTransferSettled(eventId, fromId, toId, amount, settled) {
+  const db = getDb();
+  const amt = roundMoney(amount);
+  if (settled) {
+    db.prepare(`
+      INSERT OR REPLACE INTO shared_settlement_settled
+        (event_id, from_participant_id, to_participant_id, amount, settled_at)
+      VALUES (?, ?, ?, ?, datetime('now'))
+    `).run(eventId, fromId, toId, amt);
+  } else {
+    db.prepare(`
+      DELETE FROM shared_settlement_settled
+      WHERE event_id = ? AND from_participant_id = ? AND to_participant_id = ? AND amount = ?
+    `).run(eventId, fromId, toId, amt);
+  }
+  db.prepare("UPDATE shared_events SET updated_at = datetime('now') WHERE id = ?").run(eventId);
+}
+
+function importParticipantsFromEvent(targetEventId, sourceEventId) {
+  if (targetEventId === sourceEventId) throw new Error('Cannot import from the same event');
+  const source = getEvent(sourceEventId);
+  const target = getEvent(targetEventId);
+  if (!source || !target) throw new Error('Event not found');
+
+  const existing = new Set(
+    target.participants.map((p) => p.name.trim().toLowerCase())
+  );
+  const added = [];
+  const skipped = [];
+  for (const p of source.participants) {
+    const key = p.name.trim().toLowerCase();
+    if (existing.has(key)) {
+      skipped.push(p.name);
+      continue;
+    }
+    added.push(addParticipant(targetEventId, p.name));
+    existing.add(key);
+  }
+  return { added, skipped, addedCount: added.length, skippedCount: skipped.length };
 }
 
 function createEvent({ name, currency = 'EUR', notes = '', eventDate = null }) {
@@ -220,6 +296,9 @@ module.exports = {
   getEvent,
   computeSummary,
   getSettlement,
+  transferKey,
+  setTransferSettled,
+  importParticipantsFromEvent,
   createEvent,
   updateEvent,
   deleteEvent,

@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Users, Receipt, ChevronRight, Trash2 } from 'lucide-react';
-import { getSharedEvents, createSharedEvent, deleteSharedEvent } from '../api/client';
+import { useNavigate } from 'react-router-dom';
+import { getSharedEvents, createSharedEvent, deleteSharedEvent, importSharedParticipants } from '../api/client';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 
 const fmt = (n, currency = 'EUR') =>
@@ -10,17 +11,27 @@ const fmt = (n, currency = 'EUR') =>
 
 export default function SharedExpenses() {
   const qc = useQueryClient();
+  const navigate = useNavigate();
   const [name, setName] = useState('');
+  const [importFromId, setImportFromId] = useState('');
   const [showForm, setShowForm] = useState(false);
 
   const events = useQuery({ queryKey: ['sharedEvents'], queryFn: getSharedEvents });
 
   const createMut = useMutation({
-    mutationFn: () => createSharedEvent({ name: name.trim() }),
-    onSuccess: () => {
+    mutationFn: async () => {
+      const ev = await createSharedEvent({ name: name.trim() });
+      if (importFromId) {
+        await importSharedParticipants(ev.id, Number(importFromId));
+      }
+      return ev;
+    },
+    onSuccess: (ev) => {
       qc.invalidateQueries({ queryKey: ['sharedEvents'] });
       setName('');
+      setImportFromId('');
       setShowForm(false);
+      navigate(`/shared/${ev.id}?tab=people`);
     },
   });
 
@@ -67,21 +78,40 @@ export default function SharedExpenses() {
       </div>
 
       {showForm && (
-        <div className="card p-4 flex flex-col sm:flex-row gap-2">
+        <div className="card p-4 space-y-3">
           <input
-            className="input flex-1"
+            className="input w-full"
             placeholder="e.g. Weekend Getaway 23 May 2025"
             value={name}
             onChange={(e) => setName(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && name.trim() && createMut.mutate()}
           />
+          {eventList.length > 0 && (
+            <div>
+              <label className="text-xs font-medium text-gray-500 dark:text-gray-400 block mb-1">
+                Copy people from past event (optional)
+              </label>
+              <select
+                className="input w-full"
+                value={importFromId}
+                onChange={(e) => setImportFromId(e.target.value)}
+              >
+                <option value="">Start with no people</option>
+                {eventList.map((e) => (
+                  <option key={e.id} value={e.id}>
+                    {e.name} ({e.participant_count} people)
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
           <button
             type="button"
-            className="btn-primary"
+            className="btn-primary w-full sm:w-auto"
             disabled={!name.trim() || createMut.isPending}
             onClick={() => createMut.mutate()}
           >
-            Create
+            Create event
           </button>
         </div>
       )}

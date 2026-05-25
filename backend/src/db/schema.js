@@ -859,7 +859,24 @@ const MIGRATION_V21 = {
   },
 };
 
-const ALL_MIGRATIONS = [...migrations.filter(m => m.version === 1), MIGRATION_V2, MIGRATION_V3, MIGRATION_V4, MIGRATION_V5, MIGRATION_V6, MIGRATION_V7, MIGRATION_V8, MIGRATION_V9, MIGRATION_V10, MIGRATION_V11, MIGRATION_V12, MIGRATION_V13, MIGRATION_V14, MIGRATION_V15, MIGRATION_V16, MIGRATION_V17, MIGRATION_V18, MIGRATION_V19, MIGRATION_V20, MIGRATION_V21];
+// ── Migration v22: Shared settlement tracking ─────────────────────────────────
+const MIGRATION_V22 = {
+  version: 22,
+  up: (db) => {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS shared_settlement_settled (
+        event_id              INTEGER NOT NULL REFERENCES shared_events(id) ON DELETE CASCADE,
+        from_participant_id   INTEGER NOT NULL,
+        to_participant_id     INTEGER NOT NULL,
+        amount                REAL NOT NULL,
+        settled_at            TEXT DEFAULT (datetime('now')),
+        PRIMARY KEY (event_id, from_participant_id, to_participant_id, amount)
+      );
+    `);
+  },
+};
+
+const ALL_MIGRATIONS = [...migrations.filter(m => m.version === 1), MIGRATION_V2, MIGRATION_V3, MIGRATION_V4, MIGRATION_V5, MIGRATION_V6, MIGRATION_V7, MIGRATION_V8, MIGRATION_V9, MIGRATION_V10, MIGRATION_V11, MIGRATION_V12, MIGRATION_V13, MIGRATION_V14, MIGRATION_V15, MIGRATION_V16, MIGRATION_V17, MIGRATION_V18, MIGRATION_V19, MIGRATION_V20, MIGRATION_V21, MIGRATION_V22];
 
 function runMigrations(db) {
   db.exec(`CREATE TABLE IF NOT EXISTS schema_migrations (

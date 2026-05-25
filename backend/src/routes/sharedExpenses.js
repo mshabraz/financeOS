@@ -89,6 +89,39 @@ router.delete('/participants/:id', (req, res) => {
   res.json({ ok: true });
 });
 
+router.post('/events/:id/participants/import', (req, res) => {
+  const targetId = Number(req.params.id);
+  const sourceEventId = Number(req.body?.sourceEventId);
+  if (!sourceEventId) return res.status(400).json({ error: 'sourceEventId is required' });
+  try {
+    const result = repo.importParticipantsFromEvent(targetId, sourceEventId);
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+router.patch('/events/:id/settlement/settled', (req, res) => {
+  const eventId = Number(req.params.id);
+  if (!repo.getEvent(eventId)) return res.status(404).json({ error: 'Event not found' });
+  try {
+    const { fromParticipantId, toParticipantId, amount, settled } = req.body;
+    if (!fromParticipantId || !toParticipantId || amount == null) {
+      return res.status(400).json({ error: 'fromParticipantId, toParticipantId, and amount are required' });
+    }
+    repo.setTransferSettled(
+      eventId,
+      Number(fromParticipantId),
+      Number(toParticipantId),
+      Number(amount),
+      settled !== false
+    );
+    res.json(repo.getSettlement(eventId));
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
 router.post('/events/:id/expenses', (req, res) => {
   const eventId = Number(req.params.id);
   if (!repo.getEvent(eventId)) return res.status(404).json({ error: 'Event not found' });

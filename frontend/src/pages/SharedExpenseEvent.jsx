@@ -1,19 +1,23 @@
 import { useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  ArrowLeft, Plus, Trash2, Users, Receipt, Scale, HandCoins, Pencil,
+  ArrowLeft, Plus, Trash2, Users, Receipt, Scale, HandCoins, Pencil, UserPlus, Check, Circle,
 } from 'lucide-react';
 import {
   getSharedEvent,
+  getSharedEvents,
   addSharedParticipant,
   deleteSharedParticipant,
+  importSharedParticipants,
+  setSharedTransferSettled,
   createSharedExpense,
   updateSharedExpense,
   deleteSharedExpense,
   deleteSharedEvent,
 } from '../api/client';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
+import SettlementSharePanel from '../components/shared/SettlementSharePanel';
 import clsx from 'clsx';
 
 const fmt = (n, currency = 'EUR') =>
@@ -87,10 +91,16 @@ function buildExpensePayload(form, participants) {
 
 export default function SharedExpenseEvent() {
   const { eventId } = useParams();
+  const [searchParams] = useSearchParams();
   const id = Number(eventId);
   const qc = useQueryClient();
-  const [tab, setTab] = useState('expenses');
+  const initialTab = ['expenses', 'people', 'balances', 'settlement'].includes(searchParams.get('tab'))
+    ? searchParams.get('tab')
+    : 'expenses';
+  const [tab, setTab] = useState(initialTab);
   const [newPerson, setNewPerson] = useState('');
+  const [importSourceId, setImportSourceId] = useState('');
+  const [importMessage, setImportMessage] = useState('');
   const [showExpenseForm, setShowExpenseForm] = useState(false);
   const [editExpenseId, setEditExpenseId] = useState(null);
   const [expenseForm, setExpenseForm] = useState(null);
@@ -99,6 +109,12 @@ export default function SharedExpenseEvent() {
     queryKey: ['sharedEvent', id],
     queryFn: () => getSharedEvent(id),
   });
+
+  const allEventsQ = useQuery({
+    queryKey: ['sharedEvents'],
+    queryFn: getSharedEvents,
+  });
+  const otherEvents = (allEventsQ.data ?? []).filter((e) => e.id !== id);
 
   const data = eventQ.data;
   const currency = data?.event?.currency ?? 'EUR';
@@ -146,6 +162,31 @@ export default function SharedExpenseEvent() {
   const deleteEventMut = useMutation({
     mutationFn: () => deleteSharedEvent(id),
     onSuccess: () => { window.location.href = '/shared'; },
+  });
+
+  const importPeopleMut = useMutation({
+    mutationFn: () => importSharedParticipants(id, Number(importSourceId)),
+    onSuccess: (result) => {
+      qc.invalidateQueries({ queryKey: ['sharedEvent', id] });
+      setImportSourceId('');
+      const parts = [];
+      if (result.addedCount) parts.push(`Added ${result.addedCount}`);
+      if (result.skippedCount) parts.push(`${result.skippedCount} already in list`);
+      setImportMessage(parts.join(' · ') || 'Done');
+      setTimeout(() => setImportMessage(''), 4000);
+    },
+    onError: (err) => setImportMessage(err.message || 'Import failed'),
+  });
+
+  const settleMut = useMutation({
+    mutationFn: ({ transfer, settled }) =>
+      setSharedTransferSettled(id, {
+        fromParticipantId: transfer.fromId,
+        toParticipantId: transfer.toId,
+        amount: transfer.amount,
+        settled,
+      }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['sharedEvent', id] }),
   });
 
   const startEdit = (exp) => {
@@ -238,6 +279,42 @@ export default function SharedExpenseEvent() {
 
       {tab === 'people' && (
         <div className="space-y-4">
+          {otherEvents.length > 0 && (
+            <div className="card p-4 space-y-2">
+              <p className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-1.5">
+                <UserPlus size={16} className="text-brand-600" />
+                Import from another event
+              </p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                Copy participant names from a past trip or dinner (skips duplicates).
+              </p>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <select
+                  className="input flex-1"
+                  value={importSourceId}
+                  onChange={(e) => setImportSourceId(e.target.value)}
+                >
+                  <option value="">Select event…</option>
+                  {otherEvents.map((e) => (
+                    <option key={e.id} value={e.id}>
+                      {e.name} ({e.participant_count} people)
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  className="btn-secondary shrink-0"
+                  disabled={!importSourceId || importPeopleMut.isPending}
+                  onClick={() => importPeopleMut.mutate()}
+                >
+                  Import
+                </button>
+              </div>
+              {importMessage && (
+                <p className="text-xs text-brand-600 dark:text-brand-400">{importMessage}</p>
+              )}
+            </div>
+          )}
           <div className="card p-4 flex gap-2">
             <input
               className="input flex-1"
@@ -540,24 +617,83 @@ export default function SharedExpenseEvent() {
 
       {tab === 'settlement' && settlement && (
         <div className="space-y-4">
+          <SettlementSharePanel
+            eventName={data.event.name}
+            currency={currency}
+            totalSpend={summary?.totalSpend}
+            transfers={settlement.transfers}
+            pendingCount={settlement.pendingCount ?? 0}
+          />
+
           {settlement.transfers.length === 0 ? (
-            <div className="card p-6 text-center text-gray-500">Everyone is settled up.</div>
+            <div className="card p-6 text-center text-gray-500">Everyone is settled up — no payments needed.</div>
           ) : (
-            <ul className="space-y-2">
-              {(settlement.transfers ?? []).map((t, i) => (
-                <li key={i} className="card p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                  <p className="text-gray-900 dark:text-white">
-                    <span className="font-semibold">{t.fromName}</span>
-                    <span className="text-gray-500 mx-2">pays</span>
-                    <span className="font-semibold">{t.toName}</span>
-                  </p>
-                  <p className="text-lg font-bold text-brand-600 dark:text-brand-400">{fmt(t.amount, currency)}</p>
-                </li>
-              ))}
-            </ul>
+            <>
+              <div className="flex items-center justify-between text-sm px-1">
+                <span className="text-gray-500">
+                  {settlement.settledCount ?? 0} of {settlement.transfers.length} marked paid
+                </span>
+                {settlement.allSettled && (
+                  <span className="text-green-600 dark:text-green-400 font-medium flex items-center gap-1">
+                    <Check size={14} />
+                    All done
+                  </span>
+                )}
+              </div>
+              <ul className="space-y-2">
+                {(settlement.transfers ?? []).map((t) => (
+                  <li
+                    key={t.key}
+                    className={clsx(
+                      'card p-4 flex flex-col sm:flex-row sm:items-center gap-3',
+                      t.settled && 'opacity-75 border-green-200 dark:border-green-900/50'
+                    )}
+                  >
+                    <label className="flex items-start gap-3 flex-1 min-w-0 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        className="mt-1 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
+                        checked={!!t.settled}
+                        disabled={settleMut.isPending}
+                        onChange={(e) => settleMut.mutate({ transfer: t, settled: e.target.checked })}
+                      />
+                      <div className="min-w-0">
+                        <p className="text-gray-900 dark:text-white">
+                          <span className={clsx('font-semibold', t.settled && 'line-through text-gray-500')}>
+                            {t.fromName}
+                          </span>
+                          <span className="text-gray-500 mx-2">pays</span>
+                          <span className={clsx('font-semibold', t.settled && 'line-through text-gray-500')}>
+                            {t.toName}
+                          </span>
+                        </p>
+                        {t.settled && t.settledAt && (
+                          <p className="text-xs text-green-600 dark:text-green-400 mt-0.5 flex items-center gap-1">
+                            <Check size={12} />
+                            Paid · {t.settledAt.slice(0, 10)}
+                          </p>
+                        )}
+                        {!t.settled && (
+                          <p className="text-xs text-amber-600 dark:text-amber-400 mt-0.5 flex items-center gap-1">
+                            <Circle size={10} />
+                            Pending
+                          </p>
+                        )}
+                      </div>
+                    </label>
+                    <p className={clsx(
+                      'text-lg font-bold shrink-0 sm:text-right',
+                      t.settled ? 'text-gray-400' : 'text-brand-600 dark:text-brand-400'
+                    )}>
+                      {fmt(t.amount, currency)}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            </>
           )}
           <p className="text-xs text-gray-500">
-            Simplified payment plan — fewer transfers than settling every pairwise balance.
+            Simplified payment plan — fewer transfers than settling every pairwise balance. Tick when paid in real life.
           </p>
         </div>
       )}
