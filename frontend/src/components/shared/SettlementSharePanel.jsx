@@ -92,7 +92,6 @@ export default function SettlementSharePanel({
             )}
           </div>
 
-          <p className="text-[10px] text-gray-400 text-center">FinanceOS · Shared Expenses</p>
         </div>
       </div>
     </div>

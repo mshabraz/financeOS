@@ -258,6 +258,8 @@ export const importSharedParticipants = (eventId, sourceEventId) =>
   api.post(`/shared/events/${eventId}/participants/import`, { sourceEventId });
 export const setSharedTransferSettled = (eventId, body) =>
   api.patch(`/shared/events/${eventId}/settlement/settled`, body);
+export const setSharedTransfersSettledBatch = (eventId, transfers, settled) =>
+  api.patch(`/shared/events/${eventId}/settlement/settled`, { transfers, settled });
 export const createSharedExpense = (eventId, body) =>
   api.post(`/shared/events/${eventId}/expenses`, body);
 export const updateSharedExpense = (id, body) => api.patch(`/shared/expenses/${id}`, body);

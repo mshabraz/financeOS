@@ -48,10 +48,9 @@ export function downloadSettlementShareImage(opts) {
   const pad = 48;
   const lineH = 72;
   const headerH = 200;
-  const footerH = 120;
   const pending = transfers.filter((t) => !t.settled);
   const rows = pending.length ? pending : transfers;
-  const height = headerH + Math.max(rows.length, 1) * lineH + footerH + pad;
+  const height = headerH + Math.max(rows.length, 1) * lineH + pad + 32;
 
   const canvas = document.createElement('canvas');
   canvas.width = width;
@@ -131,11 +130,6 @@ export function downloadSettlementShareImage(opts) {
       y += lineH;
     }
   }
-
-  y = height - pad - 56;
-  ctx.fillStyle = '#9ca3af';
-  ctx.font = '24px system-ui, Segoe UI, sans-serif';
-  ctx.fillText('FinanceOS · Shared Expenses', pad + 40, y);
 
   const safeName = eventName.replace(/[^\w\s-]/g, '').trim().slice(0, 40) || 'settlement';
   const link = document.createElement('a');

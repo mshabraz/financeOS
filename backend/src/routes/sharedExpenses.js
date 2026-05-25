@@ -105,7 +105,10 @@ router.patch('/events/:id/settlement/settled', (req, res) => {
   const eventId = Number(req.params.id);
   if (!repo.getEvent(eventId)) return res.status(404).json({ error: 'Event not found' });
   try {
-    const { fromParticipantId, toParticipantId, amount, settled } = req.body;
+    const { transfers, fromParticipantId, toParticipantId, amount, settled } = req.body;
+    if (Array.isArray(transfers) && transfers.length > 0) {
+      return res.json(repo.setTransfersSettledBatch(eventId, transfers, settled !== false));
+    }
     if (!fromParticipantId || !toParticipantId || amount == null) {
       return res.status(400).json({ error: 'fromParticipantId, toParticipantId, and amount are required' });
     }

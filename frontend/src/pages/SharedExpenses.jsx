@@ -71,9 +71,21 @@ export default function SharedExpenses() {
             Split trips, dinners, and group costs — separate from your personal finance tracking.
           </p>
         </div>
-        <button type="button" className="btn-primary shrink-0" onClick={() => setShowForm((v) => !v)}>
+        <button
+          type="button"
+          className="btn-primary shrink-0"
+          onClick={() => {
+            if (showForm) {
+              setShowForm(false);
+              setName('');
+              setImportFromId('');
+            } else {
+              setShowForm(true);
+            }
+          }}
+        >
           <Plus size={16} />
-          New event
+          {showForm ? 'Close' : 'New event'}
         </button>
       </div>
 
@@ -105,14 +117,27 @@ export default function SharedExpenses() {
               </select>
             </div>
           )}
-          <button
-            type="button"
-            className="btn-primary w-full sm:w-auto"
-            disabled={!name.trim() || createMut.isPending}
-            onClick={() => createMut.mutate()}
-          >
-            Create event
-          </button>
+          <div className="flex flex-col-reverse sm:flex-row gap-2">
+            <button
+              type="button"
+              className="btn-secondary flex-1 sm:flex-none"
+              onClick={() => {
+                setShowForm(false);
+                setName('');
+                setImportFromId('');
+              }}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              className="btn-primary flex-1 sm:flex-none"
+              disabled={!name.trim() || createMut.isPending}
+              onClick={() => createMut.mutate()}
+            >
+              Create event
+            </button>
+          </div>
         </div>
       )}
 

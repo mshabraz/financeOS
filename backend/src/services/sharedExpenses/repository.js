@@ -149,6 +149,22 @@ function setTransferSettled(eventId, fromId, toId, amount, settled) {
   db.prepare("UPDATE shared_events SET updated_at = datetime('now') WHERE id = ?").run(eventId);
 }
 
+function setTransfersSettledBatch(eventId, transfers, settled) {
+  if (!Array.isArray(transfers) || transfers.length === 0) {
+    throw new Error('transfers array is required');
+  }
+  for (const t of transfers) {
+    setTransferSettled(
+      eventId,
+      Number(t.fromParticipantId),
+      Number(t.toParticipantId),
+      Number(t.amount),
+      settled !== false
+    );
+  }
+  return getSettlement(eventId);
+}
+
 function importParticipantsFromEvent(targetEventId, sourceEventId) {
   if (targetEventId === sourceEventId) throw new Error('Cannot import from the same event');
   const source = getEvent(sourceEventId);
@@ -298,6 +314,7 @@ module.exports = {
   getSettlement,
   transferKey,
   setTransferSettled,
+  setTransfersSettledBatch,
   importParticipantsFromEvent,
   createEvent,
   updateEvent,
