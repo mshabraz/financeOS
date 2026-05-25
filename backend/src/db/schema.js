@@ -802,7 +802,64 @@ const MIGRATION_V20 = {
 };
 
 // Keep in sync with migrations array below
-const ALL_MIGRATIONS = [...migrations.filter(m => m.version === 1), MIGRATION_V2, MIGRATION_V3, MIGRATION_V4, MIGRATION_V5, MIGRATION_V6, MIGRATION_V7, MIGRATION_V8, MIGRATION_V9, MIGRATION_V10, MIGRATION_V11, MIGRATION_V12, MIGRATION_V13, MIGRATION_V14, MIGRATION_V15, MIGRATION_V16, MIGRATION_V17, MIGRATION_V18, MIGRATION_V19, MIGRATION_V20];
+// ── Migration v21: Shared expenses (standalone from personal finance) ───────────
+const MIGRATION_V21 = {
+  version: 21,
+  up: (db) => {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS shared_events (
+        id          INTEGER PRIMARY KEY AUTOINCREMENT,
+        name        TEXT NOT NULL,
+        currency    TEXT NOT NULL DEFAULT 'EUR',
+        notes       TEXT,
+        event_date  TEXT,
+        created_at  TEXT DEFAULT (datetime('now')),
+        updated_at  TEXT DEFAULT (datetime('now'))
+      );
+
+      CREATE TABLE IF NOT EXISTS shared_participants (
+        id          INTEGER PRIMARY KEY AUTOINCREMENT,
+        event_id    INTEGER NOT NULL REFERENCES shared_events(id) ON DELETE CASCADE,
+        name        TEXT NOT NULL,
+        sort_order  INTEGER NOT NULL DEFAULT 0,
+        UNIQUE(event_id, name)
+      );
+
+      CREATE TABLE IF NOT EXISTS shared_expenses (
+        id            INTEGER PRIMARY KEY AUTOINCREMENT,
+        event_id      INTEGER NOT NULL REFERENCES shared_events(id) ON DELETE CASCADE,
+        description   TEXT NOT NULL,
+        expense_date  TEXT,
+        category      TEXT,
+        notes         TEXT,
+        split_type    TEXT NOT NULL DEFAULT 'equal_all',
+        created_at    TEXT DEFAULT (datetime('now')),
+        updated_at    TEXT DEFAULT (datetime('now'))
+      );
+
+      CREATE TABLE IF NOT EXISTS shared_expense_payments (
+        id              INTEGER PRIMARY KEY AUTOINCREMENT,
+        expense_id      INTEGER NOT NULL REFERENCES shared_expenses(id) ON DELETE CASCADE,
+        participant_id  INTEGER NOT NULL REFERENCES shared_participants(id) ON DELETE CASCADE,
+        amount          REAL NOT NULL,
+        UNIQUE(expense_id, participant_id)
+      );
+
+      CREATE TABLE IF NOT EXISTS shared_expense_shares (
+        id              INTEGER PRIMARY KEY AUTOINCREMENT,
+        expense_id      INTEGER NOT NULL REFERENCES shared_expenses(id) ON DELETE CASCADE,
+        participant_id  INTEGER NOT NULL REFERENCES shared_participants(id) ON DELETE CASCADE,
+        amount          REAL NOT NULL,
+        UNIQUE(expense_id, participant_id)
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_shared_participants_event ON shared_participants(event_id);
+      CREATE INDEX IF NOT EXISTS idx_shared_expenses_event ON shared_expenses(event_id);
+    `);
+  },
+};
+
+const ALL_MIGRATIONS = [...migrations.filter(m => m.version === 1), MIGRATION_V2, MIGRATION_V3, MIGRATION_V4, MIGRATION_V5, MIGRATION_V6, MIGRATION_V7, MIGRATION_V8, MIGRATION_V9, MIGRATION_V10, MIGRATION_V11, MIGRATION_V12, MIGRATION_V13, MIGRATION_V14, MIGRATION_V15, MIGRATION_V16, MIGRATION_V17, MIGRATION_V18, MIGRATION_V19, MIGRATION_V20, MIGRATION_V21];
 
 function runMigrations(db) {
   db.exec(`CREATE TABLE IF NOT EXISTS schema_migrations (

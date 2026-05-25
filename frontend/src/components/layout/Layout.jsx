@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import {
-  LayoutDashboard, ArrowDownUp, Tag, Moon, Sun, TrendingUp, LineChart, Hash, Settings,
+  LayoutDashboard, ArrowDownUp, Tag, Moon, Sun, TrendingUp, LineChart, Hash, Settings, UsersRound,
   LogOut, MoreHorizontal, X,
 } from 'lucide-react';
 import { useTheme } from '../../hooks/useTheme';
@@ -17,6 +17,7 @@ const PRIMARY_NAV = [
 
 const MORE_NAV = [
   { to: '/investments', icon: LineChart, label: 'Investments' },
+  { to: '/shared',      icon: UsersRound, label: 'Shared' },
   { to: '/tags',        icon: Hash,      label: 'Tags' },
   { to: '/categories',  icon: Tag,       label: 'Categories' },
   { to: '/settings',    icon: Settings,  label: 'Auto-import' },
@@ -27,6 +28,7 @@ const DESKTOP_NAV = [
   { to: '/transactions', icon: ArrowDownUp,     label: 'Transactions' },
   { to: '/analytics',    icon: TrendingUp,      label: 'Analytics' },
   { to: '/investments',  icon: LineChart,       label: 'Investments' },
+  { to: '/shared',       icon: UsersRound,      label: 'Shared Expenses' },
   { to: '/tags',         icon: Hash,            label: 'Tags' },
   { to: '/categories',   icon: Tag,             label: 'Categories' },
   { to: '/settings',     icon: Settings,        label: 'Auto-import' },

@@ -14,6 +14,8 @@ import Categories   from './pages/Categories';
 import Settings     from './pages/Settings';
 import Tags         from './pages/Tags';
 import Investments from './pages/Investments';
+import SharedExpenses from './pages/SharedExpenses';
+import SharedExpenseEvent from './pages/SharedExpenseEvent';
 import LoadingSpinner from './components/ui/LoadingSpinner';
 import ErrorBoundary from './components/ui/ErrorBoundary';
 
@@ -58,6 +60,8 @@ function AppRoutes() {
           <Route path="/tags"         element={<Tags />} />
           <Route path="/categories"   element={<Categories />} />
           <Route path="/settings"     element={<Settings />} />
+          <Route path="/shared"      element={<SharedExpenses />} />
+          <Route path="/shared/:eventId" element={<SharedExpenseEvent />} />
           <Route path="*"            element={<Navigate to="/" replace />} />
         </Routes>
       </ErrorBoundary>

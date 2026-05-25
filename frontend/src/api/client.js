@@ -240,4 +240,20 @@ export const bulkCategorizeApply = (body) => api.post('/transactions/bulk-catego
 export const bulkUpdateCategory = (ids, categoryId) =>
   api.patch('/transactions/bulk', { ids, categoryId });
 
+// --- Shared expenses (standalone) ---
+export const getSharedEvents = () => api.get('/shared/events');
+export const createSharedEvent = (body) => api.post('/shared/events', body);
+export const getSharedEvent = (id) => api.get(`/shared/events/${id}`);
+export const updateSharedEvent = (id, body) => api.patch(`/shared/events/${id}`, body);
+export const deleteSharedEvent = (id) => api.delete(`/shared/events/${id}`);
+export const addSharedParticipant = (eventId, name) =>
+  api.post(`/shared/events/${eventId}/participants`, { name });
+export const updateSharedParticipant = (id, name) =>
+  api.patch(`/shared/participants/${id}`, { name });
+export const deleteSharedParticipant = (id) => api.delete(`/shared/participants/${id}`);
+export const createSharedExpense = (eventId, body) =>
+  api.post(`/shared/events/${eventId}/expenses`, body);
+export const updateSharedExpense = (id, body) => api.patch(`/shared/expenses/${id}`, body);
+export const deleteSharedExpense = (id) => api.delete(`/shared/expenses/${id}`);
+
 export default api;
