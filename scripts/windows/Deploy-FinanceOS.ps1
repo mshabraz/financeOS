@@ -49,6 +49,9 @@ function Initialize-DeployEnvironment {
     $node = Get-Command node -ErrorAction SilentlyContinue
     if (-not $git) { throw 'git not found in PATH (install Git for Windows)' }
     if (-not $node) { throw 'node not found in PATH' }
+    $safeDir = $RepoPath.Replace('\', '/')
+    git config --global --add safe.directory $safeDir 2>$null | Out-Null
+    git config --global --add safe.directory $RepoPath 2>$null | Out-Null
     Write-DeployLog "using git: $($git.Source)"
     Write-DeployLog "using node: $($node.Source)"
     Write-DeployLog "repo: $RepoPath"
