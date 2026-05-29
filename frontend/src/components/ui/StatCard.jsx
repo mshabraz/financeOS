@@ -1,6 +1,11 @@
 import clsx from 'clsx';
+import { usePrivacy } from '../../context/PrivacyContext';
+import { maskIfPrivacy } from '../../utils/privacyMask';
 
 export default function StatCard({ label, value, sub, icon, color = 'blue', trend }) {
+  usePrivacy();
+  const displayValue = maskIfPrivacy(value);
+  const displaySub = sub != null ? maskIfPrivacy(sub) : sub;
   const colors = {
     blue:   'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400',
     green:  'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400',
@@ -16,8 +21,8 @@ export default function StatCard({ label, value, sub, icon, color = 'blue', tren
           <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
             {label}
           </p>
-          <p className="mt-1 text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white break-words">{value}</p>
-          {sub && <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{sub}</p>}
+          <p className="mt-1 text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white break-words">{displayValue}</p>
+          {displaySub && <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{displaySub}</p>}
         </div>
         {icon && (
           <div className={clsx('p-2 rounded-lg', colors[color])}>

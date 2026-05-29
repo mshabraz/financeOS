@@ -8,10 +8,11 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from 'recharts';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
+import { fmtEur, privText } from '../utils/displayFormat';
+import { usePrivacy } from '../context/PrivacyContext';
 import clsx from 'clsx';
 
-const fmt = (n) =>
-  new Intl.NumberFormat('et-EE', { style: 'currency', currency: 'EUR' }).format(n ?? 0);
+const fmt = fmtEur;
 
 const COLORS = [
   '#6366f1','#ec4899','#10b981','#f97316','#3b82f6','#a855f7','#ef4444',
@@ -19,6 +20,7 @@ const COLORS = [
 ];
 
 export default function Tags() {
+  usePrivacy();
   const qc = useQueryClient();
   const [newName,  setNewName]  = useState('');
   const [newColor, setNewColor] = useState(COLORS[0]);
@@ -253,7 +255,7 @@ export default function Tags() {
                               <span className="text-[10px] text-gray-400">Bank</span>
                             )}
                           </td>
-                          <td className="px-4 py-2.5 text-gray-800 dark:text-gray-200">{tx.merchant || tx.beneficiary}</td>
+                          <td className="px-4 py-2.5 text-gray-800 dark:text-gray-200">{privText(tx.merchant || tx.beneficiary)}</td>
                           <td
                             className={clsx('px-4 py-2.5 font-medium', tx.direction === 'K' ? 'text-green-600' : 'text-gray-900 dark:text-white')}
                             title={

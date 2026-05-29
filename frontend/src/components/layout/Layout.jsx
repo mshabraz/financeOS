@@ -2,10 +2,11 @@ import { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, ArrowDownUp, Tag, Moon, Sun, TrendingUp, LineChart, Hash, Settings, UsersRound,
-  LogOut, MoreHorizontal, X,
+  LogOut, MoreHorizontal, X, Eye, EyeOff,
 } from 'lucide-react';
 import { useTheme } from '../../hooks/useTheme';
 import { useAuth } from '../../context/AuthContext';
+import { usePrivacy } from '../../context/PrivacyContext';
 import clsx from 'clsx';
 import FinanceLogo from '../ui/FinanceLogo';
 
@@ -66,6 +67,7 @@ function NavItem({ to, icon: Icon, label, end, onClick, compact }) {
 export default function Layout({ children }) {
   const { dark, toggle } = useTheme();
   const { status, logout } = useAuth();
+  const { privacyMode, togglePrivacy } = usePrivacy();
   const [moreOpen, setMoreOpen] = useState(false);
   const location = useLocation();
 
@@ -86,6 +88,20 @@ export default function Layout({ children }) {
           ))}
         </nav>
         <div className="p-3 border-t border-gray-200 dark:border-gray-800 space-y-0.5">
+          <button
+            type="button"
+            onClick={togglePrivacy}
+            className={clsx(
+              'flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium min-h-[44px]',
+              privacyMode
+                ? 'bg-amber-50 dark:bg-amber-900/20 text-amber-800 dark:text-amber-300'
+                : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
+            )}
+            title={privacyMode ? 'Show amounts and account details' : 'Hide amounts and account details'}
+          >
+            {privacyMode ? <EyeOff size={18} /> : <Eye size={18} />}
+            {privacyMode ? 'Privacy on' : 'Privacy off'}
+          </button>
           <button type="button" onClick={toggle} className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 min-h-[44px]">
             {dark ? <Sun size={18} /> : <Moon size={18} />}
             {dark ? 'Light mode' : 'Dark mode'}
@@ -164,6 +180,19 @@ export default function Layout({ children }) {
               ))}
             </div>
             <div className="p-2 pt-0 border-t border-gray-100 dark:border-gray-800 mt-1 space-y-0.5">
+              <button
+                type="button"
+                onClick={togglePrivacy}
+                className={clsx(
+                  'flex items-center gap-3 w-full px-4 py-3.5 rounded-xl text-base font-medium min-h-[48px] active:bg-gray-100 dark:active:bg-gray-800',
+                  privacyMode
+                    ? 'bg-amber-50 dark:bg-amber-900/20 text-amber-800 dark:text-amber-300'
+                    : 'text-gray-700 dark:text-gray-200'
+                )}
+              >
+                {privacyMode ? <EyeOff size={22} /> : <Eye size={22} />}
+                {privacyMode ? 'Privacy on' : 'Privacy off'}
+              </button>
               <button
                 type="button"
                 onClick={toggle}

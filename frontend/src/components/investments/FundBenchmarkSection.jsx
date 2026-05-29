@@ -2,6 +2,8 @@ import { useState } from 'react';
 import clsx from 'clsx';
 import { ExternalLink, Layers } from 'lucide-react';
 import { fmtEur } from '../../utils/investmentFormat';
+import { fmtPct, privText } from '../../utils/displayFormat';
+import { usePrivacy } from '../../context/PrivacyContext';
 import { CHART_COLORS } from './constants';
 
 function BreakdownList({ rows, valueKey = 'pct' }) {
@@ -15,10 +17,10 @@ function BreakdownList({ rows, valueKey = 'pct' }) {
               className="w-2 h-2 rounded-full shrink-0"
               style={{ background: CHART_COLORS[i % CHART_COLORS.length] }}
             />
-            <span className="truncate">{row.label || row.name}</span>
+            <span className="truncate">{privText(row.label || row.name)}</span>
           </span>
           <span className="tabular-nums font-medium text-gray-600 dark:text-gray-400 shrink-0">
-            {Number(row[valueKey]).toFixed(2)}%
+            {fmtPct(Number(row[valueKey]), { decimals: 2 })}
           </span>
         </li>
       ))}
@@ -44,17 +46,17 @@ function FundCard({ fund }) {
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">
-            {fund.ticker}
+            {privText(fund.ticker)}
             {fund.portfolioPct != null && (
               <span className="ml-2 text-gray-400 font-normal tabular-nums">
-                {fund.portfolioPct.toFixed(1)}% of portfolio
+                {fmtPct(fund.portfolioPct)} of portfolio
               </span>
             )}
           </p>
-          <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{fund.fundName}</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{privText(fund.fundName)}</p>
           <p className="text-xs text-brand-600 dark:text-brand-400 mt-0.5">
-            Benchmark: {fund.benchmark}
-            {fund.ter != null && ` · TER ${fund.ter}%`}
+            Benchmark: {privText(fund.benchmark)}
+            {fund.ter != null && ` · TER ${fmtPct(fund.ter, { decimals: 2 })}`}
           </p>
         </div>
         {fund.marketValueEur != null && (
@@ -110,6 +112,7 @@ function FundCard({ fund }) {
 }
 
 export default function FundBenchmarkSection({ fundProfiles }) {
+  usePrivacy();
   if (!fundProfiles?.length) {
     return (
       <div className="card p-5 text-sm text-gray-400">

@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import './index.css';
 
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { PrivacyProvider } from './context/PrivacyContext';
 import Layout       from './components/layout/Layout';
 import Login        from './pages/Login';
 import Dashboard    from './pages/Dashboard';
@@ -72,11 +73,13 @@ function AppRoutes() {
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <BrowserRouter>
-          <AppRoutes />
-        </BrowserRouter>
-      </AuthProvider>
+      <PrivacyProvider>
+        <AuthProvider>
+          <BrowserRouter>
+            <AppRoutes />
+          </BrowserRouter>
+        </AuthProvider>
+      </PrivacyProvider>
     </QueryClientProvider>
   </StrictMode>
 );

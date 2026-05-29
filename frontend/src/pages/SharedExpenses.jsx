@@ -5,11 +5,13 @@ import { Plus, Users, Receipt, ChevronRight, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { getSharedEvents, createSharedEvent, deleteSharedEvent, importSharedParticipants } from '../api/client';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
+import { fmtCurrency, privText } from '../utils/displayFormat';
+import { usePrivacy } from '../context/PrivacyContext';
 
-const fmt = (n, currency = 'EUR') =>
-  new Intl.NumberFormat('et-EE', { style: 'currency', currency }).format(n ?? 0);
+const fmt = (n, currency = 'EUR') => fmtCurrency(n, currency);
 
 export default function SharedExpenses() {
+  usePrivacy();
   const qc = useQueryClient();
   const navigate = useNavigate();
   const [name, setName] = useState('');
@@ -111,7 +113,7 @@ export default function SharedExpenses() {
                 <option value="">Start with no people</option>
                 {eventList.map((e) => (
                   <option key={e.id} value={e.id}>
-                    {e.name} ({e.participant_count} people)
+                    {privText(e.name)} ({e.participant_count} people)
                   </option>
                 ))}
               </select>
@@ -157,7 +159,7 @@ export default function SharedExpenses() {
                   </div>
                   <div className="min-w-0">
                     <p className="font-semibold text-gray-900 dark:text-white group-hover:text-brand-600 dark:group-hover:text-brand-400 truncate">
-                      {ev.name}
+                      {privText(ev.name)}
                     </p>
                     <p className="text-xs text-gray-500 dark:text-gray-400">
                       {ev.participant_count} people · {ev.expense_count} expenses · {fmt(ev.total_spend, ev.currency)}

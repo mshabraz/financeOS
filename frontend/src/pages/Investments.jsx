@@ -27,15 +27,14 @@ import StatCard from '../components/ui/StatCard';
 import UserNoteField from '../components/transactions/UserNoteField';
 import PortfolioOverview from '../components/investments/PortfolioOverview';
 import PriceSyncCompact from '../components/investments/PriceSyncCompact';
+import { fmtCurrency, fmtNumber } from '../utils/displayFormat';
+import { usePrivacy } from '../context/PrivacyContext';
 
 const getImportHistory  = () => api.get('/investments/history');
 const detectBroker      = (file) => { const f = new FormData(); f.append('file', file); return api.post('/investments/detect', f); };
 
-const fmt = (n, ccy = 'EUR') =>
-  new Intl.NumberFormat('et-EE', { style: 'currency', currency: ccy, maximumFractionDigits: 2 }).format(n ?? 0);
-
-const fmtQty = (n) =>
-  n == null ? '—' : new Intl.NumberFormat('en', { maximumFractionDigits: 6 }).format(n);
+const fmt = (n, ccy = 'EUR') => fmtCurrency(n, ccy);
+const fmtQty = (n) => fmtNumber(n);
 
 const BROKER_COLORS = {
   lightyear:     '#6366f1',
@@ -1134,6 +1133,7 @@ function InvestmentLedger({ brokerFilter }) {
 // ── Main ─────────────────────────────────────────────────────────────────────
 
 export default function Investments() {
+  usePrivacy();
   const qc = useQueryClient();
   const [tab,          setTab]         = useState('overview');
   const [brokerFilter, setBrokerFilter] = useState('');  // '' = all

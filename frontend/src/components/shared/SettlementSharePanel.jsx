@@ -1,9 +1,10 @@
 import { useRef } from 'react';
 import { Download, Share2 } from 'lucide-react';
 import { downloadSettlementShareImage } from '../../utils/settlementShareImage';
+import { fmtCurrency, privText } from '../../utils/displayFormat';
+import { usePrivacy } from '../../context/PrivacyContext';
 
-const fmt = (n, currency = 'EUR') =>
-  new Intl.NumberFormat('et-EE', { style: 'currency', currency }).format(n ?? 0);
+const fmt = (n, currency = 'EUR') => fmtCurrency(n, currency);
 
 /**
  * Settlement tab: preview card + download PNG for group chats.
@@ -15,6 +16,7 @@ export default function SettlementSharePanel({
   transfers,
   pendingCount,
 }) {
+  usePrivacy();
   const previewRef = useRef(null);
   const pending = (transfers ?? []).filter((t) => !t.settled);
   const shareRows = pending.length ? pending : transfers ?? [];
@@ -57,7 +59,7 @@ export default function SettlementSharePanel({
               Settlement
             </p>
             <h3 className="text-lg font-bold text-gray-900 dark:text-white mt-1 leading-tight">
-              {eventName}
+              {privText(eventName)}
             </h3>
             {totalSpend != null && (
               <p className="text-sm text-gray-500 mt-1">Total: {fmt(totalSpend, currency)}</p>
@@ -80,9 +82,9 @@ export default function SettlementSharePanel({
                   }`}
                 >
                   <span className="font-medium text-gray-900 dark:text-white min-w-0 truncate">
-                    <span className="font-semibold">{t.fromName}</span>
+                    <span className="font-semibold">{privText(t.fromName)}</span>
                     <span className="text-gray-400 mx-1">→</span>
-                    <span className="font-semibold">{t.toName}</span>
+                    <span className="font-semibold">{privText(t.toName)}</span>
                   </span>
                   <span className="font-bold text-teal-700 dark:text-teal-400 shrink-0">
                     {fmt(t.amount, currency)}

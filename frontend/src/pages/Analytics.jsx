@@ -15,9 +15,10 @@ import LoadingSpinner from '../components/ui/LoadingSpinner';
 import MonthFilterSelect from '../components/ui/MonthFilterSelect';
 import DatePicker from '../components/ui/DatePicker';
 import { getMonthRange } from '../utils/dateFilters';
+import { fmtEur, privText } from '../utils/displayFormat';
+import { usePrivacy } from '../context/PrivacyContext';
 
-const fmt = (n) =>
-  new Intl.NumberFormat('et-EE', { style: 'currency', currency: 'EUR' }).format(n ?? 0);
+const fmt = fmtEur;
 
 // ── Period presets ────────────────────────────────────────────────────────────
 
@@ -52,6 +53,7 @@ const monthOptions = Array.from({ length: 24 }, (_, i) =>
 // ── Analytics page ────────────────────────────────────────────────────────────
 
 export default function Analytics() {
+  usePrivacy();
   const qc = useQueryClient();
 
   // Period selection
@@ -379,7 +381,7 @@ export default function Analytics() {
                 return (
                   <div key={m.merchant + i}>
                     <div className="flex justify-between text-sm mb-1">
-                      <span className="text-gray-700 dark:text-gray-300 truncate max-w-[60%]">{m.merchant || '(unknown)'}</span>
+                      <span className="text-gray-700 dark:text-gray-300 truncate max-w-[60%]">{privText(m.merchant || '(unknown)')}</span>
                       <span className="font-medium text-gray-900 dark:text-white">{fmt(m.total)}</span>
                     </div>
                     <div className="h-1.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
@@ -403,7 +405,7 @@ export default function Analytics() {
               {recurring.data?.slice(0, 10).map((r, i) => (
                 <div key={i} className="flex items-center justify-between py-1 gap-2">
                   <div className="min-w-0">
-                    <p className="text-sm text-gray-800 dark:text-gray-200 truncate">{r.merchant}</p>
+                    <p className="text-sm text-gray-800 dark:text-gray-200 truncate">{privText(r.merchant)}</p>
                     <p className="text-xs text-gray-400">{r.monthCount} months detected</p>
                   </div>
                   <span className="text-sm font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap">~{fmt(r.avgAmount)}/mo</span>

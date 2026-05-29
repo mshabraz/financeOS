@@ -8,9 +8,10 @@ import {
   previewImport, commitImport, previewRevolutImport, commitRevolutImport, exportTransactionsCSV,
 } from '../../api/client';
 import clsx from 'clsx';
+import { fmtEur, privText } from '../../utils/displayFormat';
+import { usePrivacy } from '../../context/PrivacyContext';
 
-const fmt = (n) =>
-  new Intl.NumberFormat('et-EE', { style: 'currency', currency: 'EUR' }).format(n ?? 0);
+const fmt = fmtEur;
 
 /** Heuristic: Revolut English export uses comma-separated headers without semicolons. */
 async function detectImportKind(file) {
@@ -40,6 +41,7 @@ function SourceBadge({ kind }) {
 }
 
 export default function TransactionImportPanel() {
+  usePrivacy();
   const [importKind, setImportKind] = useState(null);
   const [stage, setStage] = useState('drop');
   const [file, setFile] = useState(null);
@@ -219,7 +221,7 @@ export default function TransactionImportPanel() {
                   <SourceBadge kind={importKind} />
                 </div>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-                  {sum?.account ?? '—'} · {sum?.dateFrom ?? '—'} → {sum?.dateTo ?? '—'}
+                  {privText(sum?.account ?? '—')} · {sum?.dateFrom ?? '—'} → {sum?.dateTo ?? '—'}
                 </p>
               </div>
               <div className="flex gap-4 sm:gap-6 text-center justify-center">
@@ -270,7 +272,7 @@ export default function TransactionImportPanel() {
                         <td className="px-4 py-2.5 text-xs">{tx.revolut_type}</td>
                       )}
                       <td className="px-4 py-2.5 truncate max-w-[180px]">
-                        {isRevolut ? tx.description : (tx.merchant || tx.beneficiary)}
+                        {privText(isRevolut ? tx.description : (tx.merchant || tx.beneficiary))}
                       </td>
                       <td className="px-4 py-2.5 text-right font-medium">{fmt(tx.amount)}</td>
                       <td className="px-4 py-2.5 text-xs">{tx.suggestedCategory}</td>

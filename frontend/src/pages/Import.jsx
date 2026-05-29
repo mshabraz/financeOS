@@ -4,11 +4,13 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Upload, CheckCircle, XCircle, AlertTriangle, FileText, ArrowRight } from 'lucide-react';
 import { previewImport, commitImport } from '../api/client';
 import clsx from 'clsx';
+import { fmtEur, privText } from '../utils/displayFormat';
+import { usePrivacy } from '../context/PrivacyContext';
 
-const fmt = (n) =>
-  new Intl.NumberFormat('et-EE', { style: 'currency', currency: 'EUR' }).format(n ?? 0);
+const fmt = fmtEur;
 
 export default function Import() {
+  usePrivacy();
   const [stage, setStage]       = useState('drop');    // drop | previewing | preview | importing | done | error
   const [file, setFile]         = useState(null);
   const [preview, setPreview]   = useState(null);
@@ -121,7 +123,7 @@ export default function Import() {
               <div className="flex-1">
                 <p className="font-semibold text-gray-900 dark:text-white">{preview.filename}</p>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-                  Account: {preview.summary.account} &middot;{' '}
+                  Account: {privText(preview.summary.account)} &middot;{' '}
                   {preview.summary.dateFrom} → {preview.summary.dateTo}
                 </p>
               </div>
@@ -180,7 +182,7 @@ export default function Import() {
                         {tx.date}
                       </td>
                       <td className="px-4 py-2.5 text-gray-900 dark:text-white max-w-xs truncate">
-                        {tx.merchant || tx.beneficiary}
+                        {privText(tx.merchant || tx.beneficiary)}
                       </td>
                       <td className={clsx(
                         'px-4 py-2.5 text-right font-medium whitespace-nowrap',

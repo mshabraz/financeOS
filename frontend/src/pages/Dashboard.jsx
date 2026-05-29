@@ -17,13 +17,10 @@ import {
 } from '../api/client';
 import StatCard from '../components/ui/StatCard';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
+import { fmtEur, fmtPkr, fmtCurrency, privText, fmtPct } from '../utils/displayFormat';
+import { usePrivacy } from '../context/PrivacyContext';
 
-const fmt = (n) =>
-  new Intl.NumberFormat('et-EE', { style: 'currency', currency: 'EUR' }).format(n ?? 0);
-
-/** PKR with Indian-style grouping (e.g. ₹1,12,22,347) */
-const fmtPkr = (n) =>
-  `₨${new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 }).format(Math.round(n ?? 0))}`;
+const fmt = fmtEur;
 
 const RADIAN = Math.PI / 180;
 
@@ -120,6 +117,7 @@ function formatPortfolioTime(iso) {
 }
 
 function AssetRow({ row, onSave, onDelete, isBuiltIn, portfolio }) {
+  usePrivacy();
   const [editing, setEditing] = useState(false);
   const [val, setVal]         = useState('');
   const isComputedInvestments = row.key === 'investments' && portfolio;
@@ -133,8 +131,7 @@ function AssetRow({ row, onSave, onDelete, isBuiltIn, portfolio }) {
   const save      = () => { onSave(parseFloat(val) || 0); setEditing(false); };
 
   const displayCcy = portfolio?.currency || 'EUR';
-  const fmtCcy = (n) =>
-    new Intl.NumberFormat('et-EE', { style: 'currency', currency: displayCcy, maximumFractionDigits: 2 }).format(n ?? 0);
+  const fmtCcy = (n) => fmtCurrency(n, displayCcy);
 
   return (
     <div className="py-2.5 border-b border-gray-100 dark:border-gray-800 last:border-0">
@@ -142,7 +139,7 @@ function AssetRow({ row, onSave, onDelete, isBuiltIn, portfolio }) {
         <div className="flex items-center gap-2.5 min-w-0">
           <span className="text-xl">{row.icon}</span>
           <div className="min-w-0">
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-300 truncate block">{row.label}</span>
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-300 truncate block">{privText(row.label)}</span>
             {isComputedInvestments && (
               <p className="text-[10px] text-gray-400">Live portfolio · converted to EUR</p>
             )}
@@ -197,7 +194,7 @@ function AssetRow({ row, onSave, onDelete, isBuiltIn, portfolio }) {
               Unrealized P/L:{' '}
               <span className={clsx('font-medium', portfolio.unrealizedPnLEur >= 0 ? 'text-emerald-600' : 'text-red-600')}>
                 {fmtCcy(portfolio.unrealizedPnLEur)}
-                {portfolio.unrealizedPnLPct != null && ` (${portfolio.unrealizedPnLPct.toFixed(1)}%)`}
+                {portfolio.unrealizedPnLPct != null && ` (${fmtPct(portfolio.unrealizedPnLPct)})`}
               </span>
             </span>
           )}
@@ -224,6 +221,7 @@ function AssetRow({ row, onSave, onDelete, isBuiltIn, portfolio }) {
 // ─── Main Dashboard ───────────────────────────────────────────────────────────
 
 export default function Dashboard() {
+  usePrivacy();
   const qc = useQueryClient();
 
   const [periodType,  setPeriodType]  = useState('month');

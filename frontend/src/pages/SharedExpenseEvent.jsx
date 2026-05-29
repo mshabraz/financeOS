@@ -19,10 +19,11 @@ import {
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 import SettlementSharePanel from '../components/shared/SettlementSharePanel';
 import { transferToPayload, transferRowId, isValidTransfer } from '../utils/sharedTransfer';
+import { fmtCurrency, privText } from '../utils/displayFormat';
+import { usePrivacy } from '../context/PrivacyContext';
 import clsx from 'clsx';
 
-const fmt = (n, currency = 'EUR') =>
-  new Intl.NumberFormat('et-EE', { style: 'currency', currency }).format(n ?? 0);
+const fmt = (n, currency = 'EUR') => fmtCurrency(n, currency);
 
 const SPLIT_TYPES = [
   { id: 'equal_all', label: 'Split equally (everyone)' },
@@ -91,6 +92,7 @@ function buildExpensePayload(form, participants) {
 }
 
 export default function SharedExpenseEvent() {
+  usePrivacy();
   const { eventId } = useParams();
   const [searchParams] = useSearchParams();
   const id = Number(eventId);
@@ -277,7 +279,7 @@ export default function SharedExpenseEvent() {
           <ArrowLeft size={20} />
         </Link>
         <div className="flex-1 min-w-0">
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white truncate">{data.event.name}</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white truncate">{privText(data.event.name)}</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400">
             {summary ? fmt(summary.totalSpend, currency) : '—'} total · {participants.length} people
           </p>
@@ -365,7 +367,7 @@ export default function SharedExpenseEvent() {
           <ul className="card divide-y divide-gray-100 dark:divide-gray-800">
             {participants.map((p) => (
               <li key={p.id} className="px-4 py-3 flex justify-between items-center">
-                <span className="font-medium text-gray-900 dark:text-white">{p.name}</span>
+                <span className="font-medium text-gray-900 dark:text-white">{privText(p.name)}</span>
                 <button
                   type="button"
                   className="text-gray-400 hover:text-red-500"
@@ -752,11 +754,11 @@ export default function SharedExpenseEvent() {
                       <div className="min-w-0">
                         <p className="text-gray-900 dark:text-white">
                           <span className={clsx('font-semibold', t.settled && 'text-gray-500')}>
-                            {t.fromName}
+                            {privText(t.fromName)}
                           </span>
                           <span className="text-gray-500 mx-2">pays</span>
                           <span className={clsx('font-semibold', t.settled && 'text-gray-500')}>
-                            {t.toName}
+                            {privText(t.toName)}
                           </span>
                         </p>
                         {t.settled && t.settledAt && (

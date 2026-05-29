@@ -9,7 +9,10 @@ import {
 } from 'lucide-react';
 import clsx from 'clsx';
 import LoadingSpinner from '../ui/LoadingSpinner';
+import { usePrivacy } from '../../context/PrivacyContext';
 import { fmtEur, fmtPct, fmtNative, fmtQty, fmtShortDate } from '../../utils/investmentFormat';
+import { privText } from '../../utils/displayFormat';
+import { maskIfPrivacy } from '../../utils/privacyMask';
 import {
   BROKER_LABELS, BROKER_COLORS, CHART_COLORS, PERIOD_OPTIONS, ALLOCATION_VIEWS,
 } from './constants';
@@ -224,7 +227,7 @@ function AllocationChart({ allocations, view, onViewChange }) {
               <span className="truncate">{d.name}</span>
             </span>
             <span className="text-gray-600 dark:text-gray-400 tabular-nums shrink-0 font-medium">
-              {d.pct != null ? `${d.pct.toFixed(2)}%` : '—'}
+              {d.pct != null ? fmtPct(d.pct, { decimals: 2 }) : '—'}
             </span>
           </li>
         );
@@ -277,7 +280,7 @@ function AllocationChart({ allocations, view, onViewChange }) {
                   formatter={(v, name, props) => {
                     const p = props.payload;
                     if (p.isNative) return [fmtNative(v, p.currency), name];
-                    return [fmtEur(v), `${name} (${p.pct?.toFixed(2)}%)`];
+                    return [fmtEur(v), `${name} (${fmtPct(p.pct, { decimals: 2 })})`];
                   }}
                 />
               </PieChart>
@@ -341,7 +344,7 @@ function PerformanceChart({ performance, period, onPeriodChange }) {
               </defs>
               <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-700" />
               <XAxis dataKey="date" tick={{ fontSize: 9 }} tickFormatter={(v) => v?.slice(5)} />
-              <YAxis tick={{ fontSize: 9 }} tickFormatter={(v) => `€${(v / 1000).toFixed(0)}k`} width={42} />
+              <YAxis tick={{ fontSize: 9 }} tickFormatter={(v) => maskIfPrivacy(`€${(v / 1000).toFixed(0)}k`)} width={42} />
               <Tooltip
                 formatter={(v, name) => [
                   fmtEur(v),
@@ -517,9 +520,9 @@ function CompositionTable({ rows, brokerFilter }) {
               const up = (r.unrealizedPnLEur ?? 0) >= 0;
               return (
                 <tr key={`${r.broker}-${r.ticker}-${r.currency}`} className="border-b border-gray-50 dark:border-gray-800/50 hover:bg-gray-50/50 dark:hover:bg-gray-800/30">
-                  <td className="px-3 py-2.5 font-semibold text-gray-900 dark:text-white">{r.ticker}</td>
-                  <td className="px-3 py-2.5 max-w-[140px] truncate text-gray-600 dark:text-gray-400">{r.securityName}</td>
-                  <td className="px-3 py-2.5 tabular-nums">{r.portfolioPct != null ? `${r.portfolioPct.toFixed(1)}%` : '—'}</td>
+                  <td className="px-3 py-2.5 font-semibold text-gray-900 dark:text-white">{privText(r.ticker)}</td>
+                  <td className="px-3 py-2.5 max-w-[140px] truncate text-gray-600 dark:text-gray-400">{privText(r.securityName)}</td>
+                  <td className="px-3 py-2.5 tabular-nums">{r.portfolioPct != null ? fmtPct(r.portfolioPct) : '—'}</td>
                   <td className="px-3 py-2.5 tabular-nums">{r.marketValueEur != null ? fmtEur(r.marketValueEur) : '—'}</td>
                   <td className="px-3 py-2.5 tabular-nums">{fmtQty(r.quantity)}</td>
                   <td className={clsx('px-3 py-2.5 tabular-nums font-medium', up ? 'text-emerald-600' : 'text-red-600')}>
@@ -605,6 +608,7 @@ export default function PortfolioOverview({
   onOpenHoldings,
   priceSyncBar,
 }) {
+  usePrivacy();
   if (isLoading) return <LoadingSpinner />;
   if (isError) {
     return (

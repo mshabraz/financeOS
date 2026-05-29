@@ -19,15 +19,17 @@ import DatePicker from '../components/ui/DatePicker';
 import TransactionImportPanel from '../components/transactions/TransactionImportPanel';
 import UserNoteField from '../components/transactions/UserNoteField';
 import { getMonthRange } from '../utils/dateFilters';
+import { fmtCurrency, privText } from '../utils/displayFormat';
+import { usePrivacy } from '../context/PrivacyContext';
 import clsx from 'clsx';
 
-const fmt = (n) =>
-  new Intl.NumberFormat('et-EE', { style: 'currency', currency: 'EUR' }).format(Math.abs(n ?? 0));
+const fmt = (n) => fmtCurrency(n, 'EUR', { abs: true });
 
 // ── Bulk categorize modal ─────────────────────────────────────────────────────
 // Lets the user apply a category to a batch of similar/exact transactions at
 // once. Rules are managed separately on the Categories page.
 function BulkCategorizeModal({ merchant, onClose, onApplied }) {
+  usePrivacy();
   const [mode, setMode]         = useState('similar');
   const [catId, setCatId]       = useState('');
   const [applying, setApplying] = useState(false);
@@ -57,7 +59,7 @@ function BulkCategorizeModal({ merchant, onClose, onApplied }) {
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X size={18} /></button>
         </div>
         <div className="bg-gray-50 dark:bg-gray-800 rounded-lg px-4 py-3">
-          <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Merchant: <span className="font-mono">{merchant}</span></p>
+          <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Merchant: <span className="font-mono">{privText(merchant)}</span></p>
         </div>
         <div className="flex gap-2">
           {[['exact','Exact matches only'],['similar','Similar merchants']].map(([val, label]) => (
@@ -77,7 +79,7 @@ function BulkCategorizeModal({ merchant, onClose, onApplied }) {
             <div className="divide-y divide-gray-100 dark:divide-gray-800 max-h-40 overflow-y-auto">
               {preview.data?.examples?.map((tx) => (
                 <div key={tx.id} className="flex justify-between px-4 py-2 text-sm">
-                  <span className="text-gray-700 dark:text-gray-300 truncate">{tx.merchant}</span>
+                  <span className="text-gray-700 dark:text-gray-300 truncate">{privText(tx.merchant)}</span>
                   <span className="text-gray-500 ml-4 whitespace-nowrap">{tx.date} · {fmt(tx.amount)}</span>
                 </div>
               ))}
@@ -179,7 +181,7 @@ function ExpandedRow({ tx, colSpan, onSaveNote }) {
             <div key={label} className="flex items-start gap-2 min-w-0">
               <span className="text-xs font-medium text-gray-400 w-28 flex-shrink-0 mt-0.5">{label}</span>
               <div className="flex items-start gap-1 flex-1 min-w-0">
-                <span className="text-xs text-gray-700 dark:text-gray-200 break-all leading-relaxed">{value}</span>
+                <span className="text-xs text-gray-700 dark:text-gray-200 break-all leading-relaxed">{privText(value)}</span>
                 <button
                   onClick={() => copy(value)}
                   className="flex-shrink-0 text-gray-300 dark:text-gray-600 hover:text-gray-500 dark:hover:text-gray-400 mt-0.5"
@@ -199,6 +201,7 @@ function ExpandedRow({ tx, colSpan, onSaveNote }) {
 
 // ── Main Transactions page ────────────────────────────────────────────────────
 export default function Transactions() {
+  usePrivacy();
   const qc = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
   const tab = searchParams.get('tab') === 'import' ? 'import' : 'list';
@@ -510,7 +513,7 @@ export default function Transactions() {
                 <button type="button" className="w-full text-left" onClick={() => toggleExpand(rowId)}>
                   <div className="flex justify-between gap-2">
                     <div className="min-w-0">
-                      <p className="font-medium text-gray-900 dark:text-white truncate">{tx.merchant || tx.beneficiary || '—'}</p>
+                      <p className="font-medium text-gray-900 dark:text-white truncate">{privText(tx.merchant || tx.beneficiary || '—')}</p>
                       <p className="text-xs text-gray-400">{tx.date}</p>
                       <TransactionSourceBadges tx={tx} className="mt-1" />
                     </div>
@@ -613,7 +616,7 @@ export default function Transactions() {
                           >
                             <div className="flex items-center gap-1.5">
                               <p className="font-medium text-gray-900 dark:text-white group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors line-clamp-1">
-                                {tx.merchant || tx.beneficiary || '—'}
+                                {privText(tx.merchant || tx.beneficiary || '—')}
                               </p>
                               {expandedId === rowId
                                 ? <ChevronDown size={12} className="flex-shrink-0 text-brand-500" />

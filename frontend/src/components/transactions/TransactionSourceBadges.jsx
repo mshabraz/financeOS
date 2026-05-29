@@ -1,9 +1,11 @@
 import clsx from 'clsx';
+import { fmtCurrency } from '../../utils/displayFormat';
+import { usePrivacy } from '../../context/PrivacyContext';
 
-const fmt = (n) =>
-  new Intl.NumberFormat('et-EE', { style: 'currency', currency: 'EUR' }).format(Math.abs(n ?? 0));
+const fmt = (n) => fmtCurrency(n, 'EUR', { abs: true });
 
 export default function TransactionSourceBadges({ tx, className }) {
+  usePrivacy();
   const isRevolut = tx.source === 'revolut';
   const shared = !!tx.applies_shared_split;
   const excluded = !!tx.exclude_from_analytics;
@@ -46,6 +48,7 @@ export default function TransactionSourceBadges({ tx, className }) {
 }
 
 export function TransactionAmountDetail({ tx }) {
+  usePrivacy();
   if (tx.source !== 'revolut' && tx.amount === tx.effective_amount) return null;
 
   return (
