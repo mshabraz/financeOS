@@ -25,6 +25,49 @@ const fmt = (n) =>
 const fmtPkr = (n) =>
   `₨${new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 }).format(Math.round(n ?? 0))}`;
 
+const RADIAN = Math.PI / 180;
+
+/** Category name + optional icon beside each slice (external label + leader line). */
+function renderCategoryPieLabel({
+  cx, cy, midAngle, outerRadius, percent, name, icon,
+}) {
+  if (percent < 0.025) return null;
+
+  const label = [icon, name].filter(Boolean).join(' ').trim() || name;
+  const cos = Math.cos(-RADIAN * midAngle);
+  const sin = Math.sin(-RADIAN * midAngle);
+  const sx = cx + outerRadius * cos;
+  const sy = cy + outerRadius * sin;
+  const mx = cx + (outerRadius + 12) * cos;
+  const my = cy + (outerRadius + 12) * sin;
+  const ex = mx + (cos >= 0 ? 1 : -1) * 10;
+  const ey = my;
+  const textAnchor = cos >= 0 ? 'start' : 'end';
+  const tx = ex + (cos >= 0 ? 6 : -6);
+
+  return (
+    <g>
+      <path
+        d={`M${sx},${sy}L${mx},${my}L${ex},${ey}`}
+        stroke="#94a3b8"
+        fill="none"
+        strokeWidth={1}
+      />
+      <text
+        x={tx}
+        y={ey}
+        textAnchor={textAnchor}
+        dominantBaseline="central"
+        className="fill-gray-600 dark:fill-gray-300"
+        fontSize={11}
+        fontWeight={500}
+      >
+        {label}
+      </text>
+    </g>
+  );
+}
+
 const now = new Date();
 
 // ─── Period selector state helpers ───────────────────────────────────────────
@@ -490,7 +533,7 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* Category pie — tooltip-only categories, responsive donut */}
+        {/* Category pie — labels on slices */}
         <div className="card p-4 sm:p-6">
           <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">
             Spending by Category
@@ -503,22 +546,23 @@ export default function Dashboard() {
               No spending data for this period
             </div>
           ) : (
-            <div className="mx-auto w-full max-w-md px-2 py-3 sm:px-4 sm:py-4">
-              {/* Fixed heights — ResponsiveContainer needs a definite block size (avoids Recharts + flex edge cases). */}
-              <div className="h-[240px] w-full sm:h-[280px]">
+            <div className="mx-auto w-full max-w-lg px-1 py-2 sm:px-2 sm:py-3">
+              <div className="h-[300px] w-full sm:h-[340px]">
                 <ResponsiveContainer width="100%" height="100%">
-                  <PieChart margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
+                  <PieChart margin={{ top: 12, right: 48, bottom: 12, left: 48 }}>
                     <Pie
                       data={byCategory.data}
                       dataKey="total"
                       nameKey="name"
                       cx="50%"
                       cy="50%"
-                      innerRadius="40%"
-                      outerRadius="72%"
+                      innerRadius="38%"
+                      outerRadius="58%"
                       paddingAngle={2}
                       stroke="none"
                       isAnimationActive={false}
+                      label={renderCategoryPieLabel}
+                      labelLine={false}
                     >
                       {byCategory.data?.map((entry, i) => (
                         <Cell key={entry.name ?? i} fill={entry.color ?? '#94a3b8'} />
