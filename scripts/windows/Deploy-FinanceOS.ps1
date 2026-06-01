@@ -190,6 +190,23 @@ function Test-SettlementSettledRoute {
     }
 }
 
+# 400/401 = route exists; 404 = bulk transaction delete API missing on running backend
+function Test-BulkDeleteTransactionsRoute {
+    try {
+        $body = '{"ids":["r1"]}'
+        Invoke-WebRequest -Uri 'http://127.0.0.1:3001/api/transactions/bulk-delete' `
+            -Method POST -Body $body -ContentType 'application/json' -UseBasicParsing -TimeoutSec 10 | Out-Null
+        return $true
+    } catch {
+        if ($_.Exception.Response) {
+            $code = [int]$_.Exception.Response.StatusCode
+            if ($code -eq 404) { return $false }
+            if ($code -eq 400 -or $code -eq 401) { return $true }
+        }
+        return $false
+    }
+}
+
 function Stop-ListenerOnPort([int]$Port = 3001) {
     $prev = $ErrorActionPreference
     $ErrorActionPreference = 'Continue'
@@ -208,11 +225,17 @@ function Stop-ListenerOnPort([int]$Port = 3001) {
 function Ensure-BackendReloaded {
     $sharedRoute = Join-Path $RepoPath 'backend\src\routes\sharedExpenses.js'
     if (-not (Test-Path $sharedRoute)) { return }
-    if (Test-SharedApiRoute -and (Test-SettlementSettledRoute)) {
-        Write-DeployLog 'shared API routes OK (including settlement/settled)'
+    $sharedOk = Test-SharedApiRoute
+    $settledOk = Test-SettlementSettledRoute
+    $bulkDelOk = Test-BulkDeleteTransactionsRoute
+    if ($sharedOk -and $settledOk -and $bulkDelOk) {
+        Write-DeployLog 'API routes OK (shared, settlement/settled, transactions/bulk-delete)'
         return
     }
-    Write-DeployLog '[warn] /api/shared/events is 404 — forcing process restart on port 3001'
+    if (-not $sharedOk) { Write-DeployLog '[warn] /api/shared/events is 404' }
+    if (-not $settledOk) { Write-DeployLog '[warn] settlement/settled route is 404' }
+    if (-not $bulkDelOk) { Write-DeployLog '[warn] POST /api/transactions/bulk-delete is 404' }
+    Write-DeployLog '[warn] forcing process restart on port 3001'
     Stop-ListenerOnPort 3001
     $nssm = Get-Nssm
     if ($nssm) {
@@ -228,7 +251,10 @@ function Ensure-BackendReloaded {
     if (-not (Test-SettlementSettledRoute)) {
         throw 'Backend missing POST /api/shared/events/:id/settlement/settled — restart FinanceOS service (services.msc)'
     }
-    Write-DeployLog 'shared API routes OK after forced restart'
+    if (-not (Test-BulkDeleteTransactionsRoute)) {
+        throw 'Backend missing POST /api/transactions/bulk-delete — restart FinanceOS service (services.msc)'
+    }
+    Write-DeployLog 'API routes OK after forced restart'
 }
 
 function Invoke-Rollback([string]$Commit, [string]$Reason) {

@@ -117,32 +117,45 @@ router.patch('/bulk', (req, res) => {
   }
 });
 
-// DELETE /api/transactions/bulk — permanently remove bank and/or Revolut rows (tag links cascade)
-router.delete('/bulk', (req, res) => {
-  try {
-    const db = getDb();
-    const { ids } = req.body;
-    if (!ids?.length) return res.status(400).json({ error: 'ids[] required' });
-
-    const { bankIds, revolutIds } = splitTxnIds(ids);
-    if (!bankIds.length && !revolutIds.length) {
-      return res.status(400).json({ error: 'No valid transaction ids' });
-    }
-
-    const deleteBank = db.prepare('DELETE FROM transactions WHERE id = ?');
-    const deleteRev = db.prepare('DELETE FROM revolut_transactions WHERE id = ?');
-    const doDelete = db.transaction(() => {
-      for (const id of bankIds) deleteBank.run(id);
-      for (const id of revolutIds) deleteRev.run(id);
-    });
-    doDelete();
-
-    res.json({ ok: true, deleted: bankIds.length + revolutIds.length });
-  } catch (err) {
-    logger.error('[DELETE /transactions/bulk]', err);
-    res.status(500).json({ error: err.message });
+function bulkDeleteTransactions(ids) {
+  const db = getDb();
+  if (!ids?.length) {
+    const err = new Error('ids[] required');
+    err.status = 400;
+    throw err;
   }
-});
+
+  const { bankIds, revolutIds } = splitTxnIds(ids);
+  if (!bankIds.length && !revolutIds.length) {
+    const err = new Error('No valid transaction ids');
+    err.status = 400;
+    throw err;
+  }
+
+  const deleteBank = db.prepare('DELETE FROM transactions WHERE id = ?');
+  const deleteRev = db.prepare('DELETE FROM revolut_transactions WHERE id = ?');
+  const doDelete = db.transaction(() => {
+    for (const id of bankIds) deleteBank.run(id);
+    for (const id of revolutIds) deleteRev.run(id);
+  });
+  doDelete();
+
+  return { ok: true, deleted: bankIds.length + revolutIds.length };
+}
+
+function handleBulkDelete(req, res) {
+  try {
+    res.json(bulkDeleteTransactions(req.body?.ids));
+  } catch (err) {
+    const status = err.status || 500;
+    if (status >= 500) logger.error('[bulk-delete transactions]', err);
+    res.status(status).json({ error: err.message });
+  }
+}
+
+// POST preferred (some proxies block DELETE bodies); DELETE kept for compatibility
+router.post('/bulk-delete', handleBulkDelete);
+router.delete('/bulk', handleBulkDelete);
 
 router.get('/:id', (req, res) => {
   const db = getDb();

@@ -361,7 +361,12 @@ export default function Transactions() {
       setExpandedId(null);
       clearSel();
     } catch (err) {
-      setBulkError(err.message || 'Failed to delete transactions');
+      const msg = err.message || 'Failed to delete transactions';
+      setBulkError(
+        msg.includes('404')
+          ? 'Delete API not available on the server (backend may need a restart after deploy). The transactions were not removed.'
+          : msg
+      );
     } finally {
       setBulkDeleting(false);
     }

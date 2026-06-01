@@ -240,7 +240,7 @@ export const bulkCategorizeApply = (body) => api.post('/transactions/bulk-catego
 export const bulkUpdateCategory = (ids, categoryId) =>
   api.patch('/transactions/bulk', { ids, categoryId });
 export const bulkDeleteTransactions = (ids) =>
-  api.delete('/transactions/bulk', { data: { ids } });
+  api.post('/transactions/bulk-delete', { ids });
 
 // --- Shared expenses (standalone) ---
 export const getSharedEvents = async () => {
