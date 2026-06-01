@@ -3,12 +3,12 @@ import { useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Search, Download, ChevronLeft, ChevronRight, Check, X,
-  Tag, Layers, AlertCircle, ChevronDown, ChevronRight as ChevronRt, Copy, Upload,
+  Tag, Layers, AlertCircle, ChevronDown, ChevronRight as ChevronRt, Copy, Upload, Trash2,
 } from 'lucide-react';
 import {
   getTransactions, updateTransaction, getCategories,
   exportTransactionsCSV, getTags, assignTag, removeTag, assignRevolutTag, removeRevolutTag,
-  bulkCategorizePrev, bulkCategorizeApply, bulkUpdateCategory, bulkAssignTag,
+  bulkCategorizePrev, bulkCategorizeApply, bulkUpdateCategory, bulkAssignTag, bulkDeleteTransactions,
 } from '../api/client';
 import TransactionSourceBadges, { TransactionAmountDetail } from '../components/transactions/TransactionSourceBadges';
 import CategoryBadge from '../components/ui/CategoryBadge';
@@ -232,6 +232,7 @@ export default function Transactions() {
   const [bulkTagId, setBulkTagId] = useState('');
   const [bulkApplying, setBulkApplying] = useState(false);
   const [bulkTagApplying, setBulkTagApplying] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
   const [bulkModal, setBulkModal] = useState(null);
   const [bulkError, setBulkError] = useState('');
 
@@ -326,6 +327,44 @@ export default function Transactions() {
       await bulkAssignTag(parseInt(bulkTagId, 10), bankIds, revolutIds);
       qc.invalidateQueries({ queryKey: ['transactions'] }); clearSel();
     } finally { setBulkTagApplying(false); }
+  };
+
+  const invalidateAfterTxnDelete = () => {
+    qc.invalidateQueries({ queryKey: ['transactions'] });
+    qc.invalidateQueries({ queryKey: ['dashboard'] });
+    qc.invalidateQueries({ queryKey: ['trend'] });
+    qc.invalidateQueries({ queryKey: ['bycat'] });
+    qc.invalidateQueries({ queryKey: ['byincome'] });
+    qc.invalidateQueries({ queryKey: ['merchants'] });
+    qc.invalidateQueries({ queryKey: ['recurring'] });
+    qc.invalidateQueries({ queryKey: ['tagSummary'] });
+    qc.invalidateQueries({ queryKey: ['tagAnalytics'] });
+  };
+
+  const applyBulkDelete = async () => {
+    if (!selected.size) return;
+    const n = selected.size;
+    const msg = n === 1
+      ? 'Delete 1 selected transaction permanently? This cannot be undone.'
+      : `Delete ${n} selected transactions permanently? This cannot be undone.`;
+    if (!window.confirm(msg)) return;
+
+    setBulkDeleting(true);
+    setBulkError('');
+    try {
+      const result = await bulkDeleteTransactions([...selected]);
+      if (result?.deleted === 0) {
+        setBulkError('No transactions were deleted. Try again or refresh the page.');
+        return;
+      }
+      invalidateAfterTxnDelete();
+      setExpandedId(null);
+      clearSel();
+    } catch (err) {
+      setBulkError(err.message || 'Failed to delete transactions');
+    } finally {
+      setBulkDeleting(false);
+    }
   };
 
   const onMonthChange = (v) => {
@@ -490,6 +529,15 @@ export default function Transactions() {
           </select>
           <button onClick={applyBulkTag} disabled={!bulkTagId || bulkTagApplying} className="btn-secondary py-1.5 text-xs">
             {bulkTagApplying ? 'Tagging...' : 'Apply tag'}
+          </button>
+          <button
+            type="button"
+            onClick={applyBulkDelete}
+            disabled={bulkDeleting || bulkApplying || bulkTagApplying}
+            className="inline-flex items-center gap-1 py-1.5 px-3 rounded-lg text-xs font-medium border border-red-200 dark:border-red-900/50 text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-950/30 hover:bg-red-100 dark:hover:bg-red-950/50 disabled:opacity-50"
+          >
+            <Trash2 size={14} />
+            {bulkDeleting ? 'Deleting...' : 'Delete'}
           </button>
           <button onClick={clearSel} className="btn-ghost py-1.5 text-xs text-gray-400">Clear</button>
         </div>
