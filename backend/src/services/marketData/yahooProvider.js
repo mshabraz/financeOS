@@ -157,14 +157,21 @@ async function searchSecurities(query, limit = 15) {
   const q = String(query || '').trim();
   if (!q) return [];
 
-  const data = await withYahooRetry((yf) =>
-    yf.search(q, {
-      quotesCount: limit,
-      newsCount: 0,
-      enableFuzzyQuery: true,
-      region: 'US',
-    })
-  );
+  const searchOpts = {
+    quotesCount: limit,
+    newsCount: 0,
+    enableFuzzyQuery: true,
+    region: 'US',
+  };
+
+  let data;
+  try {
+    data = await withYahooRetry((yf) => yf.search(q, searchOpts));
+  } catch (err) {
+    // Yahoo frequently changes search payload shape; retry without strict schema validation.
+    if (!/schema validation/i.test(String(err.message || ''))) throw err;
+    data = await withYahooRetry((yf) => yf.search(q, searchOpts, { validateResult: false }));
+  }
 
   const quotes = data?.quotes || [];
   const mapped = quotes.map(mapSearchQuote).filter(Boolean);
