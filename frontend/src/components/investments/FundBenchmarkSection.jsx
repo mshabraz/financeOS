@@ -136,8 +136,8 @@ export default function FundBenchmarkSection({ fundProfiles }) {
         </div>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-        {fundProfiles.map((fund) => (
-          <FundCard key={`${fund.broker}-${fund.ticker}-${fund.profileId}`} fund={fund} />
+        {fundProfiles.filter(Boolean).map((fund) => (
+          <FundCard key={`${fund.broker}-${fund.ticker}-${fund.profileId ?? 'na'}`} fund={fund} />
         ))}
       </div>
     </div>

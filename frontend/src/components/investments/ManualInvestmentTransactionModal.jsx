@@ -26,7 +26,8 @@ function numOrEmpty(v) {
   return String(v);
 }
 
-function defaults(initial = {}) {
+function defaults(initial) {
+  const tx = initial ?? {};
   let preferredBroker = 'lightyear';
   try {
     preferredBroker = localStorage.getItem('financeos.lastManualInvestmentBroker') || preferredBroker;
@@ -34,24 +35,24 @@ function defaults(initial = {}) {
     /* ignore */
   }
   return {
-    id: initial.id ?? null,
-    type: initial.type || 'Buy',
-    ticker: initial.ticker || '',
-    isin: initial.isin || '',
-    fundName: initial.fund_name || initial.fundName || '',
-    quantity: numOrEmpty(initial.quantity),
-    pricePerShare: numOrEmpty(initial.price_per_share ?? initial.pricePerShare),
-    totalCost: numOrEmpty(initial.gross_amount ?? initial.grossAmount),
-    date: toInputDate(initial.date) || toInputDate(new Date().toISOString()),
-    broker: initial.broker || preferredBroker,
-    brokerAccountId: initial.broker_account_id || '',
-    fee: numOrEmpty(initial.fee ?? 0),
-    taxAmount: numOrEmpty(initial.tax_amount ?? 0),
-    currency: initial.currency || 'EUR',
-    notes: initial.notes || '',
-    reference: initial.reference || '',
-    rawDetails: initial.raw_details || '',
-    rawType: initial.raw_type && initial.type === 'Other' ? initial.raw_type : '',
+    id: tx.id ?? null,
+    type: tx.type || 'Buy',
+    ticker: tx.ticker || '',
+    isin: tx.isin || '',
+    fundName: tx.fund_name || tx.fundName || '',
+    quantity: numOrEmpty(tx.quantity),
+    pricePerShare: numOrEmpty(tx.price_per_share ?? tx.pricePerShare),
+    totalCost: numOrEmpty(tx.gross_amount ?? tx.grossAmount),
+    date: toInputDate(tx.date) || toInputDate(new Date().toISOString()),
+    broker: tx.broker || preferredBroker,
+    brokerAccountId: tx.broker_account_id || '',
+    fee: numOrEmpty(tx.fee ?? 0),
+    taxAmount: numOrEmpty(tx.tax_amount ?? 0),
+    currency: tx.currency || 'EUR',
+    notes: tx.notes || '',
+    reference: tx.reference || '',
+    rawDetails: tx.raw_details || '',
+    rawType: tx.raw_type && tx.type === 'Other' ? tx.raw_type : '',
   };
 }
 

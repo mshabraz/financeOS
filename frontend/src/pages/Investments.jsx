@@ -1049,7 +1049,10 @@ function InvestmentLedger({ brokerFilter }) {
 
   const auditQ = useQuery({
     queryKey: ['invTxAudit', auditTx?.id],
-    queryFn: () => getInvestmentTransactionAudit(auditTx.id),
+    queryFn: () => {
+      if (!auditTx?.id) return Promise.resolve([]);
+      return getInvestmentTransactionAudit(auditTx.id);
+    },
     enabled: !!auditTx?.id,
   });
 
@@ -1063,7 +1066,7 @@ function InvestmentLedger({ brokerFilter }) {
     URL.revokeObjectURL(url);
   };
 
-  const rows = list.data?.data ?? [];
+  const rows = (list.data?.data ?? []).filter(Boolean);
   const openCreate = () => {
     setManualFormError('');
     setEditingTx(null);
