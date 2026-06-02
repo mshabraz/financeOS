@@ -888,7 +888,8 @@ const MIGRATION_V23 = {
       db.exec('ALTER TABLE investment_transactions ADD COLUMN manual_transaction INTEGER NOT NULL DEFAULT 0');
     }
     if (!cols.includes('updated_at')) {
-      db.exec("ALTER TABLE investment_transactions ADD COLUMN updated_at TEXT DEFAULT (datetime('now'))");
+      db.exec('ALTER TABLE investment_transactions ADD COLUMN updated_at TEXT');
+      db.exec("UPDATE investment_transactions SET updated_at = COALESCE(updated_at, created_at, datetime('now'))");
     }
 
     db.exec(`
