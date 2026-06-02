@@ -180,6 +180,12 @@ export const commitInvestmentImport = (file) => {
 export const getInvestmentTransactions = (params) => api.get('/investments/transactions', { params });
 export const updateInvestmentTransaction = (id, data) =>
   api.patch(`/investments/transactions/${id}`, data);
+export const createManualInvestmentTransaction = (body) =>
+  api.post('/investments/transactions/manual', body);
+export const deleteInvestmentTransaction = (id) =>
+  api.delete(`/investments/transactions/${id}`);
+export const getInvestmentTransactionAudit = (id) =>
+  api.get(`/investments/transactions/${id}/audit`);
 export const exportInvestmentTransactionsCSV = () =>
   axios.get(`${apiBaseURL}/investments/transactions/export/csv`, {
     responseType: 'blob',

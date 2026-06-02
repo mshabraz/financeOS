@@ -14,6 +14,7 @@ const {
   bindFromSearchResult,
   clearBinding,
   getBinding,
+  tryAutoMatch,
   setManualQuantity,
   setManualAvgCostPerShare,
 } = require('../services/investmentSecurities');
@@ -29,10 +30,147 @@ const {
 const {
   loadInvestmentDedupSets,
   isDuplicateInvestmentTx,
+  canonicalFingerprint,
 } = require('../services/investmentDedup');
 const logger = require('../services/logger');
 
 const INVESTMENT_PREVIEW_LIMIT = 100;
+const SUPPORTED_MANUAL_TYPES = new Set([
+  'Buy',
+  'Sell',
+  'Dividend',
+  'Interest',
+  'Deposit',
+  'Withdrawal',
+  'Fee',
+  'Stock Split',
+  'Transfer',
+  'Other',
+]);
+
+function parseNum(v, fallback = null) {
+  if (v === '' || v == null) return fallback;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+function normalizeType(type) {
+  const t = String(type || '').trim();
+  if (!t) return null;
+  if (SUPPORTED_MANUAL_TYPES.has(t)) return t;
+  return null;
+}
+
+function computeManualNetAmount(payload) {
+  const type = normalizeType(payload.type);
+  const qty = parseNum(payload.quantity, null);
+  const pps = parseNum(payload.pricePerShare, null);
+  const fee = Math.abs(parseNum(payload.fee, 0) || 0);
+  const tax = Math.abs(parseNum(payload.taxAmount, 0) || 0);
+  const total = parseNum(payload.totalCost, null);
+  const gross = total != null
+    ? Math.abs(total)
+    : qty != null && pps != null
+      ? Math.abs(qty * pps)
+      : null;
+
+  if (!type) throw new Error('transaction type is required');
+  if (!payload.date) throw new Error('transaction date is required');
+  if (!payload.broker) throw new Error('broker/account is required');
+  if (!payload.currency) throw new Error('currency is required');
+  if (['Buy', 'Sell', 'Stock Split'].includes(type) && (!payload.ticker || !String(payload.ticker).trim())) {
+    throw new Error('ticker symbol is required for this transaction type');
+  }
+  if (['Buy', 'Sell', 'Stock Split'].includes(type) && (qty == null || qty <= 0)) {
+    throw new Error('quantity must be greater than 0 for this transaction type');
+  }
+  if (type === 'Buy' && gross == null) throw new Error('total cost or quantity × price is required for Buy');
+  if (type === 'Sell' && gross == null) throw new Error('total proceeds or quantity × price is required for Sell');
+
+  let netAmount = 0;
+  if (type === 'Buy') netAmount = gross + fee + tax;
+  else if (type === 'Sell') netAmount = Math.max(0, (gross || 0) - fee - tax);
+  else if (type === 'Fee') netAmount = -(gross || fee || 0);
+  else if (type === 'Withdrawal') netAmount = -(gross || 0);
+  else if (type === 'Deposit' || type === 'Dividend' || type === 'Interest') netAmount = gross || 0;
+  else if (type === 'Stock Split') netAmount = 0;
+  else {
+    const signed = parseNum(payload.totalCost, 0);
+    netAmount = signed;
+  }
+
+  return {
+    type,
+    quantity: qty,
+    pricePerShare: pps,
+    grossAmount: gross,
+    fee,
+    taxAmount: tax,
+    netAmount,
+  };
+}
+
+function toManualTxRecord(body, existing = null) {
+  const merged = { ...(existing || {}), ...(body || {}) };
+  const calc = computeManualNetAmount(merged);
+  const broker = String(merged.broker || '').trim();
+  const ticker = String(merged.ticker || '').trim().toUpperCase() || null;
+  const currency = String(merged.currency || 'EUR').trim().toUpperCase();
+  const date = String(merged.date || '').slice(0, 10);
+  const datetime = merged.datetime ? String(merged.datetime) : `${date}T12:00:00`;
+  const reference = String(merged.reference || '').trim() || null;
+  const fingerprint = canonicalFingerprint(
+    broker,
+    reference,
+    datetime,
+    calc.netAmount,
+    calc.type,
+    ticker
+  );
+
+  return {
+    fingerprint,
+    reference,
+    datetime,
+    date,
+    ticker,
+    isin: merged.isin ? String(merged.isin).trim().toUpperCase() : null,
+    type: calc.type,
+    quantity: calc.quantity,
+    currency,
+    pricePerShare: calc.pricePerShare,
+    grossAmount: calc.grossAmount,
+    fxRate: parseNum(merged.fxRate, null),
+    fee: calc.fee,
+    netAmount: calc.netAmount,
+    taxAmount: calc.taxAmount,
+    broker,
+    brokerAccountId: merged.brokerAccountId ? String(merged.brokerAccountId).trim() : null,
+    fundName: merged.fundName ? String(merged.fundName).trim() : null,
+    fundOrderId: merged.fundOrderId ? String(merged.fundOrderId).trim() : null,
+    rawDetails: merged.rawDetails ? String(merged.rawDetails).trim() : null,
+    rawType: calc.type === 'Other' ? (String(merged.rawType || merged.customType || 'Other').trim() || 'Other') : calc.type,
+    settlementDate: merged.settlementDate ? String(merged.settlementDate).slice(0, 10) : null,
+    notes: merged.notes == null || merged.notes === '' ? null : String(merged.notes),
+    sourceType: 'manual',
+    manualTransaction: 1,
+  };
+}
+
+function auditInvestmentChange(db, { transactionId, action, sourceType = 'manual', before, after, changedFields = [] }) {
+  db.prepare(
+    `INSERT INTO investment_transaction_audit
+       (transaction_id, action, source_type, changed_fields, before_json, after_json)
+     VALUES (?, ?, ?, ?, ?, ?)`
+  ).run(
+    transactionId ?? null,
+    action,
+    sourceType,
+    JSON.stringify(changedFields || []),
+    before ? JSON.stringify(before) : null,
+    after ? JSON.stringify(after) : null
+  );
+}
 
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 50 * 1024 * 1024 } });
@@ -158,6 +296,7 @@ router.get('/transactions', (req, res) => {
     page = 1, limit = 50,
     broker = '', type = '', ticker = '', dateFrom = '', dateTo = '',
     search = '',
+    sourceType = '',
     hasNotes = '',
     sortBy = 'date', sortDir = 'DESC',
   } = req.query;
@@ -169,6 +308,11 @@ router.get('/transactions', (req, res) => {
   if (ticker)   { conds.push('ticker = ?');    params.push(ticker.toUpperCase()); }
   if (dateFrom) { conds.push('date >= ?');     params.push(dateFrom); }
   if (dateTo)   { conds.push('date <= ?');     params.push(dateTo); }
+  if (sourceType === 'manual') {
+    conds.push("(manual_transaction = 1 OR source_type = 'manual')");
+  } else if (sourceType === 'imported') {
+    conds.push("(manual_transaction = 0 OR source_type = 'imported' OR source_type IS NULL)");
+  }
   if (search) {
     const s = `%${search}%`;
     conds.push(
@@ -193,24 +337,228 @@ router.get('/transactions', (req, res) => {
   res.json({ data: rows, total, page: parseInt(page), totalPages: Math.ceil(total / parseInt(limit)) });
 });
 
-// PATCH /api/investments/transactions/:id — update user note
-router.patch('/transactions/:id', (req, res) => {
+// POST /api/investments/transactions/manual — create one manual investment transaction
+router.post('/transactions/manual', async (req, res) => {
+  try {
+    const db = getDb();
+    const tx = toManualTxRecord(req.body);
+    const dedup = loadInvestmentDedupSets(db);
+    const duplicateWarning = isDuplicateInvestmentTx(tx, dedup);
+
+    const result = db.prepare(`
+      INSERT INTO investment_transactions
+        (fingerprint, reference, datetime, date, ticker, isin, type,
+         quantity, currency, price_per_share, gross_amount, fx_rate, fee, net_amount, tax_amount,
+         broker, broker_account_id, fund_name, fund_order_id, raw_details, raw_type, settlement_date,
+         notes, source_type, manual_transaction, updated_at)
+      VALUES
+        (@fingerprint, @reference, @datetime, @date, @ticker, @isin, @type,
+         @quantity, @currency, @pricePerShare, @grossAmount, @fxRate, @fee, @netAmount, @taxAmount,
+         @broker, @brokerAccountId, @fundName, @fundOrderId, @rawDetails, @rawType, @settlementDate,
+         @notes, @sourceType, @manualTransaction, datetime('now'))
+    `).run(tx);
+
+    const created = db.prepare('SELECT * FROM investment_transactions WHERE id = ?').get(result.lastInsertRowid);
+    auditInvestmentChange(db, {
+      transactionId: created.id,
+      action: 'created',
+      sourceType: created.source_type || 'manual',
+      before: null,
+      after: created,
+      changedFields: Object.keys(req.body || {}),
+    });
+
+    // Auto-link ticker to Yahoo symbol if possible (non-blocking behavior on errors).
+    if (created.ticker) {
+      try {
+        await tryAutoMatch(db, {
+          broker: created.broker,
+          ticker: created.ticker,
+          isin: created.isin,
+          currency: created.currency,
+          fundName: created.fund_name,
+        });
+      } catch (err) {
+        logger.warn(`[investments/manual create auto-match] ${err.message}`);
+      }
+    }
+
+    setImmediate(() => {
+      runPriceSync().catch((e) => logger.warn(`[investments/manual create] price sync: ${e.message}`));
+    });
+
+    res.json({ ...created, duplicateWarning });
+  } catch (err) {
+    if (/required|must|invalid/i.test(err.message)) {
+      return res.status(400).json({ error: err.message });
+    }
+    logger.error('[POST /investments/transactions/manual]', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// PATCH /api/investments/transactions/:id — update note or full manual transaction
+router.patch('/transactions/:id', async (req, res) => {
   try {
     const db = getDb();
     const id = parseInt(req.params.id, 10);
-    const { notes } = req.body;
-    if (notes === undefined) return res.status(400).json({ error: 'notes required' });
+    const existing = db.prepare('SELECT * FROM investment_transactions WHERE id = ?').get(id);
+    if (!existing) return res.status(404).json({ error: 'Not found' });
 
-    const row = db.prepare('SELECT id FROM investment_transactions WHERE id = ?').get(id);
-    if (!row) return res.status(404).json({ error: 'Not found' });
+    const bodyKeys = Object.keys(req.body || {});
+    if (!bodyKeys.length) return res.status(400).json({ error: 'No fields to update' });
+    const noteOnly = bodyKeys.length === 1 && bodyKeys[0] === 'notes';
 
-    db.prepare('UPDATE investment_transactions SET notes = ? WHERE id = ?').run(
-      notes === null || notes === '' ? null : String(notes),
-      id,
-    );
-    res.json(db.prepare('SELECT * FROM investment_transactions WHERE id = ?').get(id));
+    // Imported rows may only update user note to preserve import integrity.
+    const isManual = existing.manual_transaction === 1 || existing.source_type === 'manual';
+    if (!isManual && !noteOnly) {
+      return res.status(400).json({ error: 'Imported transactions allow note updates only' });
+    }
+
+    let updated;
+    if (noteOnly) {
+      db.prepare(
+        "UPDATE investment_transactions SET notes = ?, updated_at = datetime('now') WHERE id = ?"
+      ).run(
+        req.body.notes === null || req.body.notes === '' ? null : String(req.body.notes),
+        id
+      );
+      updated = db.prepare('SELECT * FROM investment_transactions WHERE id = ?').get(id);
+    } else {
+      const mergedSource = {
+        ...existing,
+        ...req.body,
+        pricePerShare: req.body.pricePerShare ?? existing.price_per_share,
+        totalCost: req.body.totalCost ?? existing.gross_amount,
+        taxAmount: req.body.taxAmount ?? existing.tax_amount,
+        fxRate: req.body.fxRate ?? existing.fx_rate,
+        brokerAccountId: req.body.brokerAccountId ?? existing.broker_account_id,
+        fundName: req.body.fundName ?? existing.fund_name,
+        fundOrderId: req.body.fundOrderId ?? existing.fund_order_id,
+        rawDetails: req.body.rawDetails ?? existing.raw_details,
+        rawType: req.body.rawType ?? existing.raw_type,
+        settlementDate: req.body.settlementDate ?? existing.settlement_date,
+        sourceType: 'manual',
+        manualTransaction: 1,
+      };
+      const tx = toManualTxRecord(mergedSource, existing);
+      db.prepare(`
+        UPDATE investment_transactions SET
+          fingerprint = @fingerprint,
+          reference = @reference,
+          datetime = @datetime,
+          date = @date,
+          ticker = @ticker,
+          isin = @isin,
+          type = @type,
+          quantity = @quantity,
+          currency = @currency,
+          price_per_share = @pricePerShare,
+          gross_amount = @grossAmount,
+          fx_rate = @fxRate,
+          fee = @fee,
+          net_amount = @netAmount,
+          tax_amount = @taxAmount,
+          broker = @broker,
+          broker_account_id = @brokerAccountId,
+          fund_name = @fundName,
+          fund_order_id = @fundOrderId,
+          raw_details = @rawDetails,
+          raw_type = @rawType,
+          settlement_date = @settlementDate,
+          notes = @notes,
+          source_type = @sourceType,
+          manual_transaction = @manualTransaction,
+          updated_at = datetime('now')
+        WHERE id = @id
+      `).run({ ...tx, id });
+      updated = db.prepare('SELECT * FROM investment_transactions WHERE id = ?').get(id);
+
+      if (updated.ticker) {
+        try {
+          await tryAutoMatch(db, {
+            broker: updated.broker,
+            ticker: updated.ticker,
+            isin: updated.isin,
+            currency: updated.currency,
+            fundName: updated.fund_name,
+          });
+        } catch (err) {
+          logger.warn(`[investments/manual edit auto-match] ${err.message}`);
+        }
+      }
+    }
+
+    auditInvestmentChange(db, {
+      transactionId: id,
+      action: 'updated',
+      sourceType: updated.source_type || (isManual ? 'manual' : 'imported'),
+      before: existing,
+      after: updated,
+      changedFields: bodyKeys,
+    });
+
+    setImmediate(() => {
+      runPriceSync().catch((e) => logger.warn(`[investments/transactions patch] price sync: ${e.message}`));
+    });
+    res.json(updated);
   } catch (err) {
+    if (/required|must|invalid/i.test(err.message)) {
+      return res.status(400).json({ error: err.message });
+    }
     logger.error('[PATCH /investments/transactions/:id]', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// DELETE /api/investments/transactions/:id — remove manual transaction
+router.delete('/transactions/:id', (req, res) => {
+  try {
+    const db = getDb();
+    const id = parseInt(req.params.id, 10);
+    const existing = db.prepare('SELECT * FROM investment_transactions WHERE id = ?').get(id);
+    if (!existing) return res.status(404).json({ error: 'Not found' });
+    const isManual = existing.manual_transaction === 1 || existing.source_type === 'manual';
+    if (!isManual) return res.status(400).json({ error: 'Only manual transactions can be deleted' });
+
+    db.prepare('DELETE FROM investment_transactions WHERE id = ?').run(id);
+    auditInvestmentChange(db, {
+      transactionId: id,
+      action: 'deleted',
+      sourceType: existing.source_type || 'manual',
+      before: existing,
+      after: null,
+      changedFields: [],
+    });
+    setImmediate(() => {
+      runPriceSync().catch((e) => logger.warn(`[investments/transactions delete] price sync: ${e.message}`));
+    });
+    res.json({ ok: true });
+  } catch (err) {
+    logger.error('[DELETE /investments/transactions/:id]', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/investments/transactions/:id/audit
+router.get('/transactions/:id/audit', (req, res) => {
+  try {
+    const db = getDb();
+    const id = parseInt(req.params.id, 10);
+    const rows = db.prepare(
+      `SELECT id, transaction_id, action, source_type, changed_fields, before_json, after_json, changed_at
+       FROM investment_transaction_audit
+       WHERE transaction_id = ?
+       ORDER BY changed_at DESC, id DESC`
+    ).all(id).map((r) => ({
+      ...r,
+      changed_fields: JSON.parse(r.changed_fields || '[]'),
+      before: r.before_json ? JSON.parse(r.before_json) : null,
+      after: r.after_json ? JSON.parse(r.after_json) : null,
+    }));
+    res.json(rows);
+  } catch (err) {
+    logger.error('[GET /investments/transactions/:id/audit]', err);
     res.status(500).json({ error: err.message });
   }
 });

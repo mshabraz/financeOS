@@ -876,7 +876,42 @@ const MIGRATION_V22 = {
   },
 };
 
-const ALL_MIGRATIONS = [...migrations.filter(m => m.version === 1), MIGRATION_V2, MIGRATION_V3, MIGRATION_V4, MIGRATION_V5, MIGRATION_V6, MIGRATION_V7, MIGRATION_V8, MIGRATION_V9, MIGRATION_V10, MIGRATION_V11, MIGRATION_V12, MIGRATION_V13, MIGRATION_V14, MIGRATION_V15, MIGRATION_V16, MIGRATION_V17, MIGRATION_V18, MIGRATION_V19, MIGRATION_V20, MIGRATION_V21, MIGRATION_V22];
+// ── Migration v23: Manual investment transaction metadata + audit trail ──────
+const MIGRATION_V23 = {
+  version: 23,
+  up: (db) => {
+    const cols = db.prepare('PRAGMA table_info(investment_transactions)').all().map((r) => r.name);
+    if (!cols.includes('source_type')) {
+      db.exec("ALTER TABLE investment_transactions ADD COLUMN source_type TEXT NOT NULL DEFAULT 'imported'");
+    }
+    if (!cols.includes('manual_transaction')) {
+      db.exec('ALTER TABLE investment_transactions ADD COLUMN manual_transaction INTEGER NOT NULL DEFAULT 0');
+    }
+    if (!cols.includes('updated_at')) {
+      db.exec("ALTER TABLE investment_transactions ADD COLUMN updated_at TEXT DEFAULT (datetime('now'))");
+    }
+
+    db.exec(`
+      CREATE INDEX IF NOT EXISTS idx_inv_source_type ON investment_transactions(source_type);
+      CREATE INDEX IF NOT EXISTS idx_inv_manual_flag ON investment_transactions(manual_transaction);
+
+      CREATE TABLE IF NOT EXISTS investment_transaction_audit (
+        id               INTEGER PRIMARY KEY AUTOINCREMENT,
+        transaction_id   INTEGER REFERENCES investment_transactions(id) ON DELETE CASCADE,
+        action           TEXT NOT NULL, -- created | updated | deleted
+        source_type      TEXT NOT NULL DEFAULT 'manual',
+        changed_fields   TEXT,          -- JSON array
+        before_json      TEXT,
+        after_json       TEXT,
+        changed_at       TEXT DEFAULT (datetime('now'))
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_inv_audit_tx_id ON investment_transaction_audit(transaction_id, changed_at DESC);
+    `);
+  },
+};
+
+const ALL_MIGRATIONS = [...migrations.filter(m => m.version === 1), MIGRATION_V2, MIGRATION_V3, MIGRATION_V4, MIGRATION_V5, MIGRATION_V6, MIGRATION_V7, MIGRATION_V8, MIGRATION_V9, MIGRATION_V10, MIGRATION_V11, MIGRATION_V12, MIGRATION_V13, MIGRATION_V14, MIGRATION_V15, MIGRATION_V16, MIGRATION_V17, MIGRATION_V18, MIGRATION_V19, MIGRATION_V20, MIGRATION_V21, MIGRATION_V22, MIGRATION_V23];
 
 function runMigrations(db) {
   db.exec(`CREATE TABLE IF NOT EXISTS schema_migrations (

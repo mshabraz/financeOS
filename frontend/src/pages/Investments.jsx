@@ -8,13 +8,14 @@ import {
 import {
   Upload, TrendingUp, TrendingDown, Wallet, ArrowRightLeft, DollarSign,
   CheckCircle, AlertCircle, Info, ChevronDown, Search, Download,
-  RefreshCw, Link2, Unlink, Loader2,
+  RefreshCw, Link2, Unlink, Loader2, Plus, Pencil, History,
 } from 'lucide-react';
 import clsx from 'clsx';
 import {
   previewInvestmentImport, commitInvestmentImport,
   getInvestmentHoldings, getInvestmentDividends,
   getInvestmentTransactions, updateInvestmentTransaction, exportInvestmentTransactionsCSV,
+  createManualInvestmentTransaction, deleteInvestmentTransaction, getInvestmentTransactionAudit,
   getInvestmentValuations, getInvestmentAnalytics, getInvestmentPriceSyncStatus, triggerInvestmentPriceSync,
   searchInvestmentSecurities, bindInvestmentSecurity,   clearInvestmentBinding, clearAutoInvestmentBindings,
   setInvestmentBrokerCash, getInvestmentMarketHealth,
@@ -27,6 +28,7 @@ import StatCard from '../components/ui/StatCard';
 import UserNoteField from '../components/transactions/UserNoteField';
 import PortfolioOverview from '../components/investments/PortfolioOverview';
 import PriceSyncCompact from '../components/investments/PriceSyncCompact';
+import ManualInvestmentTransactionModal from '../components/investments/ManualInvestmentTransactionModal';
 import { fmtCurrency, fmtNumber } from '../utils/displayFormat';
 import { usePrivacy } from '../context/PrivacyContext';
 
@@ -989,9 +991,21 @@ function InvestmentLedger({ brokerFilter }) {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [hasNotesOnly, setHasNotesOnly] = useState(false);
+  const [sourceType, setSourceType] = useState('');
+  const [manualOpen, setManualOpen] = useState(false);
+  const [editingTx, setEditingTx] = useState(null);
+  const [auditTx, setAuditTx] = useState(null);
+  const [manualFormError, setManualFormError] = useState('');
+  const brokerOptions = Object.entries(BROKER_LABELS);
+
+  const invalidateInvestmentQueries = () => {
+    ['invTx', 'invHoldings', 'invValuations', 'invAnalytics', 'invDividends', 'assets', 'yahooHealth'].forEach((k) => {
+      qc.invalidateQueries({ queryKey: [k] });
+    });
+  };
 
   const list = useQuery({
-    queryKey: ['invTx', page, search, brokerFilter, hasNotesOnly],
+    queryKey: ['invTx', page, search, brokerFilter, hasNotesOnly, sourceType],
     queryFn: () =>
       getInvestmentTransactions({
         page,
@@ -999,12 +1013,44 @@ function InvestmentLedger({ brokerFilter }) {
         search: search.trim() || undefined,
         broker: brokerFilter || undefined,
         hasNotes: hasNotesOnly ? '1' : undefined,
+        sourceType: sourceType || undefined,
       }),
   });
 
   const notesMut = useMutation({
     mutationFn: ({ id, notes }) => updateInvestmentTransaction(id, { notes }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['invTx'] }),
+  });
+  const manualMut = useMutation({
+    mutationFn: ({ id, ...body }) =>
+      id ? updateInvestmentTransaction(id, body) : createManualInvestmentTransaction(body),
+    onSuccess: (res) => {
+      if (res?.duplicateWarning) {
+        setManualFormError('Potential duplicate detected. The transaction was still saved; please verify holdings/activity.');
+      } else {
+        setManualFormError('');
+      }
+      setManualOpen(false);
+      setEditingTx(null);
+      invalidateInvestmentQueries();
+    },
+    onError: (err) => setManualFormError(err.message || 'Failed to save manual transaction'),
+  });
+  const deleteMut = useMutation({
+    mutationFn: (id) => deleteInvestmentTransaction(id),
+    onSuccess: () => {
+      setManualOpen(false);
+      setEditingTx(null);
+      setManualFormError('');
+      invalidateInvestmentQueries();
+    },
+    onError: (err) => setManualFormError(err.message || 'Failed to delete transaction'),
+  });
+
+  const auditQ = useQuery({
+    queryKey: ['invTxAudit', auditTx?.id],
+    queryFn: () => getInvestmentTransactionAudit(auditTx.id),
+    enabled: !!auditTx?.id,
   });
 
   const handleExport = async () => {
@@ -1018,19 +1064,101 @@ function InvestmentLedger({ brokerFilter }) {
   };
 
   const rows = list.data?.data ?? [];
+  const openCreate = () => {
+    setManualFormError('');
+    setEditingTx(null);
+    setManualOpen(true);
+  };
+  const openEdit = (tx) => {
+    setManualFormError('');
+    setEditingTx(tx);
+    setManualOpen(true);
+  };
+  const handleManualSubmit = async (form) => {
+    const payload = {
+      type: form.type,
+      ticker: form.ticker || null,
+      isin: form.isin || null,
+      fundName: form.fundName || null,
+      quantity: form.quantity === '' ? null : Number(form.quantity),
+      pricePerShare: form.pricePerShare === '' ? null : Number(form.pricePerShare),
+      totalCost: form.totalCost === '' ? null : Number(form.totalCost),
+      date: form.date,
+      broker: form.broker,
+      brokerAccountId: form.brokerAccountId || null,
+      fee: form.fee === '' ? 0 : Number(form.fee),
+      taxAmount: form.taxAmount === '' ? 0 : Number(form.taxAmount),
+      currency: form.currency,
+      notes: form.notes || null,
+      reference: form.reference || null,
+      rawDetails: form.rawDetails || null,
+      rawType: form.rawType || null,
+    };
+    await manualMut.mutateAsync({ id: form.id, ...payload });
+  };
+  const handleDelete = async (form) => {
+    if (!form?.id) return;
+    if (!window.confirm('Delete this manual investment transaction permanently?')) return;
+    await deleteMut.mutateAsync(form.id);
+  };
 
   return (
     <div className="space-y-4">
+      <ManualInvestmentTransactionModal
+        open={manualOpen}
+        initial={editingTx}
+        brokerOptions={brokerOptions}
+        onClose={() => { setManualOpen(false); setEditingTx(null); setManualFormError(''); }}
+        onSubmit={handleManualSubmit}
+        onDelete={handleDelete}
+        saving={manualMut.isPending}
+        deleting={deleteMut.isPending}
+      />
+      {auditTx && (
+        <div className="fixed inset-0 z-50 bg-black/50 p-3 sm:p-6 flex items-end sm:items-center justify-center" onClick={() => setAuditTx(null)}>
+          <div className="w-full max-w-2xl bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-2xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Transaction Audit History · #{auditTx.id}</h3>
+              <button type="button" className="text-gray-400 hover:text-gray-600" onClick={() => setAuditTx(null)}>Close</button>
+            </div>
+            <div className="p-4 max-h-[65vh] overflow-y-auto">
+              {auditQ.isLoading ? (
+                <LoadingSpinner />
+              ) : (
+                <div className="space-y-2">
+                  {(auditQ.data || []).map((a) => (
+                    <div key={a.id} className="rounded-lg border border-gray-200 dark:border-gray-800 p-3 text-xs">
+                      <p className="font-medium text-gray-800 dark:text-gray-200">
+                        {a.action} · {a.changed_at}
+                      </p>
+                      {!!a.changed_fields?.length && (
+                        <p className="text-gray-500 mt-1">Fields: {a.changed_fields.join(', ')}</p>
+                      )}
+                    </div>
+                  ))}
+                  {!auditQ.data?.length && <p className="text-xs text-gray-400">No audit entries yet.</p>}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
       <div className="flex flex-col sm:flex-row sm:items-center gap-3 justify-between">
         <p className="text-sm text-gray-500 dark:text-gray-400 max-w-3xl">
-          Broker trades and cash flows from your imports. Add a short note to remember what each line was for — notes stay out of calculations and duplicate detection.
+          Broker trades and cash flows from imports and manual entries. Manual rows flow through the same holdings, valuation, and analytics pipeline.
         </p>
-        <button type="button" onClick={handleExport} className="btn-secondary gap-2 w-full sm:w-auto shrink-0">
-          <Download size={15} /> Export CSV
-        </button>
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <button type="button" onClick={openCreate} className="btn-primary gap-2 w-full sm:w-auto">
+            <Plus size={15} /> Add Investment Transaction
+          </button>
+          <button type="button" onClick={handleExport} className="btn-secondary gap-2 w-full sm:w-auto shrink-0">
+            <Download size={15} /> Export CSV
+          </button>
+        </div>
       </div>
+      {manualFormError && <p className="text-xs text-red-500">{manualFormError}</p>}
       <div className="card p-4 space-y-3">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
           <div className="relative">
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
@@ -1041,6 +1169,15 @@ function InvestmentLedger({ brokerFilter }) {
               className="input pl-8 w-full"
             />
           </div>
+          <select
+            className="input w-full"
+            value={sourceType}
+            onChange={(e) => { setSourceType(e.target.value); setPage(1); }}
+          >
+            <option value="">All sources</option>
+            <option value="manual">Manual only</option>
+            <option value="imported">Imported only</option>
+          </select>
           <label className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400 cursor-pointer touch-manipulation min-h-[44px]">
             <input
               type="checkbox"
@@ -1057,10 +1194,10 @@ function InvestmentLedger({ brokerFilter }) {
           <LoadingSpinner />
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm min-w-[960px]">
+            <table className="w-full text-sm min-w-[1120px]">
               <thead className="bg-gray-50 dark:bg-gray-800/50">
                 <tr>
-                  {['Date', 'Broker', 'Type', 'Ticker', 'Net', 'Fee', 'Your note'].map((h) => (
+                  {['Date', 'Broker', 'Source', 'Type', 'Ticker', 'Net', 'Fee', 'Your note', 'Actions'].map((h) => (
                     <th key={h} className="text-left px-4 py-2.5 text-xs font-medium text-gray-500">{h}</th>
                   ))}
                 </tr>
@@ -1077,6 +1214,16 @@ function InvestmentLedger({ brokerFilter }) {
                         {BROKER_LABELS[r.broker] || r.broker}
                       </span>
                     </td>
+                    <td className="px-4 py-2.5">
+                      <span className={clsx(
+                        'text-[10px] px-1.5 py-0.5 rounded uppercase tracking-wide font-semibold',
+                        (r.manual_transaction === 1 || r.source_type === 'manual')
+                          ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300'
+                          : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300'
+                      )}>
+                        {(r.manual_transaction === 1 || r.source_type === 'manual') ? 'Manual' : 'Imported'}
+                      </span>
+                    </td>
                     <td className="px-4 py-2.5">{r.type}</td>
                     <td className="px-4 py-2.5 font-mono text-xs font-semibold text-brand-600">{r.ticker || '—'}</td>
                     <td className="px-4 py-2.5 font-medium whitespace-nowrap">{fmt(r.net_amount, r.currency)}</td>
@@ -1089,11 +1236,33 @@ function InvestmentLedger({ brokerFilter }) {
                         multiline={false}
                       />
                     </td>
+                    <td className="px-4 py-2.5">
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          className="text-xs text-gray-500 hover:text-brand-600 inline-flex items-center gap-1"
+                          onClick={() => setAuditTx(r)}
+                          title="View audit history"
+                        >
+                          <History size={12} /> History
+                        </button>
+                        {(r.manual_transaction === 1 || r.source_type === 'manual') && (
+                          <button
+                            type="button"
+                            className="text-xs text-gray-500 hover:text-brand-600 inline-flex items-center gap-1"
+                            onClick={() => openEdit(r)}
+                            title="Edit manual transaction"
+                          >
+                            <Pencil size={12} /> Edit
+                          </button>
+                        )}
+                      </div>
+                    </td>
                   </tr>
                 ))}
                 {!rows.length && (
                   <tr>
-                    <td colSpan={7} className="px-4 py-8 text-center text-sm text-gray-400">
+                    <td colSpan={9} className="px-4 py-8 text-center text-sm text-gray-400">
                       No rows match your filters.
                     </td>
                   </tr>
