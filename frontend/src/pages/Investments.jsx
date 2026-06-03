@@ -1311,6 +1311,7 @@ export default function Investments() {
   const qc = useQueryClient();
   const [searchParams] = useSearchParams();
   const initialTab = searchParams.get('tab');
+  const plannerView = searchParams.get('planner');
   const [tab,          setTab]         = useState(
     ['overview', 'holdings', 'ledger', 'dividends', 'planner', 'history', 'import'].includes(initialTab)
       ? initialTab
@@ -1472,7 +1473,7 @@ export default function Investments() {
 
       {/* ── Wealth planner (compound interest / FIRE) ── */}
       {tab === 'planner' && (
-        <CompoundPlanner brokerFilter={brokerFilter} />
+        <CompoundPlanner brokerFilter={brokerFilter} plannerView={plannerView} />
       )}
 
       {/* ── Holdings ── */}

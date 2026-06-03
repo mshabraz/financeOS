@@ -1,5 +1,4 @@
 import { useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { format, addYears } from 'date-fns';
 import { Target, Clock, PiggyBank, TrendingUp, Flag } from 'lucide-react';
@@ -34,6 +33,7 @@ export default function GoalSolverView({
   setTickerPick,
   input,
   onSyncBaseline,
+  onTrackingStarted,
 }) {
   const effectiveTarget = useMemo(
     () => resolveGoalTarget(form),
@@ -73,7 +73,6 @@ export default function GoalSolverView({
 
   const gap = Math.max(0, effectiveTarget - (form.principal || 0));
 
-  const navigate = useNavigate();
   const qc = useQueryClient();
   const trackMut = useMutation({
     mutationFn: () => {
@@ -91,7 +90,7 @@ export default function GoalSolverView({
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['wealth-goal-active'] });
-      navigate('/goals');
+      onTrackingStarted?.();
     },
   });
 
@@ -340,7 +339,7 @@ export default function GoalSolverView({
                   Track this goal over time
                 </h3>
                 <p className="text-xs text-gray-500 mb-3">
-                  Save as your active wealth goal to monitor monthly savings hits/misses, progress %, and required pace on the Goals page and Dashboard.
+                  Save as your active wealth goal to monitor monthly savings hits/misses, progress %, and required pace in Goal tracking.
                 </p>
                 <div className="flex flex-col sm:flex-row gap-2">
                   <input

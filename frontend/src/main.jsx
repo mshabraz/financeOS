@@ -15,7 +15,6 @@ import Categories   from './pages/Categories';
 import Settings     from './pages/Settings';
 import Tags         from './pages/Tags';
 import Investments from './pages/Investments';
-import WealthGoals from './pages/WealthGoals';
 import SharedExpenses from './pages/SharedExpenses';
 import SharedExpenseEvent from './pages/SharedExpenseEvent';
 import LoadingSpinner from './components/ui/LoadingSpinner';
@@ -59,7 +58,7 @@ function AppRoutes() {
           <Route path="/analytics"    element={<Analytics />} />
           <Route path="/revolut" element={<Navigate to="/transactions?tab=import" replace />} />
           <Route path="/investments"  element={<Investments />} />
-          <Route path="/goals"       element={<WealthGoals />} />
+          <Route path="/goals" element={<Navigate to="/investments?tab=planner&planner=tracking" replace />} />
           <Route path="/tags"         element={<Tags />} />
           <Route path="/categories"   element={<Categories />} />
           <Route path="/settings"     element={<Settings />} />

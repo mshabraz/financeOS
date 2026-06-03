@@ -10,15 +10,28 @@ function round2(n) {
   return Math.round(n * 100) / 100;
 }
 
+/** Accept Date, ISO date (YYYY-MM-DD), or month key (YYYY-MM). */
+function toDate(input) {
+  if (input == null || input === '') return new Date();
+  if (input instanceof Date && !Number.isNaN(input.getTime())) return input;
+  const s = String(input).trim();
+  const monthOnly = /^(\d{4})-(\d{2})$/.exec(s);
+  if (monthOnly) return new Date(Number(monthOnly[1]), Number(monthOnly[2]) - 1, 1);
+  const iso = /^(\d{4})-(\d{2})-(\d{2})/.exec(s);
+  if (iso) return new Date(Number(iso[1]), Number(iso[2]) - 1, Number(iso[3]));
+  const parsed = new Date(s);
+  return Number.isNaN(parsed.getTime()) ? new Date() : parsed;
+}
+
 function monthKey(d = new Date()) {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const date = toDate(d);
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
   return `${y}-${m}`;
 }
 
 function parseMonthKey(key) {
-  const [y, m] = String(key).split('-').map(Number);
-  return new Date(y, m - 1, 1);
+  return toDate(key);
 }
 
 function monthsBetween(startKey, endKey) {

@@ -16,7 +16,6 @@ import {
   getManualBalances, updateManualBalance, addManualBalance, deleteManualBalance,
 } from '../api/client';
 import StatCard from '../components/ui/StatCard';
-import WealthGoalWidget from '../components/wealthGoals/WealthGoalWidget';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 import { fmtEur, fmtPkr, fmtCurrency, privText, fmtPct } from '../utils/displayFormat';
 import { usePrivacy } from '../context/PrivacyContext';
@@ -316,8 +315,6 @@ export default function Dashboard() {
           <p className="page-subtitle">Your financial overview</p>
         </div>
       </div>
-
-      <WealthGoalWidget />
 
       {/* ── Total assets (bank, investments, and other balances) ── */}
       <div className="card p-5">

@@ -1,5 +1,4 @@
 import { useState, useMemo } from 'react';
-import { Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -18,11 +17,11 @@ import {
   updateWealthGoal,
   deleteWealthGoal,
   getInvestmentPlannerBaseline,
-} from '../api/client';
-import StatCard from '../components/ui/StatCard';
-import LoadingSpinner from '../components/ui/LoadingSpinner';
-import { fmtEur, fmtPct } from '../utils/displayFormat';
-import { usePrivacy } from '../context/PrivacyContext';
+} from '../../api/client';
+import StatCard from '../ui/StatCard';
+import LoadingSpinner from '../ui/LoadingSpinner';
+import { fmtEur, fmtPct } from '../../utils/displayFormat';
+import { usePrivacy } from '../../context/PrivacyContext';
 
 const BASIS_OPTIONS = [
   { id: 'portfolio', label: 'Portfolio (holdings + cash)' },
@@ -49,7 +48,7 @@ function defaultForm() {
   };
 }
 
-export default function WealthGoals() {
+export default function WealthGoalTracking() {
   usePrivacy();
   const qc = useQueryClient();
   const [editing, setEditing] = useState(false);
@@ -160,32 +159,20 @@ export default function WealthGoals() {
 
   return (
     <div className="space-y-6">
-      <div className="page-header flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-        <div>
-          <h1 className="page-title flex items-center gap-2">
-            <Target className="text-brand-600" size={28} />
-            Wealth goals
-          </h1>
-          <p className="page-subtitle">
-            Set a long-term target, track progress against your portfolio, and see whether monthly investment savings keep you on pace.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {hasGoal && (
-            <>
-              <button type="button" onClick={startEdit} className="btn-secondary text-sm">
-                Edit goal
-              </button>
-              <button type="button" onClick={() => archiveMut.mutate()} className="btn-secondary text-sm">
-                Archive & set new
-              </button>
-            </>
-          )}
-          <Link to="/investments?tab=planner" className="btn-secondary text-sm inline-flex items-center gap-1">
-            <LineChart size={16} />
-            Wealth planner
-          </Link>
-        </div>
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+        <p className="text-sm text-gray-600 dark:text-gray-400">
+          Set a long-term target and track monthly investment savings (Buy + Deposit) against the pace you need to reach it.
+        </p>
+        {hasGoal && !editing && (
+          <div className="flex flex-wrap gap-2 shrink-0">
+            <button type="button" onClick={startEdit} className="btn-secondary text-sm">
+              Edit goal
+            </button>
+            <button type="button" onClick={() => archiveMut.mutate()} className="btn-secondary text-sm">
+              Archive & set new
+            </button>
+          </div>
+        )}
       </div>
 
       {(!hasGoal || editing) && (

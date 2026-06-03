@@ -6,7 +6,7 @@ import {
 } from 'recharts';
 import {
   Calculator, Target, TrendingUp, Sparkles, Save, Download, RefreshCw,
-  ChevronDown, ChevronUp, Wallet, PiggyBank,
+  ChevronDown, ChevronUp, Wallet, PiggyBank, Flag,
 } from 'lucide-react';
 import clsx from 'clsx';
 import {
@@ -24,6 +24,7 @@ import LoadingSpinner from '../ui/LoadingSpinner';
 import NumericField from './plannerNumericField';
 import PlannerBasisFields from './PlannerBasisFields';
 import GoalSolverView from './GoalSolverView';
+import WealthGoalTracking from '../wealthGoals/WealthGoalTracking';
 
 function toPlannerInput(form, withdrawalStartYear) {
   return {
@@ -54,12 +55,25 @@ function toPlannerInput(form, withdrawalStartYear) {
   };
 }
 
-export default function CompoundPlanner({ brokerFilter = '' }) {
+const PLANNER_MODES = [
+  { id: 'project', label: 'Forward projection', icon: TrendingUp },
+  { id: 'goal', label: 'Goal solver', icon: Target },
+  { id: 'tracking', label: 'Goal tracking', icon: Flag },
+];
+
+export default function CompoundPlanner({ brokerFilter = '', plannerView }) {
   const qc = useQueryClient();
-  const [form, setForm] = useState({ ...DEFAULT_PLANNER });
+  const initialMode = ['project', 'goal', 'tracking'].includes(plannerView) ? plannerView : DEFAULT_PLANNER.mode;
+  const [form, setForm] = useState({ ...DEFAULT_PLANNER, mode: initialMode });
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [showSaved, setShowSaved] = useState(false);
   const [tickerPick, setTickerPick] = useState([]);
+
+  useEffect(() => {
+    if (plannerView && ['project', 'goal', 'tracking'].includes(plannerView)) {
+      setForm((f) => (f.mode === plannerView ? f : { ...f, mode: plannerView }));
+    }
+  }, [plannerView]);
 
   const plannerBrokerParam =
     form.basis === 'broker' ? form.plannerBroker : brokerFilter || '';
@@ -258,10 +272,7 @@ export default function CompoundPlanner({ brokerFilter = '' }) {
       )}
 
       <div className="flex flex-wrap gap-2">
-        {[
-          { id: 'project', label: 'Forward projection', icon: TrendingUp },
-          { id: 'goal', label: 'Goal solver', icon: Target },
-        ].map(({ id, label, icon: Icon }) => (
+        {PLANNER_MODES.map(({ id, label, icon: Icon }) => (
           <button
             key={id}
             type="button"
@@ -278,7 +289,9 @@ export default function CompoundPlanner({ brokerFilter = '' }) {
         ))}
       </div>
 
-      {form.mode === 'goal' ? (
+      {form.mode === 'tracking' ? (
+        <WealthGoalTracking />
+      ) : form.mode === 'goal' ? (
         <GoalSolverView
           form={form}
           setField={set}
@@ -288,6 +301,7 @@ export default function CompoundPlanner({ brokerFilter = '' }) {
           setTickerPick={setTickerPick}
           input={input}
           onSyncBaseline={syncBaseline}
+          onTrackingStarted={() => set('mode', 'tracking')}
         />
       ) : (
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
