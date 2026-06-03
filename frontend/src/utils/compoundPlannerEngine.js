@@ -267,10 +267,10 @@ function formatEur(n) {
 
 export const BASIS_OPTIONS = [
   { id: 'manual', label: 'Manual input' },
-  { id: 'portfolio', label: 'Full portfolio' },
-  { id: 'portfolio_no_cash', label: 'Investments excl. cash' },
-  { id: 'net_worth', label: 'Full net worth' },
-  { id: 'broker', label: 'Selected broker' },
+  { id: 'portfolio', label: 'Investment portfolio (total)' },
+  { id: 'portfolio_no_cash', label: 'Holdings only (excl. cash)' },
+  { id: 'net_worth', label: 'Total assets (Dashboard)' },
+  { id: 'broker', label: 'Selected broker filter' },
   { id: 'tickers', label: 'Selected tickers' },
 ];
 

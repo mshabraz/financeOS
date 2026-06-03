@@ -1,12 +1,14 @@
 /**
  * Load starting balances and contribution history from FinanceOS for the wealth planner.
  */
-const { computeHoldings } = require('./investmentHoldings');
 const { buildPortfolioValuation } = require('./investmentValuation');
+const { computeAssetTotals } = require('./assetTotals');
 
 async function getPlannerBaseline(db, options = {}) {
   const { broker = '', tickers = [], excludeCash = false } = options;
   const tickerSet = tickers.length ? new Set(tickers.map((t) => String(t).toUpperCase())) : null;
+
+  const assets = await computeAssetTotals(db);
 
   let valuation = null;
   try {
@@ -26,25 +28,13 @@ async function getPlannerBaseline(db, options = {}) {
     cashBalance = 0;
   }
 
-  const portfolioTotal = excludeCash ? holdingsValue : (p.totalPortfolio ?? holdingsValue + cashBalance);
+  const portfolioTotal = excludeCash
+    ? holdingsValue
+    : (p.totalPortfolio ?? holdingsValue + cashBalance);
 
-  const bankRow = db.prepare(
-    `SELECT SUM(amount) AS total
-     FROM account_balances ab1
-     WHERE balance_type = 'closing'
-       AND id = (
-         SELECT id FROM account_balances ab2
-         WHERE ab2.account = ab1.account AND ab2.balance_type = 'closing'
-         ORDER BY balance_date DESC LIMIT 1
-       )`
-  ).get();
-
-  const manuals = db.prepare(
-    "SELECT key, amount, currency FROM manual_balances WHERE key != 'investment_cash'"
-  ).all();
-  const manualTotal = manuals.reduce((s, r) => s + (r.amount || 0), 0);
-  const bankBalance = bankRow?.total ?? 0;
-  const netWorth = bankBalance + manualTotal + portfolioTotal;
+  // Match Dashboard "Total assets" — never add portfolio on top of manual "investments" row
+  const totalAssets = assets.totalAssets;
+  const netWorth = totalAssets;
 
   const contribHistory = db.prepare(`
     SELECT strftime('%Y-%m', date) AS month,
@@ -87,8 +77,11 @@ async function getPlannerBaseline(db, options = {}) {
     portfolioTotal: Math.round(portfolioTotal * 100) / 100,
     holdingsValue: Math.round(holdingsValue * 100) / 100,
     cashBalance: Math.round(cashBalance * 100) / 100,
-    netWorth: Math.round(netWorth * 100) / 100,
-    bankBalance: Math.round(bankBalance * 100) / 100,
+    totalAssets,
+    netWorth,
+    bankBalance: assets.bankBalance,
+    manualAssetsTotal: assets.manualTotal,
+    revolutSharedAsset: assets.revolutSharedAsset,
     avgMonthlyContribution,
     dividendTrailing12m: Math.round(dividendAnnual * 100) / 100,
     contributionHistory: contribHistory.reverse(),

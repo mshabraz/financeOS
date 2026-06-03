@@ -23,41 +23,53 @@ import {
 import { fmtEur, fmtPct } from '../../utils/investmentFormat';
 import LoadingSpinner from '../ui/LoadingSpinner';
 
-function SliderField({ label, value, onChange, min, max, step = 1, format = (v) => v, unit = '' }) {
-  return (
-    <div className="space-y-1">
-      <div className="flex justify-between text-xs">
-        <span className="text-gray-500 dark:text-gray-400">{label}</span>
-        <span className="font-medium text-gray-800 dark:text-gray-200 tabular-nums">
-          {format(value)}{unit}
-        </span>
-      </div>
-      <input
-        type="range"
-        min={min}
-        max={max}
-        step={step}
-        value={value}
-        onChange={(e) => onChange(Number(e.target.value))}
-        className="w-full accent-brand-600"
-      />
-    </div>
-  );
-}
+function NumericField({
+  label,
+  value,
+  onChange,
+  min = 0,
+  max,
+  step = 1,
+  unit = '',
+  showSlider = false,
+}) {
+  const handleNum = (raw) => {
+    if (raw === '' || raw == null) {
+      onChange(0);
+      return;
+    }
+    const v = Number(raw);
+    if (!Number.isNaN(v)) onChange(v);
+  };
 
-function NumInput({ label, value, onChange, step = 1, min, className }) {
   return (
-    <label className={clsx('block text-xs', className)}>
-      <span className="text-gray-500 dark:text-gray-400">{label}</span>
-      <input
-        type="number"
-        step={step}
-        min={min}
-        value={value}
-        onChange={(e) => onChange(Number(e.target.value))}
-        className="input w-full mt-1 text-sm tabular-nums"
-      />
-    </label>
+    <div className="space-y-1.5">
+      <label className="block text-xs text-gray-500 dark:text-gray-400">{label}</label>
+      <div className="flex items-center gap-2">
+        <input
+          type="number"
+          inputMode="decimal"
+          min={min}
+          max={max}
+          step={step}
+          value={value ?? 0}
+          onChange={(e) => handleNum(e.target.value)}
+          className="input w-full text-sm tabular-nums"
+        />
+        {unit && <span className="text-xs text-gray-400 shrink-0">{unit}</span>}
+      </div>
+      {showSlider && max != null && (
+        <input
+          type="range"
+          min={min}
+          max={max}
+          step={step}
+          value={Math.min(max, Math.max(min, value ?? 0))}
+          onChange={(e) => onChange(Number(e.target.value))}
+          className="w-full accent-brand-600 h-1"
+        />
+      )}
+    </div>
   );
 }
 
@@ -129,7 +141,7 @@ export default function CompoundPlanner({ brokerFilter = '' }) {
     let principal = DEFAULT_PLANNER.principal;
     if (basis === 'portfolio') principal = baseline.portfolioTotal;
     else if (basis === 'portfolio_no_cash') principal = baseline.holdingsValue;
-    else if (basis === 'net_worth') principal = baseline.netWorth;
+    else if (basis === 'net_worth') principal = baseline.totalAssets ?? baseline.netWorth;
     const monthly =
       baseline.avgMonthlyContribution > 0 ? baseline.avgMonthlyContribution : DEFAULT_PLANNER.monthlyContribution;
     setForm((f) => ({ ...f, basis, principal, monthlyContribution: monthly }));
@@ -151,12 +163,12 @@ export default function CompoundPlanner({ brokerFilter = '' }) {
   const projection = useMemo(() => runProjection(input), [input]);
   const goal = useMemo(() => {
     if (form.mode !== 'goal') return null;
-    const target =
-      form.goalType === 'passive_income' || form.goalType === 'fire'
-        ? portfolioForPassiveIncome(form.targetMonthlyIncome, form.safeWithdrawalRate)
-        : form.targetValue;
+    let target = form.targetValue;
+    if (form.goalType === 'passive_income' || form.goalType === 'fire') {
+      target = portfolioForPassiveIncome(form.targetMonthlyIncome, form.safeWithdrawalRate);
+    }
     if (target <= 0) return null;
-    return runGoalSolver({ ...input, targetValue: target });
+    return runGoalSolver({ ...input, targetValue: target, goalType: form.goalType });
   }, [input, form.mode, form.goalType, form.targetValue, form.targetMonthlyIncome, form.safeWithdrawalRate]);
 
   const activeProjection = goal?.projectionAtRequired || projection;
@@ -330,58 +342,59 @@ export default function CompoundPlanner({ brokerFilter = '' }) {
             )}
             {baselineQ.isLoading && <p className="text-xs text-gray-400">Loading portfolio…</p>}
             {baselineQ.data && form.basis !== 'manual' && (
-              <p className="text-[10px] text-gray-400">
-                Live: portfolio {fmtEur(baselineQ.data.portfolioTotal)} · net worth {fmtEur(baselineQ.data.netWorth)}
+              <p className="text-[10px] text-gray-400 leading-relaxed">
+                Live: portfolio {fmtEur(baselineQ.data.portfolioTotal)} · total assets{' '}
+                {fmtEur(baselineQ.data.totalAssets ?? baselineQ.data.netWorth)}
                 {baselineQ.data.avgMonthlyContribution > 0 && (
                   <> · avg contrib {fmtEur(baselineQ.data.avgMonthlyContribution)}/mo</>
                 )}
               </p>
             )}
-            <SliderField
-              label="Starting capital"
+            <NumericField
+              label="Starting capital (€)"
               value={form.principal}
               onChange={(v) => set('principal', v)}
               min={0}
-              max={2000000}
-              step={1000}
-              format={fmtEur}
+              step={100}
             />
           </div>
 
           <div className="card p-4 space-y-3">
             <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-500">Contributions</h3>
-            <SliderField
-              label="Monthly"
+            <NumericField
+              label="Monthly contribution (€)"
               value={form.monthlyContribution}
               onChange={(v) => set('monthlyContribution', v)}
               min={0}
-              max={10000}
-              step={50}
-              format={fmtEur}
+              step={10}
             />
-            <NumInput label="Yearly lump sum" value={form.yearlyContribution} onChange={(v) => set('yearlyContribution', v)} />
-            <SliderField
-              label="Contribution growth / year"
+            <NumericField
+              label="Yearly lump sum (€)"
+              value={form.yearlyContribution}
+              onChange={(v) => set('yearlyContribution', v)}
+              min={0}
+              step={100}
+            />
+            <NumericField
+              label="Contribution growth per year"
               value={form.contributionGrowthRate}
               onChange={(v) => set('contributionGrowthRate', v)}
               min={0}
-              max={15}
-              step={0.5}
-              format={(v) => v}
+              max={30}
+              step={0.1}
               unit="%"
             />
           </div>
 
           <div className="card p-4 space-y-3">
             <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-500">Returns & time</h3>
-            <SliderField
-              label="Expected return / year"
+            <NumericField
+              label="Expected return per year"
               value={form.annualReturn}
               onChange={(v) => set('annualReturn', v)}
-              min={0}
-              max={20}
-              step={0.25}
-              format={(v) => v}
+              min={-20}
+              max={30}
+              step={0.1}
               unit="%"
             />
             <select className="input w-full text-sm" value={form.timeMode} onChange={(e) => set('timeMode', e.target.value)}>
@@ -390,20 +403,19 @@ export default function CompoundPlanner({ brokerFilter = '' }) {
               <option value="date">End date</option>
             </select>
             {form.timeMode === 'years' && (
-              <SliderField
+              <NumericField
                 label="Years"
                 value={form.years}
                 onChange={(v) => set('years', v)}
                 min={1}
-                max={50}
+                max={80}
                 step={1}
-                format={(v) => v}
               />
             )}
             {form.timeMode === 'age' && (
               <div className="grid grid-cols-2 gap-2">
-                <NumInput label="Current age" value={form.currentAge} onChange={(v) => set('currentAge', v)} />
-                <NumInput label="Target age" value={form.targetAge ?? 65} onChange={(v) => set('targetAge', v)} />
+                <NumericField label="Current age" value={form.currentAge} onChange={(v) => set('currentAge', v)} min={16} max={100} step={1} />
+                <NumericField label="Target age" value={form.targetAge ?? 65} onChange={(v) => set('targetAge', v)} min={18} max={100} step={1} />
               </div>
             )}
             {form.timeMode === 'date' && (
@@ -427,35 +439,30 @@ export default function CompoundPlanner({ brokerFilter = '' }) {
               </select>
               {(form.goalType === 'passive_income' || form.goalType === 'fire') ? (
                 <>
-                  <SliderField
-                    label="Target monthly income"
+                  <NumericField
+                    label="Target monthly income (€)"
                     value={form.targetMonthlyIncome}
                     onChange={(v) => set('targetMonthlyIncome', v)}
-                    min={500}
-                    max={20000}
-                    step={100}
-                    format={fmtEur}
+                    min={0}
+                    step={50}
                   />
-                  <SliderField
+                  <NumericField
                     label="Safe withdrawal rate"
                     value={form.safeWithdrawalRate}
                     onChange={(v) => set('safeWithdrawalRate', v)}
-                    min={3}
-                    max={5}
+                    min={2}
+                    max={8}
                     step={0.1}
-                    format={(v) => v}
                     unit="%"
                   />
                 </>
               ) : (
-                <SliderField
-                  label="Target amount"
+                <NumericField
+                  label="Target amount (€)"
                   value={form.targetValue}
                   onChange={(v) => set('targetValue', v)}
-                  min={10000}
-                  max={5000000}
-                  step={10000}
-                  format={fmtEur}
+                  min={0}
+                  step={1000}
                 />
               )}
               <select className="input w-full text-sm" value={form.solveFor} onChange={(e) => set('solveFor', e.target.value)}>
@@ -476,9 +483,9 @@ export default function CompoundPlanner({ brokerFilter = '' }) {
           </button>
           {showAdvanced && (
             <div className="card p-4 space-y-3">
-              <SliderField label="Inflation" value={form.inflationRate} onChange={(v) => set('inflationRate', v)} min={0} max={10} step={0.1} format={(v) => v} unit="%" />
-              <SliderField label="Tax drag" value={form.taxDrag} onChange={(v) => set('taxDrag', v)} min={0} max={40} step={1} format={(v) => v} unit="%" />
-              <SliderField label="Fee drag" value={form.feeDrag} onChange={(v) => set('feeDrag', v)} min={0} max={3} step={0.05} format={(v) => v} unit="%" />
+              <NumericField label="Inflation" value={form.inflationRate} onChange={(v) => set('inflationRate', v)} min={0} max={20} step={0.1} unit="%" />
+              <NumericField label="Tax drag" value={form.taxDrag} onChange={(v) => set('taxDrag', v)} min={0} max={50} step={0.5} unit="%" />
+              <NumericField label="Fee drag" value={form.feeDrag} onChange={(v) => set('feeDrag', v)} min={0} max={5} step={0.05} unit="%" />
               <label className="flex items-center gap-2 text-xs">
                 <input type="checkbox" checked={form.useRealReturns} onChange={(e) => set('useRealReturns', e.target.checked)} />
                 Use inflation-adjusted (real) returns
@@ -487,8 +494,8 @@ export default function CompoundPlanner({ brokerFilter = '' }) {
                 <input type="checkbox" checked={form.dividendReinvest} onChange={(e) => set('dividendReinvest', e.target.checked)} />
                 Dividend reinvestment
               </label>
-              <NumInput label="Retirement draw / month" value={form.withdrawalMonthly} onChange={(v) => set('withdrawalMonthly', v)} />
-              <NumInput label="Draw starts after year" value={form.withdrawalStartYear ?? ''} onChange={(v) => set('withdrawalStartYear', v || null)} />
+              <NumericField label="Retirement draw / month (€)" value={form.withdrawalMonthly} onChange={(v) => set('withdrawalMonthly', v)} min={0} step={50} />
+              <NumericField label="Draw starts after year" value={form.withdrawalStartYear ?? 0} onChange={(v) => set('withdrawalStartYear', v || null)} min={0} max={80} step={1} />
             </div>
           )}
         </div>

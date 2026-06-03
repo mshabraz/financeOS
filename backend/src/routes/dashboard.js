@@ -373,100 +373,77 @@ router.delete('/manual-balances/:key', (req, res) => {
 
 router.get('/assets', async (req, res) => {
   const db = getDb();
-  const { getRevolutExpenseSplitRatio } = require('../services/revolutCalculations');
+  const { computeAssetTotals } = require('../services/assetTotals');
 
-  const bankRow = db.prepare(
-    `SELECT SUM(amount) AS total
-     FROM account_balances ab1
-     WHERE balance_type = 'closing'
-       AND id = (
-         SELECT id FROM account_balances ab2
-         WHERE ab2.account = ab1.account AND ab2.balance_type = 'closing'
-         ORDER BY balance_date DESC LIMIT 1
-       )`
-  ).get();
-
-  const allManuals = db.prepare('SELECT key, label, icon, amount, currency FROM manual_balances').all();
-  const investmentCashRow = allManuals.find((r) => r.key === 'investment_cash');
-  const manuals = allManuals.filter((r) => r.key !== 'investment_cash');
-
-  const revolutLatest = db.prepare(
-    `SELECT balance_after, date, product, currency
-     FROM revolut_transactions
-     WHERE balance_after IS NOT NULL
-     ORDER BY COALESCE(completed_datetime, date) DESC, id DESC
-     LIMIT 1`
-  ).get();
-
-  const splitRatio = getRevolutExpenseSplitRatio(db);
-  const revolutClosingBalance = revolutLatest?.balance_after ?? null;
-  const revolutSharedAsset =
-    revolutClosingBalance != null ? Math.round(revolutClosingBalance * splitRatio * 100) / 100 : 0;
-
-  const bankBalance = bankRow?.total ?? 0;
+  const totals = await computeAssetTotals(db);
+  const {
+    bankBalance,
+    manualTotal,
+    revolutSharedAsset,
+    totalAssets,
+    investmentPortfolio: portfolioBase,
+    manuals: manualsWithPortfolio,
+    revolutClosingBalance,
+    revolutSplitRatio: splitRatio,
+  } = totals;
 
   let investmentPortfolio = null;
-  try {
-    const { buildPortfolioValuation } = require('../services/investmentValuation');
-    const val = await buildPortfolioValuation(db);
-    const p = val.primary || {};
-    const holdingsValue = p.holdingsValue ?? 0;
-    const cashBalance = p.cashBalance ?? val.manualCash?.amountEur ?? 0;
-    let unrealizedPnLEur = 0;
-    let totalCostBasisEur = 0;
-    for (const h of val.openHoldings || []) {
-      if (h.unrealizedPnLEur != null) unrealizedPnLEur += h.unrealizedPnLEur;
-      if (h.costBasisEur != null) totalCostBasisEur += h.costBasisEur;
-    }
-    const unrealizedPnLPct =
-      totalCostBasisEur > 0 ? (unrealizedPnLEur / totalCostBasisEur) * 100 : null;
-
-    let sparkline = [];
-    let allocationSnapshot = [];
+  if (portfolioBase) {
     try {
-      const { buildPortfolioAnalytics } = require('../services/investmentPortfolioAnalytics');
-      const analytics = await buildPortfolioAnalytics(db, { period: '3M' });
-      sparkline = analytics.sparkline || [];
-      allocationSnapshot = (analytics.allocations?.assetClass || []).slice(0, 6);
-    } catch {
-      /* optional enrichment */
-    }
+      const { buildPortfolioValuation } = require('../services/investmentValuation');
+      const val = await buildPortfolioValuation(db);
+      const p = val.primary || {};
+      let unrealizedPnLEur = 0;
+      let totalCostBasisEur = 0;
+      for (const h of val.openHoldings || []) {
+        if (h.unrealizedPnLEur != null) unrealizedPnLEur += h.unrealizedPnLEur;
+        if (h.costBasisEur != null) totalCostBasisEur += h.costBasisEur;
+      }
+      const unrealizedPnLPct =
+        totalCostBasisEur > 0 ? (unrealizedPnLEur / totalCostBasisEur) * 100 : null;
 
-    investmentPortfolio = {
-      currency: 'EUR',
-      holdingsValue,
-      cashBalance,
-      totalPortfolio: p.totalPortfolio ?? holdingsValue + cashBalance,
-      byCurrency: val.byCurrency || [],
-      lastPriceUpdate: val.sync?.last_success_at ?? null,
-      syncStatus: val.sync?.status ?? 'idle',
-      syncError: val.sync?.last_error ?? null,
-      unboundCount: val.unboundCount ?? 0,
-      openPositions: val.openHoldings?.length ?? 0,
-      pricedPositions: val.openHoldings?.filter((h) => h.priceStatus === 'ok').length ?? 0,
-      needsQuantityCount: val.needsQuantityCount ?? 0,
-      unrealizedPnLEur: Math.round(unrealizedPnLEur * 100) / 100,
-      unrealizedPnLPct:
-        unrealizedPnLPct != null ? Math.round(unrealizedPnLPct * 100) / 100 : null,
-      sparkline,
-      allocationSnapshot,
-    };
-  } catch (e) {
-    investmentPortfolio = null;
+      let sparkline = [];
+      let allocationSnapshot = [];
+      try {
+        const { buildPortfolioAnalytics } = require('../services/investmentPortfolioAnalytics');
+        const analytics = await buildPortfolioAnalytics(db, { period: '3M' });
+        sparkline = analytics.sparkline || [];
+        allocationSnapshot = (analytics.allocations?.assetClass || []).slice(0, 6);
+      } catch {
+        /* optional enrichment */
+      }
+
+      investmentPortfolio = {
+        currency: 'EUR',
+        holdingsValue: portfolioBase.holdingsValue,
+        cashBalance: portfolioBase.cashBalance,
+        totalPortfolio: portfolioBase.totalPortfolio,
+        byCurrency: val.byCurrency || [],
+        lastPriceUpdate: val.sync?.last_success_at ?? null,
+        syncStatus: val.sync?.status ?? 'idle',
+        syncError: val.sync?.last_error ?? null,
+        unboundCount: val.unboundCount ?? 0,
+        openPositions: val.openHoldings?.length ?? 0,
+        pricedPositions: val.openHoldings?.filter((h) => h.priceStatus === 'ok').length ?? 0,
+        needsQuantityCount: val.needsQuantityCount ?? 0,
+        unrealizedPnLEur: Math.round(unrealizedPnLEur * 100) / 100,
+        unrealizedPnLPct:
+          unrealizedPnLPct != null ? Math.round(unrealizedPnLPct * 100) / 100 : null,
+        sparkline,
+        allocationSnapshot,
+      };
+    } catch (e) {
+      investmentPortfolio = {
+        currency: 'EUR',
+        ...portfolioBase,
+      };
+    }
   }
 
-  const manualsWithPortfolio = manuals.map((row) => {
+  const manualsEnriched = manualsWithPortfolio.map((row) => {
     if (row.key !== 'investments' || !investmentPortfolio) return row;
-    return {
-      ...row,
-      amount: investmentPortfolio.totalPortfolio,
-      computed: true,
-      portfolio: investmentPortfolio,
-    };
+    return { ...row, portfolio: investmentPortfolio };
   });
-
-  const manualTotal = manualsWithPortfolio.reduce((s, r) => s + (r.amount || 0), 0);
-  const totalAssets = bankBalance + manualTotal + revolutSharedAsset;
 
   const { getPerEurRates, convertFromEur, FALLBACK_PER_EUR } = require('../services/fxRates');
   let perEur = { EUR: 1, PKR: FALLBACK_PER_EUR.PKR };
@@ -485,9 +462,17 @@ router.get('/assets', async (req, res) => {
     convertFromEur(totalAssets, 'PKR', perEur) ??
     Math.round(totalAssets * eurToPkrRate * 100) / 100;
 
+  const revolutLatest = db.prepare(
+    `SELECT balance_after, date, product, currency
+     FROM revolut_transactions
+     WHERE balance_after IS NOT NULL
+     ORDER BY COALESCE(completed_datetime, date) DESC, id DESC
+     LIMIT 1`
+  ).get();
+
   res.json({
     bankBalance,
-    manuals: manualsWithPortfolio,
+    manuals: manualsEnriched,
     manualTotal,
     investmentPortfolio,
     revolutClosingBalance,
