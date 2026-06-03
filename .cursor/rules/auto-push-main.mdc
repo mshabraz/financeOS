@@ -1,0 +1,19 @@
+---
+description: Push completed FinanceOS work to main without waiting for the user to ask
+alwaysApply: true
+---
+
+# Auto-push to main
+
+After you finish a coherent batch of work in this repository (features, fixes, refactors, or docs the user requested):
+
+1. Ensure the frontend builds if you changed `frontend/` (`npm run build` from repo root when practical).
+2. Stage only files that belong to the change (never commit secrets, `*.db`, `finance.zip`, analysis dumps, or local-only packs).
+3. Commit with a clear message following existing style (`fix:`, `feat:`, etc.).
+4. **Push to `origin main` immediately** — do not wait for the user to say "push".
+
+Skip push only when:
+- The user explicitly says not to push, or only wants a local preview.
+- There are no commits to push, or push would fail and you have not fixed it yet (report the blocker).
+
+If deploy is relevant, mention that LAN/cloud deploy may follow via existing GitHub workflows after push.
