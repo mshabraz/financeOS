@@ -85,11 +85,11 @@ export default function GoalSolverView({
         basis: mapBasisForTracking(form.basis),
         broker: form.basis === 'broker' ? form.plannerBroker || '' : '',
         annualReturn: form.annualReturn ?? 7,
-        setActive: true,
       });
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['wealth-goal-active'] });
+      qc.invalidateQueries({ queryKey: ['wealth-goals'] });
+      qc.invalidateQueries({ queryKey: ['wealth-goal-progress'] });
       onTrackingStarted?.();
     },
   });

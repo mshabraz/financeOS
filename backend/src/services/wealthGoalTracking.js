@@ -185,7 +185,8 @@ function buildMonthlyProgress(goal, contribMap, requiredMonthly, fromMonth, toMo
   };
 }
 
-async function buildGoalProgress(db, goal) {
+async function buildGoalProgress(db, goalIn) {
+  let goal = goalIn;
   const currentValue =
     goal.basis === 'manual'
       ? goal.starting_amount
@@ -240,7 +241,15 @@ async function buildGoalProgress(db, goal) {
         ? 'on_track'
         : 'behind';
 
-  const completed = currentValue >= goal.target_amount;
+  let completed = currentValue >= goal.target_amount;
+
+  if (completed && goal.status === 'active') {
+    db.prepare(
+      "UPDATE wealth_goals SET status = 'achieved', updated_at = datetime('now') WHERE id = ?"
+    ).run(goal.id);
+    goal = db.prepare('SELECT * FROM wealth_goals WHERE id = ?').get(goal.id);
+    completed = true;
+  }
 
   return {
     goal: serializeGoal(goal),
@@ -311,25 +320,22 @@ function getActiveGoal(db) {
   ).get();
 }
 
-function listGoals(db, { activeOnly = false } = {}) {
-  if (activeOnly) {
+function listGoals(db, { status } = {}) {
+  if (status === 'active') {
     return db.prepare(
       "SELECT * FROM wealth_goals WHERE status = 'active' ORDER BY updated_at DESC"
+    ).all();
+  }
+  if (status === 'archived') {
+    return db.prepare(
+      "SELECT * FROM wealth_goals WHERE status IN ('archived', 'achieved') ORDER BY updated_at DESC"
     ).all();
   }
   return db.prepare('SELECT * FROM wealth_goals ORDER BY updated_at DESC').all();
 }
 
-function deleteArchivedGoals(db) {
-  return db.prepare("DELETE FROM wealth_goals WHERE status != 'active'").run();
-}
-
-function deactivateOthers(db, exceptId = null) {
-  if (exceptId) {
-    db.prepare('DELETE FROM wealth_goals WHERE id != ?').run(exceptId);
-  } else {
-    db.prepare('DELETE FROM wealth_goals').run();
-  }
+function getGoalById(db, id) {
+  return db.prepare('SELECT * FROM wealth_goals WHERE id = ?').get(id);
 }
 
 async function createGoal(db, body) {
@@ -343,7 +349,6 @@ async function createGoal(db, body) {
     annualReturn = 7,
     contributionGrowth = 0,
     notes = null,
-    setActive = true,
   } = body;
 
   if (!name || !targetAmount) throw new Error('name and targetAmount required');
@@ -353,8 +358,6 @@ async function createGoal(db, body) {
     const cur = await resolveCurrentValue(db, basis, broker || '');
     startingAmount = cur ?? 0;
   }
-
-  if (setActive) deactivateOthers(db);
 
   const trackingStart = monthKey();
   const result = db.prepare(`
@@ -371,7 +374,7 @@ async function createGoal(db, body) {
     broker || null,
     annualReturn,
     contributionGrowth,
-    setActive ? 'active' : 'paused',
+    'active',
     notes,
     trackingStart
   );
@@ -388,8 +391,6 @@ async function createGoalAndProgress(db, body) {
 function updateGoal(db, id, body) {
   const existing = db.prepare('SELECT * FROM wealth_goals WHERE id = ?').get(id);
   if (!existing) return null;
-
-  if (body.status === 'active') deactivateOthers(db, id);
 
   db.prepare(`
     UPDATE wealth_goals SET
@@ -434,7 +435,7 @@ module.exports = {
   createGoalAndProgress,
   updateGoal,
   deleteGoal,
-  deleteArchivedGoals,
+  getGoalById,
   serializeGoal,
   resolveCurrentValue,
   monthKey,

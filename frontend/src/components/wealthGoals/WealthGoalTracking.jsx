@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -6,12 +6,13 @@ import {
 } from 'recharts';
 import {
   Target, PiggyBank, Calendar, TrendingUp, TrendingDown, CheckCircle2, XCircle,
-  Flame, LineChart, Trash2, Save, RefreshCw,
+  Flame, LineChart, Trash2, Save, RefreshCw, Plus, Archive,
 } from 'lucide-react';
 import clsx from 'clsx';
 import { format, addYears } from 'date-fns';
 import {
-  getActiveWealthGoal,
+  getWealthGoals,
+  getWealthGoalProgress,
   createWealthGoal,
   updateWealthGoal,
   deleteWealthGoal,
@@ -47,59 +48,99 @@ function defaultForm() {
   };
 }
 
+function statusLabel(status) {
+  if (status === 'achieved') return 'Achieved';
+  if (status === 'archived') return 'Archived';
+  return 'Active';
+}
+
 export default function WealthGoalTracking() {
   usePrivacy();
   const qc = useQueryClient();
-  const [editing, setEditing] = useState(false);
+  const [panel, setPanel] = useState('track');
+  const [selectedId, setSelectedId] = useState(null);
   const [form, setForm] = useState(defaultForm);
 
-  const activeQ = useQuery({
-    queryKey: ['wealth-goal-active'],
-    queryFn: getActiveWealthGoal,
+  const activeGoalsQ = useQuery({
+    queryKey: ['wealth-goals', 'active'],
+    queryFn: () => getWealthGoals({ status: 'active' }),
+  });
+
+  const archivesQ = useQuery({
+    queryKey: ['wealth-goals', 'archived'],
+    queryFn: () => getWealthGoals({ status: 'archived' }),
+  });
+
+  const activeGoals = activeGoalsQ.data ?? [];
+  const archives = archivesQ.data ?? [];
+
+  useEffect(() => {
+    if (panel !== 'track') return;
+    if (selectedId != null) return;
+    if (activeGoals.length) setSelectedId(activeGoals[0].id);
+  }, [activeGoals, selectedId, panel]);
+
+  useEffect(() => {
+    if (panel !== 'track' || selectedId == null) return;
+    const stillExists =
+      activeGoals.some((g) => g.id === selectedId) ||
+      archives.some((g) => g.id === selectedId);
+    if (!stillExists) {
+      setSelectedId(activeGoals[0]?.id ?? null);
+    }
+  }, [activeGoals, archives, selectedId, panel]);
+
+  const progressQ = useQuery({
+    queryKey: ['wealth-goal-progress', selectedId],
+    queryFn: () => getWealthGoalProgress(selectedId),
+    enabled: !!selectedId && panel === 'track',
   });
 
   const baselineQ = useQuery({
     queryKey: ['planner-baseline-goals', form.broker],
     queryFn: () => getInvestmentPlannerBaseline({ plannerBroker: form.broker }),
-    enabled: form.basis !== 'manual',
+    enabled: (panel === 'create' || panel === 'edit') && form.basis !== 'manual',
   });
+
+  const invalidateAll = () => {
+    qc.invalidateQueries({ queryKey: ['wealth-goals'] });
+    qc.invalidateQueries({ queryKey: ['wealth-goal-progress'] });
+  };
 
   const saveMut = useMutation({
     mutationFn: (body) => {
-      const goal = activeQ.data?.goal;
-      if (goal?.id && editing) return updateWealthGoal(goal.id, body);
-      return createWealthGoal({ ...body, setActive: true });
+      if (panel === 'edit' && selectedId) return updateWealthGoal(selectedId, body);
+      return createWealthGoal(body);
     },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['wealth-goal-active'] });
-      setEditing(false);
+    onSuccess: (result) => {
+      invalidateAll();
+      if (result?.goal?.id) setSelectedId(result.goal.id);
+      setPanel('track');
     },
   });
 
   const archiveMut = useMutation({
-    mutationFn: () => {
-      const id = activeQ.data?.goal?.id;
-      if (!id) return Promise.resolve();
-      return deleteWealthGoal(id);
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['wealth-goal-active'] });
-      setEditing(true);
-      setForm(defaultForm());
+    mutationFn: (id) => updateWealthGoal(id, { status: 'archived' }),
+    onSuccess: (_res, archivedId) => {
+      invalidateAll();
+      const next = activeGoals.find((g) => g.id !== archivedId);
+      setSelectedId(next?.id ?? null);
+      if (!next) setPanel('create');
     },
   });
 
   const deleteMut = useMutation({
-    mutationFn: () => deleteWealthGoal(activeQ.data.goal.id),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['wealth-goal-active'] });
-      setEditing(true);
-      setForm(defaultForm());
+    mutationFn: (id) => deleteWealthGoal(id),
+    onSuccess: (_res, deletedId) => {
+      invalidateAll();
+      const remaining = activeGoals.filter((g) => g.id !== deletedId);
+      setSelectedId(remaining[0]?.id ?? null);
+      if (!remaining.length) setPanel('create');
     },
   });
 
-  const data = activeQ.data;
-  const hasGoal = !!data?.goal;
+  const data = progressQ.data;
+  const isReadOnly = data?.goal?.status !== 'active';
   const monthly = data?.monthly;
 
   const chartData = useMemo(() => {
@@ -124,7 +165,12 @@ export default function WealthGoalTracking() {
         notes: data.goal.notes || '',
       });
     }
-    setEditing(true);
+    setPanel('edit');
+  };
+
+  const startCreate = () => {
+    setForm(defaultForm());
+    setPanel('create');
   };
 
   const submit = (e) => {
@@ -140,7 +186,10 @@ export default function WealthGoalTracking() {
     });
   };
 
-  if (activeQ.isLoading) {
+  const showForm = panel === 'create' || panel === 'edit';
+  const showProgress = panel === 'track' && !!data?.goal;
+
+  if (activeGoalsQ.isLoading) {
     return (
       <div className="flex justify-center py-20">
         <LoadingSpinner />
@@ -150,28 +199,44 @@ export default function WealthGoalTracking() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-        <p className="text-sm text-gray-600 dark:text-gray-400">
-          Track progress toward your wealth target. Monthly performance uses{' '}
-          <strong>net savings</strong> (net income − net expenses), same as Analytics — pension and investment transfers are excluded.
-        </p>
-        {hasGoal && !editing && (
-          <div className="flex flex-wrap gap-2 shrink-0">
-            <button type="button" onClick={startEdit} className="btn-secondary text-sm">
-              Edit goal
-            </button>
-            <button type="button" onClick={() => archiveMut.mutate()} className="btn-secondary text-sm">
-              Archive & set new
-            </button>
-          </div>
-        )}
+      <p className="text-sm text-gray-600 dark:text-gray-400">
+        Track one or more wealth targets. Monthly performance uses{' '}
+        <strong>net savings</strong> (net income − net expenses), same as Analytics.
+      </p>
+
+      {/* Active goal picker */}
+      <div className="flex flex-wrap items-center gap-2">
+        {activeGoals.map((g) => (
+          <button
+            key={g.id}
+            type="button"
+            onClick={() => { setSelectedId(g.id); setPanel('track'); }}
+            className={clsx(
+              'px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors',
+              selectedId === g.id && panel === 'track'
+                ? 'bg-brand-600 border-brand-600 text-white'
+                : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-brand-400'
+            )}
+          >
+            {g.name}
+          </button>
+        ))}
+        <button type="button" onClick={startCreate} className="btn-secondary text-sm inline-flex items-center gap-1">
+          <Plus size={16} />
+          New goal
+        </button>
       </div>
 
-      {(!hasGoal || editing) && (
+      {showForm && (
         <form onSubmit={submit} className="card p-5 space-y-4 border-2 border-brand-200 dark:border-brand-800">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-            {hasGoal ? 'Update your goal' : 'Create your wealth goal'}
+            {panel === 'edit' ? 'Edit goal' : 'Create a new goal'}
           </h2>
+          {panel === 'create' && activeGoals.length > 0 && (
+            <p className="text-xs text-gray-500">
+              Your other active goals stay as they are — nothing is archived or deleted.
+            </p>
+          )}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <label className="block">
               <span className="text-xs font-medium text-gray-500">Goal name</span>
@@ -240,20 +305,18 @@ export default function WealthGoalTracking() {
               </label>
             )}
           </div>
-          <p className="text-xs text-gray-500">
-            Starting wealth is captured from your selected basis when you save.
-            Each month compares your net savings to the amount you need to stay on pace.
-          </p>
           <div className="flex flex-wrap gap-2">
             <button type="submit" className="btn-primary" disabled={saveMut.isPending}>
               <Save size={16} />
-              {saveMut.isPending ? 'Saving…' : hasGoal ? 'Save changes' : 'Start tracking'}
+              {saveMut.isPending ? 'Saving…' : panel === 'edit' ? 'Save changes' : 'Start tracking'}
             </button>
-            {hasGoal && editing && (
-              <button type="button" className="btn-secondary" onClick={() => setEditing(false)}>
-                Cancel
-              </button>
-            )}
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={() => setPanel('track')}
+            >
+              Cancel
+            </button>
           </div>
           {saveMut.isError && (
             <p className="text-sm text-red-600">{saveMut.error.message}</p>
@@ -261,8 +324,52 @@ export default function WealthGoalTracking() {
         </form>
       )}
 
-      {hasGoal && !editing && (
+      {panel === 'track' && !activeGoals.length && !archives.length && !showForm && (
+        <div className="card p-8 text-center text-sm text-gray-500">
+          No goals yet. Click <strong>New goal</strong> to get started.
+        </div>
+      )}
+
+      {panel === 'track' && progressQ.isLoading && selectedId && (
+        <LoadingSpinner />
+      )}
+
+      {showProgress && (
         <>
+          {isReadOnly && (
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs font-medium px-2 py-1 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300">
+                {statusLabel(data.goal.status)}
+              </span>
+              {activeGoals.length > 0 && (
+                <button
+                  type="button"
+                  className="text-sm text-brand-600 hover:underline"
+                  onClick={() => setSelectedId(activeGoals[0].id)}
+                >
+                  Back to active goals
+                </button>
+              )}
+            </div>
+          )}
+
+          {!isReadOnly && (
+            <div className="flex flex-wrap gap-2 justify-end">
+              <button type="button" onClick={startEdit} className="btn-secondary text-sm">
+                Edit goal
+              </button>
+              <button
+                type="button"
+                onClick={() => archiveMut.mutate(data.goal.id)}
+                className="btn-secondary text-sm inline-flex items-center gap-1"
+                disabled={archiveMut.isPending}
+              >
+                <Archive size={14} />
+                Archive
+              </button>
+            </div>
+          )}
+
           <div className={clsx('card p-4 rounded-lg flex flex-wrap items-center gap-3', ON_TRACK_STYLES[data.onTrack])}>
             <span className="font-semibold">
               {data.completed
@@ -357,9 +464,9 @@ export default function WealthGoalTracking() {
             <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">
               Net savings vs required pace
             </h2>
-            <p className="text-xs text-gray-400 mb-4">Last 24 months · green = net savings met ≥85% of required (Analytics logic)</p>
+            <p className="text-xs text-gray-400 mb-4">Last 24 months · green = net savings met ≥85% of required</p>
             {chartData.length === 0 ? (
-              <p className="text-sm text-gray-400 py-8 text-center">No contribution history yet in the tracking window.</p>
+              <p className="text-sm text-gray-400 py-8 text-center">No savings history in the tracking window yet.</p>
             ) : (
               <div className="chart-h">
                 <ResponsiveContainer width="100%" height="100%">
@@ -414,26 +521,70 @@ export default function WealthGoalTracking() {
             </table>
           </div>
 
-          <div className="flex justify-end">
-            <button
-              type="button"
-              onClick={() => deleteMut.mutate()}
-              className="text-sm text-red-600 hover:underline flex items-center gap-1"
-              disabled={deleteMut.isPending}
-            >
-              <Trash2 size={14} />
-              Delete goal permanently
-            </button>
-          </div>
+          {!isReadOnly && (
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={() => {
+                  if (window.confirm('Permanently delete this goal? This cannot be undone.')) {
+                    deleteMut.mutate(data.goal.id);
+                  }
+                }}
+                className="text-sm text-red-600 hover:underline flex items-center gap-1"
+                disabled={deleteMut.isPending}
+              >
+                <Trash2 size={14} />
+                Delete goal permanently
+              </button>
+            </div>
+          )}
         </>
+      )}
+
+      {archives.length > 0 && (
+        <div className="card p-4">
+          <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Archives</h3>
+          <p className="text-xs text-gray-500 mb-3">
+            Achieved goals move here automatically. Archived goals are ones you set aside manually.
+          </p>
+          <ul className="space-y-2">
+            {archives.map((g) => (
+              <li key={g.id}>
+                <button
+                  type="button"
+                  onClick={() => { setSelectedId(g.id); setPanel('track'); }}
+                  className={clsx(
+                    'w-full text-left px-3 py-2 rounded-lg border text-sm transition-colors',
+                    selectedId === g.id && panel === 'track'
+                      ? 'border-brand-400 bg-brand-50 dark:bg-brand-950/30'
+                      : 'border-gray-200 dark:border-gray-700 hover:border-gray-300'
+                  )}
+                >
+                  <span className="font-medium text-gray-900 dark:text-white">{g.name}</span>
+                  <span className="text-gray-500 ml-2">{fmtEur(g.targetAmount)}</span>
+                  <span
+                    className={clsx(
+                      'ml-2 text-[10px] uppercase font-semibold px-1.5 py-0.5 rounded',
+                      g.status === 'achieved'
+                        ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300'
+                        : 'bg-gray-100 dark:bg-gray-800 text-gray-500'
+                    )}
+                  >
+                    {statusLabel(g.status)}
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
 
       <button
         type="button"
         className="btn-ghost text-sm mx-auto flex items-center gap-1"
         onClick={() => {
-          qc.invalidateQueries({ queryKey: ['wealth-goal-active'] });
-          activeQ.refetch();
+          invalidateAll();
+          progressQ.refetch();
         }}
       >
         <RefreshCw size={14} />

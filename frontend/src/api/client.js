@@ -245,7 +245,7 @@ export const deleteInvestmentPlannerScenario = (id) =>
   api.delete(`/investments/planner/scenarios/${id}`);
 
 // --- Wealth goals (tracking) ---
-export const getWealthGoals = () => api.get('/wealth-goals');
+export const getWealthGoals = (params) => api.get('/wealth-goals', { params });
 export const getActiveWealthGoal = () => api.get('/wealth-goals/active');
 export const getWealthGoalProgress = (id) => api.get(`/wealth-goals/${id}/progress`);
 export const createWealthGoal = (body) => api.post('/wealth-goals', body);
