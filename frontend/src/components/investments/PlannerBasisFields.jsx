@@ -113,7 +113,7 @@ export default function PlannerBasisFields({
           Portfolio {fmtEur(baseline.portfolioTotal)}
           {baseline.totalAssets != null && <> · Total assets {fmtEur(baseline.totalAssets)}</>}
           {baseline.avgMonthlyContribution > 0 && (
-            <> · Avg buys {fmtEur(baseline.avgMonthlyContribution)}/mo</>
+            <> · Avg net savings {fmtEur(baseline.avgMonthlyContribution)}/mo</>
           )}
         </p>
       )}

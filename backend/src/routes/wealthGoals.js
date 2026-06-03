@@ -16,7 +16,7 @@ const router = express.Router();
 router.get('/', async (req, res) => {
   try {
     const db = getDb();
-    const rows = listGoals(db);
+    const rows = listGoals(db, { activeOnly: req.query.all !== '1' });
     res.json(rows.map(serializeGoal));
   } catch (err) {
     logger.error('[wealth-goals/list]', err);

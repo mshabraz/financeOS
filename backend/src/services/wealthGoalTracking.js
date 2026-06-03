@@ -5,6 +5,10 @@ const { getDb } = require('../db/database');
 const { computeAssetTotals } = require('./assetTotals');
 const { buildPortfolioValuation } = require('./investmentValuation');
 const { runProjection, solveForContribution } = require('./compoundInterestEngine');
+const {
+  getMonthlyNetSavingsMap,
+  sumNetSavingsInMap,
+} = require('./netSavingsAnalytics');
 
 function round2(n) {
   return Math.round(n * 100) / 100;
@@ -74,24 +78,9 @@ async function resolveCurrentValue(db, basis = 'portfolio', broker = '') {
   }
 }
 
-function getMonthlyContributions(db, fromMonth, toMonth, broker = '') {
-  const params = [`${fromMonth}-01`, `${toMonth}-31`];
-  let sql = `
-    SELECT strftime('%Y-%m', date) AS month,
-           SUM(CASE WHEN type IN ('Buy','Deposit') THEN ABS(net_amount) ELSE 0 END) AS contributed
-    FROM investment_transactions
-  `;
-  if (broker) {
-    sql += ' WHERE broker = ? AND date >= ? AND date <= ?';
-    params.unshift(broker);
-  } else {
-    sql += ' WHERE date >= ? AND date <= ?';
-  }
-  sql += ' GROUP BY month ORDER BY month ASC';
-  const rows = db.prepare(sql).all(...params);
-
-  const map = new Map(rows.map((r) => [r.month, r.contributed || 0]));
-  return map;
+/** Net savings per month (income − expenses), same as Analytics. */
+function getMonthlySavingsActuals(db, fromMonth, toMonth) {
+  return getMonthlyNetSavingsMap(db, fromMonth, toMonth);
 }
 
 function plannerInputFromGoal(goal, currentValue, years) {
@@ -202,7 +191,13 @@ async function buildGoalProgress(db, goal) {
       ? goal.starting_amount
       : (await resolveCurrentValue(db, goal.basis, goal.broker || '')) ?? goal.starting_amount;
 
-  const achieved = Math.max(0, currentValue - (goal.starting_amount || 0));
+  const startingAmount = goal.starting_amount || 0;
+  const achieved = Math.max(0, currentValue - startingAmount);
+  const targetGap = Math.max(0, goal.target_amount - startingAmount);
+  const achievedPctOfGap =
+    targetGap > 0 ? Math.min(100, round2((achieved / targetGap) * 100)) : 0;
+  const growthSinceStartPct =
+    startingAmount > 0 ? round2((achieved / startingAmount) * 100) : 0;
   const remaining = Math.max(0, goal.target_amount - currentValue);
   const progressPct =
     goal.target_amount > 0
@@ -214,26 +209,31 @@ async function buildGoalProgress(db, goal) {
 
   const startMonth = goal.tracking_start_month || monthKey(new Date(goal.created_at || Date.now()));
   const thisMonth = monthKey();
-  const contribMap = getMonthlyContributions(db, startMonth, thisMonth, goal.broker || '');
-  const monthly = buildMonthlyProgress(goal, contribMap, req.monthly, startMonth, thisMonth);
+  const savingsMap = getMonthlySavingsActuals(db, startMonth, thisMonth);
+  const monthly = buildMonthlyProgress(goal, savingsMap, req.monthly, startMonth, thisMonth);
 
-  const thisMonthActual = contribMap.get(thisMonth) || 0;
+  const thisMonthActual = savingsMap.get(thisMonth) || 0;
+  const trackedMonths = listMonthKeys(startMonth, thisMonth);
+  const elapsedMonths = Math.max(1, trackedMonths.length);
+  const cumulativeNetSavings = sumNetSavingsInMap(savingsMap, trackedMonths);
+  const expectedCumulativeSavings = round2(req.monthly * elapsedMonths);
+
   const expectedLinear =
-    goal.target_date && goal.target_amount > goal.starting_amount
+    goal.target_date && goal.target_amount > startingAmount
       ? (() => {
           const totalMonths = Math.max(1, monthsBetween(startMonth, monthKey(goal.target_date)));
           const elapsed = Math.max(0, monthsBetween(startMonth, thisMonth));
-          const expected = goal.starting_amount +
-            ((goal.target_amount - goal.starting_amount) * elapsed) / totalMonths;
+          const expected = startingAmount +
+            ((goal.target_amount - startingAmount) * elapsed) / totalMonths;
           return round2(expected);
         })()
       : null;
 
   const onTrack =
-    expectedLinear != null
-      ? currentValue >= expectedLinear * 0.95
+    expectedCumulativeSavings > 0
+      ? cumulativeNetSavings >= expectedCumulativeSavings * 0.95
         ? 'ahead'
-        : currentValue >= expectedLinear * 0.85
+        : cumulativeNetSavings >= expectedCumulativeSavings * 0.85
           ? 'on_track'
           : 'behind'
       : monthly.hitRate >= 50
@@ -248,8 +248,13 @@ async function buildGoalProgress(db, goal) {
     startingAmount: round2(goal.starting_amount),
     targetAmount: round2(goal.target_amount),
     achieved: round2(achieved),
+    achievedPctOfGap,
+    growthSinceStartPct,
     remaining: round2(remaining),
     progressPct,
+    cumulativeNetSavings,
+    expectedCumulativeSavings,
+    savingsMetric: 'net_income_minus_expenses',
     requiredMonthly: req.monthly,
     requiredYearly: req.yearly,
     requiredWeekly: req.weeks,
@@ -266,8 +271,8 @@ async function buildGoalProgress(db, goal) {
     onTrack,
     completed,
     expectedValueToday: expectedLinear,
-    ytdActual: round2(
-      [...contribMap.entries()]
+    ytdNetSavings: round2(
+      [...savingsMap.entries()]
         .filter(([m]) => m.startsWith(String(new Date().getFullYear())))
         .reduce((s, [, v]) => s + v, 0)
     ),
@@ -306,15 +311,24 @@ function getActiveGoal(db) {
   ).get();
 }
 
-function listGoals(db) {
+function listGoals(db, { activeOnly = false } = {}) {
+  if (activeOnly) {
+    return db.prepare(
+      "SELECT * FROM wealth_goals WHERE status = 'active' ORDER BY updated_at DESC"
+    ).all();
+  }
   return db.prepare('SELECT * FROM wealth_goals ORDER BY updated_at DESC').all();
+}
+
+function deleteArchivedGoals(db) {
+  return db.prepare("DELETE FROM wealth_goals WHERE status != 'active'").run();
 }
 
 function deactivateOthers(db, exceptId = null) {
   if (exceptId) {
-    db.prepare("UPDATE wealth_goals SET status = 'archived', updated_at = datetime('now') WHERE status = 'active' AND id != ?").run(exceptId);
+    db.prepare('DELETE FROM wealth_goals WHERE id != ?').run(exceptId);
   } else {
-    db.prepare("UPDATE wealth_goals SET status = 'archived', updated_at = datetime('now') WHERE status = 'active'").run();
+    db.prepare('DELETE FROM wealth_goals').run();
   }
 }
 
@@ -420,6 +434,7 @@ module.exports = {
   createGoalAndProgress,
   updateGoal,
   deleteGoal,
+  deleteArchivedGoals,
   serializeGoal,
   resolveCurrentValue,
   monthKey,

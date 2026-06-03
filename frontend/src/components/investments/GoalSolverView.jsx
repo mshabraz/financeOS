@@ -339,7 +339,7 @@ export default function GoalSolverView({
                   Track this goal over time
                 </h3>
                 <p className="text-xs text-gray-500 mb-3">
-                  Save as your active wealth goal to monitor monthly savings hits/misses, progress %, and required pace in Goal tracking.
+                  Save as your active wealth goal to monitor monthly net savings (Analytics logic) vs required pace in Goal tracking.
                 </p>
                 <div className="flex flex-col sm:flex-row gap-2">
                   <input

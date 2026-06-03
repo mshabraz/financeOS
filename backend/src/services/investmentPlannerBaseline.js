@@ -74,22 +74,13 @@ async function getPlannerBaseline(db, options = {}) {
   const totalAssets = assets.totalAssets;
   const netWorth = totalAssets;
 
-  const contribHistory = db.prepare(`
-    SELECT strftime('%Y-%m', date) AS month,
-           SUM(CASE WHEN type IN ('Buy','Deposit') THEN ABS(net_amount) ELSE 0 END) AS contributed
-    FROM investment_transactions
-    ${broker ? 'WHERE broker = ?' : ''}
-    GROUP BY month
-    ORDER BY month DESC
-    LIMIT 36
-  `).all(...(broker ? [broker] : []));
-
-  const avgMonthlyContribution = (() => {
-    const rows = contribHistory.filter((r) => r.contributed > 0);
-    if (!rows.length) return 0;
-    const sum = rows.reduce((s, r) => s + r.contributed, 0);
-    return Math.round((sum / rows.length) * 100) / 100;
-  })();
+  const { queryMonthlyNetSavings, averagePositiveMonthlyNetSavings } = require('./netSavingsAnalytics');
+  const netSavingsHistory = queryMonthlyNetSavings(db, { months: 36 });
+  const contribHistory = netSavingsHistory.map((r) => ({
+    month: r.month,
+    contributed: r.netSavings,
+  }));
+  const avgMonthlyContribution = averagePositiveMonthlyNetSavings(db, 36);
 
   const dividendAnnual = db.prepare(`
     SELECT SUM(net_amount) AS total

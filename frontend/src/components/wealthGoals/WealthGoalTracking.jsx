@@ -12,7 +12,6 @@ import clsx from 'clsx';
 import { format, addYears } from 'date-fns';
 import {
   getActiveWealthGoal,
-  getWealthGoals,
   createWealthGoal,
   updateWealthGoal,
   deleteWealthGoal,
@@ -59,11 +58,6 @@ export default function WealthGoalTracking() {
     queryFn: getActiveWealthGoal,
   });
 
-  const listQ = useQuery({
-    queryKey: ['wealth-goals'],
-    queryFn: getWealthGoals,
-  });
-
   const baselineQ = useQuery({
     queryKey: ['planner-baseline-goals', form.broker],
     queryFn: () => getInvestmentPlannerBaseline({ plannerBroker: form.broker }),
@@ -78,7 +72,6 @@ export default function WealthGoalTracking() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['wealth-goal-active'] });
-      qc.invalidateQueries({ queryKey: ['wealth-goals'] });
       setEditing(false);
     },
   });
@@ -87,11 +80,10 @@ export default function WealthGoalTracking() {
     mutationFn: () => {
       const id = activeQ.data?.goal?.id;
       if (!id) return Promise.resolve();
-      return updateWealthGoal(id, { status: 'archived' });
+      return deleteWealthGoal(id);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['wealth-goal-active'] });
-      qc.invalidateQueries({ queryKey: ['wealth-goals'] });
       setEditing(true);
       setForm(defaultForm());
     },
@@ -101,7 +93,6 @@ export default function WealthGoalTracking() {
     mutationFn: () => deleteWealthGoal(activeQ.data.goal.id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['wealth-goal-active'] });
-      qc.invalidateQueries({ queryKey: ['wealth-goals'] });
       setEditing(true);
       setForm(defaultForm());
     },
@@ -161,7 +152,8 @@ export default function WealthGoalTracking() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
         <p className="text-sm text-gray-600 dark:text-gray-400">
-          Set a long-term target and track monthly investment savings (Buy + Deposit) against the pace you need to reach it.
+          Track progress toward your wealth target. Monthly performance uses{' '}
+          <strong>net savings</strong> (net income − net expenses), same as Analytics — pension and investment transfers are excluded.
         </p>
         {hasGoal && !editing && (
           <div className="flex flex-wrap gap-2 shrink-0">
@@ -249,8 +241,8 @@ export default function WealthGoalTracking() {
             )}
           </div>
           <p className="text-xs text-gray-500">
-            Starting point is captured automatically from your selected basis when you save.
-            Monthly savings are tracked from investment Buy + Deposit transactions.
+            Starting wealth is captured from your selected basis when you save.
+            Each month compares your net savings to the amount you need to stay on pace.
           </p>
           <div className="flex flex-wrap gap-2">
             <button type="submit" className="btn-primary" disabled={saveMut.isPending}>
@@ -276,10 +268,10 @@ export default function WealthGoalTracking() {
               {data.completed
                 ? 'Congratulations — you reached your goal!'
                 : data.onTrack === 'ahead'
-                  ? 'Ahead of your linear plan'
+                  ? 'Ahead of your cumulative savings plan'
                   : data.onTrack === 'on_track'
-                    ? 'On track toward your goal'
-                    : 'Behind your linear plan — increase savings or extend the deadline'}
+                    ? 'On track with net savings vs plan'
+                    : 'Behind on net savings — spend less, earn more, or extend the deadline'}
             </span>
             {data.projectedCompletionHint && !data.completed && (
               <span className="text-sm opacity-90">
@@ -300,9 +292,9 @@ export default function WealthGoalTracking() {
 
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             <StatCard
-              label="Achieved (growth)"
-              value={fmtEur(data.achieved)}
-              sub={`From ${fmtEur(data.startingAmount)} start`}
+              label="Progress from start"
+              value={fmtPct(data.achievedPctOfGap ?? 0)}
+              sub={`${fmtEur(data.achieved)} of ${fmtEur(Math.max(0, data.targetAmount - data.startingAmount))} gap · ${fmtPct(data.growthSinceStartPct ?? 0)} portfolio growth`}
               icon={<TrendingUp size={18} />}
               color="green"
             />
@@ -321,7 +313,7 @@ export default function WealthGoalTracking() {
               color="blue"
             />
             <StatCard
-              label="This month saved"
+              label="This month net savings"
               value={fmtEur(data.thisMonth?.actual)}
               sub={
                 data.thisMonth?.hit
@@ -340,9 +332,10 @@ export default function WealthGoalTracking() {
               { label: 'Hit rate', value: fmtPct(monthly?.hitRate ?? 0), icon: Target },
               { label: 'Best streak', value: `${monthly?.maxStreak ?? 0} mo`, icon: Flame },
               { label: 'Current streak', value: `${monthly?.currentStreak ?? 0} mo`, icon: Flame },
-              { label: 'Avg monthly save', value: fmtEur(monthly?.avgActual ?? 0), icon: PiggyBank },
-              { label: 'YTD contributions', value: fmtEur(data.ytdActual), icon: Calendar },
-              { label: 'Expected today (linear)', value: data.expectedValueToday != null ? fmtEur(data.expectedValueToday) : '—', icon: LineChart },
+              { label: 'Avg net savings / mo', value: fmtEur(monthly?.avgActual ?? 0), icon: PiggyBank },
+              { label: 'YTD net savings', value: fmtEur(data.ytdNetSavings ?? 0), icon: Calendar },
+              { label: 'Cumulative vs plan', value: `${fmtEur(data.cumulativeNetSavings ?? 0)} / ${fmtEur(data.expectedCumulativeSavings ?? 0)}`, icon: LineChart },
+              { label: 'Wealth today (linear)', value: data.expectedValueToday != null ? fmtEur(data.expectedValueToday) : '—', icon: Target },
             ].map(({ label, value, icon: Icon }) => (
               <div key={label} className="card p-3">
                 <div className="flex items-center gap-2 text-xs text-gray-500 mb-1">
@@ -356,15 +349,15 @@ export default function WealthGoalTracking() {
 
           {monthly?.bestMonth?.month && (
             <p className="text-sm text-gray-500 px-1">
-              Best month: <strong>{monthly.bestMonth.month}</strong> with {fmtEur(monthly.bestMonth.amount)} contributed.
+              Best month: <strong>{monthly.bestMonth.month}</strong> with {fmtEur(monthly.bestMonth.amount)} net savings.
             </p>
           )}
 
           <div className="card p-5">
             <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">
-              Monthly savings vs required
+              Net savings vs required pace
             </h2>
-            <p className="text-xs text-gray-400 mb-4">Last 24 months · green bar = met ≥85% of required</p>
+            <p className="text-xs text-gray-400 mb-4">Last 24 months · green = net savings met ≥85% of required (Analytics logic)</p>
             {chartData.length === 0 ? (
               <p className="text-sm text-gray-400 py-8 text-center">No contribution history yet in the tracking window.</p>
             ) : (
@@ -377,7 +370,7 @@ export default function WealthGoalTracking() {
                     <Tooltip formatter={(v) => fmtEur(v)} />
                     <Legend />
                     <ReferenceLine y={data.requiredMonthly} stroke="#6366f1" strokeDasharray="4 4" label="Required" />
-                    <Bar dataKey="actual" name="Actual saved" fill="#10b981" radius={[2, 2, 0, 0]} />
+                    <Bar dataKey="actual" name="Net savings" fill="#10b981" radius={[2, 2, 0, 0]} />
                     <Bar dataKey="required" name="Required" fill="#94a3b8" radius={[2, 2, 0, 0]} opacity={0.35} />
                   </BarChart>
                 </ResponsiveContainer>
@@ -391,7 +384,7 @@ export default function WealthGoalTracking() {
               <thead>
                 <tr className="text-left text-xs text-gray-500 border-b border-gray-200 dark:border-gray-700">
                   <th className="pb-2 pr-4">Month</th>
-                  <th className="pb-2 pr-4">Saved</th>
+                  <th className="pb-2 pr-4">Net savings</th>
                   <th className="pb-2 pr-4">Required</th>
                   <th className="pb-2 pr-4">Shortfall</th>
                   <th className="pb-2">Status</th>
@@ -433,19 +426,6 @@ export default function WealthGoalTracking() {
             </button>
           </div>
         </>
-      )}
-
-      {(listQ.data?.length ?? 0) > 1 && (
-        <div className="card p-4">
-          <h3 className="text-sm font-semibold text-gray-600 mb-2">Past goals</h3>
-          <ul className="text-sm text-gray-500 space-y-1">
-            {listQ.data.filter((g) => g.status !== 'active').map((g) => (
-              <li key={g.id}>
-                {g.name} — {fmtEur(g.targetAmount)} ({g.status})
-              </li>
-            ))}
-          </ul>
-        </div>
       )}
 
       <button
