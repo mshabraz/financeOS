@@ -4,10 +4,7 @@ import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Legend,
 } from 'recharts';
-import {
-  Target, TrendingUp, Sparkles, Calculator,
-  ChevronDown, ChevronUp, Wallet, PiggyBank, Flag,
-} from 'lucide-react';
+import { Sparkles, ChevronDown, ChevronUp } from 'lucide-react';
 import clsx from 'clsx';
 import { getInvestmentPlannerBaseline } from '../../api/client';
 import {
@@ -20,6 +17,8 @@ import NumericField from './plannerNumericField';
 import PlannerBasisFields from './PlannerBasisFields';
 import GoalSolverView from './GoalSolverView';
 import WealthGoalTracking from '../wealthGoals/WealthGoalTracking';
+import WealthPlannerShell from './WealthPlannerShell';
+import PlannerMetricStrip from './PlannerMetricStrip';
 
 function toPlannerInput(form, withdrawalStartYear) {
   return {
@@ -49,12 +48,6 @@ function toPlannerInput(form, withdrawalStartYear) {
     mode: form.mode,
   };
 }
-
-const PLANNER_MODES = [
-  { id: 'tracking', label: 'Goal tracking', icon: Flag },
-  { id: 'project', label: 'Forward projection', icon: TrendingUp },
-  { id: 'goal', label: 'Goal solver', icon: Target },
-];
 
 export default function CompoundPlanner({ brokerFilter = '', plannerView }) {
   const initialMode = ['project', 'goal', 'tracking'].includes(plannerView) ? plannerView : DEFAULT_PLANNER.mode;
@@ -171,25 +164,7 @@ export default function CompoundPlanner({ brokerFilter = '', plannerView }) {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap gap-2">
-        {PLANNER_MODES.map(({ id, label, icon: Icon }) => (
-          <button
-            key={id}
-            type="button"
-            onClick={() => set('mode', id)}
-            className={clsx(
-              'px-4 py-2 rounded-lg text-sm font-medium border flex items-center gap-2',
-              form.mode === id
-                ? 'bg-brand-600 border-brand-600 text-white'
-                : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400'
-            )}
-          >
-            <Icon size={16} /> {label}
-          </button>
-        ))}
-      </div>
-
+    <WealthPlannerShell mode={form.mode} onModeChange={(id) => set('mode', id)}>
       {form.mode === 'tracking' ? (
         <WealthGoalTracking />
       ) : form.mode === 'goal' ? (
@@ -205,8 +180,8 @@ export default function CompoundPlanner({ brokerFilter = '', plannerView }) {
           onTrackingStarted={() => set('mode', 'tracking')}
         />
       ) : (
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        <div className="lg:col-span-4 space-y-4">
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-4 lg:gap-5">
+        <div className="xl:col-span-4 space-y-3">
           <div className="card p-4 space-y-3">
             <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-500">Starting position</h3>
             <PlannerBasisFields
@@ -317,21 +292,15 @@ export default function CompoundPlanner({ brokerFilter = '', plannerView }) {
           )}
         </div>
 
-        <div className="lg:col-span-8 space-y-4">
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {[
-              { label: 'Projected value', value: fmtEur(activeProjection.finalValue), icon: Wallet, color: 'text-indigo-600' },
-              { label: 'Total contributed', value: fmtEur(activeProjection.totalContributed), icon: PiggyBank, color: 'text-blue-600' },
-              { label: 'Growth (compounding)', value: fmtEur(activeProjection.totalGains), icon: TrendingUp, color: 'text-emerald-600' },
-              { label: 'Real value', value: fmtEur(activeProjection.finalValueReal), icon: Calculator, color: 'text-amber-600' },
-            ].map((k) => (
-              <div key={k.label} className="card p-3">
-                <k.icon size={14} className={clsx(k.color, 'mb-1')} />
-                <p className="text-[10px] text-gray-400 uppercase">{k.label}</p>
-                <p className="text-lg font-bold tabular-nums text-gray-900 dark:text-white">{k.value}</p>
-              </div>
-            ))}
-          </div>
+        <div className="xl:col-span-8 space-y-4">
+          <PlannerMetricStrip
+            items={[
+              { label: 'Projected value', value: fmtEur(activeProjection.finalValue) },
+              { label: 'Total contributed', value: fmtEur(activeProjection.totalContributed) },
+              { label: 'Growth', value: fmtEur(activeProjection.totalGains), accent: 'text-emerald-600 dark:text-emerald-400' },
+              { label: 'Real value', value: fmtEur(activeProjection.finalValueReal), accent: 'text-amber-600 dark:text-amber-400' },
+            ]}
+          />
 
           <div className="card p-4">
             <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Growth over time</h3>
@@ -440,6 +409,6 @@ export default function CompoundPlanner({ brokerFilter = '', plannerView }) {
         </div>
       </div>
       )}
-    </div>
+    </WealthPlannerShell>
   );
 }

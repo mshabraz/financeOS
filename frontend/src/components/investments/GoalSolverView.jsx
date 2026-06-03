@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { format, addYears } from 'date-fns';
-import { Target, Clock, PiggyBank, TrendingUp, Flag } from 'lucide-react';
+import { Flag } from 'lucide-react';
 import clsx from 'clsx';
 import {
   buildGoalSavingsPlan,
@@ -14,6 +14,7 @@ import {
 import { fmtEur, fmtPct } from '../../utils/investmentFormat';
 import { createWealthGoal } from '../../api/client';
 import PlannerBasisFields from './PlannerBasisFields';
+import PlannerMetricStrip from './PlannerMetricStrip';
 import NumericField from './plannerNumericField';
 
 function mapBasisForTracking(basis) {
@@ -95,21 +96,9 @@ export default function GoalSolverView({
   });
 
   return (
-    <div className="space-y-6">
-      <div className="card p-5 border-2 border-brand-200 dark:border-brand-800 bg-brand-50/30 dark:bg-brand-950/20">
-        <div className="flex items-start gap-3">
-          <Target size={22} className="text-brand-600 shrink-0 mt-0.5" />
-          <div>
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Goal solver</h2>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-              Set a target, pick when you want to reach it, and see how much you need to save each month, year, or week.
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        <div className="lg:col-span-4 space-y-4">
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-4 lg:gap-5">
+        <div className="xl:col-span-4 space-y-3">
           <div className="card p-4 space-y-4">
             <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-500">Your goal</h3>
             <div className="flex rounded-lg border border-gray-200 dark:border-gray-700 p-0.5 text-sm">
@@ -209,52 +198,51 @@ export default function GoalSolverView({
           </div>
         </div>
 
-        <div className="lg:col-span-8 space-y-4">
+        <div className="xl:col-span-8 space-y-4">
           {effectiveTarget > 0 && (
             <>
-              <div className="card p-5 bg-gradient-to-r from-brand-600 to-indigo-600 text-white">
-                <p className="text-sm opacity-90">To reach</p>
-                <p className="text-2xl sm:text-3xl font-bold tabular-nums">{fmtEur(effectiveTarget)}</p>
-                <p className="text-sm mt-2 opacity-90">
-                  in <strong>{form.goalDeadlineYears} years</strong>, starting from {fmtEur(form.principal)} today
-                </p>
-                {primaryRow && (
-                  <p className="text-xl font-semibold mt-4 tabular-nums">
-                    Save {fmtEur(primaryRow.monthly)} / month
-                  </p>
-                )}
+              <div className="rounded-2xl bg-gradient-to-br from-brand-600 to-indigo-700 text-white p-4 sm:p-5">
+                <div className="flex flex-wrap items-end justify-between gap-3">
+                  <div>
+                    <p className="text-xs uppercase tracking-wide opacity-80">Target</p>
+                    <p className="text-2xl sm:text-3xl font-bold tabular-nums">{fmtEur(effectiveTarget)}</p>
+                    <p className="text-sm mt-1 opacity-90">
+                      in {form.goalDeadlineYears} years · from {fmtEur(form.principal)} today
+                    </p>
+                  </div>
+                  {primaryRow && (
+                    <div className="text-right">
+                      <p className="text-xs uppercase tracking-wide opacity-80">Required</p>
+                      <p className="text-xl sm:text-2xl font-bold tabular-nums">{fmtEur(primaryRow.monthly)}/mo</p>
+                    </div>
+                  )}
+                </div>
                 {gap > 0 && (
-                  <p className="text-xs mt-2 opacity-80">
-                    Gap to close with savings + growth: {fmtEur(gap)} (before compounding)
+                  <p className="text-xs mt-3 opacity-75 border-t border-white/20 pt-2">
+                    Savings gap (before growth): {fmtEur(gap)}
                   </p>
                 )}
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                {primaryRow && [
-                  { label: 'Per month', value: fmtEur(primaryRow.monthly), icon: PiggyBank },
-                  { label: 'Per year', value: fmtEur(primaryRow.yearly), icon: TrendingUp },
-                  { label: 'Per week', value: fmtEur(primaryRow.weekly), icon: Clock },
-                  {
-                    label: 'At your savings rate',
-                    value: paceToGoal ? formatYearsToGoal(paceToGoal) : '—',
-                    icon: Target,
-                    sub:
-                      form.monthlyContribution > 0
-                        ? `${fmtEur(form.monthlyContribution)}/mo`
-                        : paceToGoal?.alreadyReached
-                          ? 'Starting capital covers target'
-                          : 'Growth only (€0/mo saved)',
-                  },
-                ].map((k) => (
-                  <div key={k.label} className="card p-3">
-                    <k.icon size={14} className="text-brand-600 mb-1" />
-                    <p className="text-[10px] text-gray-400 uppercase">{k.label}</p>
-                    <p className="text-base font-bold tabular-nums">{k.value}</p>
-                    {k.sub && <p className="text-[10px] text-gray-400">{k.sub}</p>}
-                  </div>
-                ))}
-              </div>
+              {primaryRow && (
+                <PlannerMetricStrip
+                  items={[
+                    { label: 'Per month', value: fmtEur(primaryRow.monthly) },
+                    { label: 'Per year', value: fmtEur(primaryRow.yearly) },
+                    { label: 'Per week', value: fmtEur(primaryRow.weekly) },
+                    {
+                      label: 'At current rate',
+                      value: paceToGoal ? formatYearsToGoal(paceToGoal) : '—',
+                      sub:
+                        form.monthlyContribution > 0
+                          ? `${fmtEur(form.monthlyContribution)}/mo saved`
+                          : paceToGoal?.alreadyReached
+                            ? 'Capital covers target'
+                            : 'No monthly savings set',
+                    },
+                  ]}
+                />
+              )}
 
               <div className="card overflow-hidden">
                 <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-800">

@@ -1395,55 +1395,83 @@ export default function Investments() {
     qc.invalidateQueries({ queryKey: ['assets'] });
   };
 
+  const isPlannerTab = tab === 'planner';
+
   return (
-    <div className="space-y-6">
-      {/* Header — title stacked; broker + tabs on scrollable rows (mobile) */}
-      <div className="space-y-3 sm:space-y-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Investments</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400">Live portfolio · allocation · performance</p>
-        </div>
-
-        <div className="w-full min-w-0">
-          <div className="scroll-x touch-pan-x rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-1">
-            {[['', 'All Brokers'], ...Object.entries(BROKER_LABELS)].map(([key, label]) => (
-              <button
-                key={key}
-                type="button"
-                onClick={() => setBrokerFilter(key)}
-                className={clsx(
-                  'px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border',
-                  brokerFilter === key
-                    ? 'bg-brand-600 border-brand-600 text-white'
-                    : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-brand-400'
-                )}
-              >
-                {key && <span className="inline-block w-1.5 h-1.5 rounded-full mr-1.5" style={{ background: BROKER_COLORS[key] }} />}
-                {label}
-              </button>
-            ))}
+    <div className={clsx('space-y-6', isPlannerTab && 'space-y-3')}>
+      <div className={clsx('space-y-3 sm:space-y-4', isPlannerTab && 'space-y-2')}>
+        {isPlannerTab ? (
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+            <h1 className="text-xl font-bold text-gray-900 dark:text-white shrink-0">Investments</h1>
+            <div className="w-full min-w-0 sm:max-w-2xl sm:ml-auto">
+              <div className="scroll-x touch-pan-x rounded-lg bg-gray-100 dark:bg-gray-800 p-0.5 text-sm">
+                {TABS.map((t) => (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => setTab(t.id)}
+                    className={clsx(
+                      'px-3 py-1.5 rounded-md font-medium transition-colors min-h-[36px]',
+                      tab === t.id
+                        ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
+                        : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                    )}
+                  >
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
-        </div>
+        ) : (
+          <>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Investments</h1>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Live portfolio · allocation · performance</p>
+            </div>
 
-        <div className="w-full min-w-0">
-          <div className="scroll-x touch-pan-x rounded-lg bg-gray-100 dark:bg-gray-800 p-0.5 text-sm">
-            {TABS.map((t) => (
-              <button
-                key={t.id}
-                type="button"
-                onClick={() => setTab(t.id)}
-                className={clsx(
-                  'px-3 py-1.5 rounded-md font-medium transition-colors min-h-[40px]',
-                  tab === t.id
-                    ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
-                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
-                )}
-              >
-                {t.label}
-              </button>
-            ))}
-          </div>
-        </div>
+            <div className="w-full min-w-0">
+              <div className="scroll-x touch-pan-x rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-1">
+                {[['', 'All Brokers'], ...Object.entries(BROKER_LABELS)].map(([key, label]) => (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => setBrokerFilter(key)}
+                    className={clsx(
+                      'px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border',
+                      brokerFilter === key
+                        ? 'bg-brand-600 border-brand-600 text-white'
+                        : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-brand-400'
+                    )}
+                  >
+                    {key && <span className="inline-block w-1.5 h-1.5 rounded-full mr-1.5" style={{ background: BROKER_COLORS[key] }} />}
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="w-full min-w-0">
+              <div className="scroll-x touch-pan-x rounded-lg bg-gray-100 dark:bg-gray-800 p-0.5 text-sm">
+                {TABS.map((t) => (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => setTab(t.id)}
+                    className={clsx(
+                      'px-3 py-1.5 rounded-md font-medium transition-colors min-h-[40px]',
+                      tab === t.id
+                        ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
+                        : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                    )}
+                  >
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </>
+        )}
       </div>
 
       {/* ── Overview — portfolio analytics ── */}
