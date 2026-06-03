@@ -182,6 +182,7 @@ export default function GoalSolverView({
               isLoading={baselineLoading}
               tickerPick={tickerPick}
               setTickerPick={setTickerPick}
+              onSyncBaseline={onSyncBaseline}
             />
           </div>
 
@@ -205,9 +206,6 @@ export default function GoalSolverView({
               step={0.1}
               unit="%"
             />
-            <button type="button" className="btn-secondary text-xs w-full" onClick={onSyncBaseline}>
-              Refresh from portfolio
-            </button>
           </div>
         </div>
 

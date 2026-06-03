@@ -1,20 +1,15 @@
 import { useMemo, useState, useEffect, useCallback } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Legend,
 } from 'recharts';
 import {
-  Calculator, Target, TrendingUp, Sparkles, Save, Download, RefreshCw,
+  Target, TrendingUp, Sparkles,
   ChevronDown, ChevronUp, Wallet, PiggyBank, Flag,
 } from 'lucide-react';
 import clsx from 'clsx';
-import {
-  getInvestmentPlannerBaseline,
-  getInvestmentPlannerScenarios,
-  saveInvestmentPlannerScenario,
-  deleteInvestmentPlannerScenario,
-} from '../../api/client';
+import { getInvestmentPlannerBaseline } from '../../api/client';
 import {
   runProjection, runScenarioComparison, buildInsights,
   DEFAULT_PLANNER, COMPOUNDING_OPTIONS,
@@ -62,11 +57,9 @@ const PLANNER_MODES = [
 ];
 
 export default function CompoundPlanner({ brokerFilter = '', plannerView }) {
-  const qc = useQueryClient();
   const initialMode = ['project', 'goal', 'tracking'].includes(plannerView) ? plannerView : DEFAULT_PLANNER.mode;
   const [form, setForm] = useState({ ...DEFAULT_PLANNER, mode: initialMode });
   const [showAdvanced, setShowAdvanced] = useState(false);
-  const [showSaved, setShowSaved] = useState(false);
   const [tickerPick, setTickerPick] = useState([]);
 
   useEffect(() => {
@@ -89,22 +82,6 @@ export default function CompoundPlanner({ brokerFilter = '', plannerView }) {
       }),
     staleTime: 60_000,
     enabled: form.basis !== 'broker' || !!form.plannerBroker,
-  });
-
-  const scenariosQ = useQuery({
-    queryKey: ['plannerScenarios'],
-    queryFn: getInvestmentPlannerScenarios,
-    enabled: showSaved,
-  });
-
-  const saveMut = useMutation({
-    mutationFn: (name) => saveInvestmentPlannerScenario({ name, preset: form.basis, payload: form }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['plannerScenarios'] }),
-  });
-
-  const deleteMut = useMutation({
-    mutationFn: deleteInvestmentPlannerScenario,
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['plannerScenarios'] }),
   });
 
   const loadFromBaseline = useCallback((baseline, basis) => {
@@ -187,21 +164,6 @@ export default function CompoundPlanner({ brokerFilter = '', plannerView }) {
     [activeProjection]
   );
 
-  const exportCsv = () => {
-    const rows = [
-      ['Year', 'Balance', 'Contributed', 'Gains', 'Real (inflation-adj)'],
-      ...activeProjection.yearlyTable.map((y) => [
-        y.year, y.balance, y.totalContributed, y.gains, y.realBalance,
-      ]),
-    ];
-    const csv = rows.map((r) => r.join(',')).join('\n');
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = 'wealth-projection.csv';
-    a.click();
-  };
-
   const syncBaseline = () => {
     baselineQ.refetch().then((r) => {
       if (r.data) loadFromBaseline(r.data, form.basis);
@@ -210,67 +172,6 @@ export default function CompoundPlanner({ brokerFilter = '', plannerView }) {
 
   return (
     <div className="space-y-6">
-      <div className="card p-5 bg-gradient-to-br from-indigo-50/80 to-white dark:from-indigo-950/30 dark:to-gray-900 border-brand-100 dark:border-gray-800">
-        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2">
-              <Calculator size={20} className="text-brand-600" />
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Wealth Planner</h2>
-            </div>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 max-w-xl">
-              Compound growth projections, FIRE targets, and goal solving — linked to your live portfolio when you choose.
-            </p>
-            <p className="text-[10px] text-gray-400 mt-2 font-mono">
-              FV ≈ PV(1+r)^t + PMT·[((1+r)^t − 1) / r]
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <button type="button" className="btn-secondary text-xs gap-1" onClick={syncBaseline}>
-              <RefreshCw size={14} /> Sync portfolio
-            </button>
-            <button type="button" className="btn-secondary text-xs gap-1" onClick={exportCsv}>
-              <Download size={14} /> Export
-            </button>
-            <button type="button" className="btn-secondary text-xs gap-1" onClick={() => setShowSaved((s) => !s)}>
-              <Save size={14} /> Saved
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {showSaved && (
-        <div className="card p-4">
-          <h3 className="text-sm font-semibold mb-2">Saved scenarios</h3>
-          {scenariosQ.isLoading ? <LoadingSpinner /> : (
-            <ul className="space-y-2 text-sm">
-              {(scenariosQ.data || []).map((s) => (
-                <li key={s.id} className="flex items-center justify-between gap-2">
-                  <button
-                    type="button"
-                    className="text-brand-600 hover:underline text-left"
-                    onClick={() => { setForm({ ...DEFAULT_PLANNER, ...s.payload }); setShowSaved(false); }}
-                  >
-                    {s.name}
-                  </button>
-                  <button type="button" className="text-xs text-red-500" onClick={() => deleteMut.mutate(s.id)}>Delete</button>
-                </li>
-              ))}
-              {!scenariosQ.data?.length && <p className="text-xs text-gray-400">No saved scenarios yet.</p>}
-            </ul>
-          )}
-          <button
-            type="button"
-            className="btn-primary text-xs mt-3"
-            onClick={() => {
-              const name = window.prompt('Scenario name');
-              if (name) saveMut.mutate(name);
-            }}
-          >
-            Save current scenario
-          </button>
-        </div>
-      )}
-
       <div className="flex flex-wrap gap-2">
         {PLANNER_MODES.map(({ id, label, icon: Icon }) => (
           <button
@@ -315,6 +216,7 @@ export default function CompoundPlanner({ brokerFilter = '', plannerView }) {
               isLoading={baselineQ.isLoading}
               tickerPick={tickerPick}
               setTickerPick={setTickerPick}
+              onSyncBaseline={syncBaseline}
             />
           </div>
 

@@ -1,4 +1,5 @@
 import clsx from 'clsx';
+import { RefreshCw } from 'lucide-react';
 import { fmtEur, fmtQty } from '../../utils/investmentFormat';
 import { BASIS_OPTIONS } from '../../utils/compoundPlannerEngine';
 import NumericField from './plannerNumericField';
@@ -18,6 +19,7 @@ export default function PlannerBasisFields({
   tickerPick,
   setTickerPick,
   showPrincipal = true,
+  onSyncBaseline,
 }) {
   const basis = form.basis;
 
@@ -126,6 +128,18 @@ export default function PlannerBasisFields({
           min={0}
           step={100}
         />
+      )}
+
+      {basis !== 'manual' && onSyncBaseline && (
+        <button
+          type="button"
+          className="btn-secondary text-xs w-full inline-flex items-center justify-center gap-1"
+          onClick={onSyncBaseline}
+          disabled={isLoading}
+        >
+          <RefreshCw size={14} className={isLoading ? 'animate-spin' : ''} />
+          Sync from portfolio
+        </button>
       )}
     </div>
   );
