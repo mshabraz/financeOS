@@ -147,6 +147,75 @@ export function portfolioForPassiveIncome(monthlyIncome, swr = 4) {
   return (monthlyIncome * 12) / (swr / 100);
 }
 
+function solveMonthlyForTarget(baseInput, effectiveTarget, years) {
+  return solveBinary(
+    (mid) => runProjection({ ...baseInput, monthlyContribution: mid, years }).finalValue >= effectiveTarget,
+    0,
+    Math.max(effectiveTarget, 50000)
+  );
+}
+
+function solveYearsForContribution(baseInput, effectiveTarget, monthlyContribution) {
+  if (monthlyContribution <= 0 && baseInput.principal >= effectiveTarget) return 0;
+  return solveBinary(
+    (mid) => runProjection({ ...baseInput, monthlyContribution, years: mid }).finalValue >= effectiveTarget,
+    0.25,
+    80
+  );
+}
+
+/**
+ * How much to save per period to hit target by each horizon (years).
+ */
+export function monthlyContributionForGoal(baseInput, effectiveTarget, years) {
+  const monthly = solveMonthlyForTarget(baseInput, effectiveTarget, years);
+  return {
+    years,
+    monthly,
+    yearly: round2(monthly * 12),
+    weekly: round2((monthly * 12) / 52),
+  };
+}
+
+export function buildGoalSavingsPlan(baseInput, effectiveTarget, horizons = [5, 10, 15, 20, 25, 30]) {
+  if (effectiveTarget <= 0) return { rows: [], yearsAtCurrentPace: null };
+
+  const rows = horizons.map((years) => {
+    const monthly = solveMonthlyForTarget(baseInput, effectiveTarget, years);
+    const projection = runProjection({ ...baseInput, monthlyContribution: monthly, years });
+    return {
+      years,
+      monthly,
+      yearly: round2(monthly * 12),
+      weekly: round2((monthly * 12) / 52),
+      finalValue: projection.finalValue,
+      gap: round2(Math.max(0, effectiveTarget - (baseInput.principal || 0))),
+    };
+  });
+
+  const yearsAtCurrentPace = solveYearsForContribution(
+    baseInput,
+    effectiveTarget,
+    baseInput.monthlyContribution || 0
+  );
+
+  return {
+    rows,
+    yearsAtCurrentPace,
+    target: effectiveTarget,
+  };
+}
+
+export function resolveGoalTarget(form) {
+  if (form.goalKind === 'income') {
+    return portfolioForPassiveIncome(
+      form.targetMonthlyIncome || 0,
+      form.safeWithdrawalRate || 4
+    );
+  }
+  return form.targetValue || 0;
+}
+
 export function runGoalSolver(input) {
   const {
     goalType = 'final_value',
@@ -270,8 +339,8 @@ export const BASIS_OPTIONS = [
   { id: 'portfolio', label: 'Investment portfolio (total)' },
   { id: 'portfolio_no_cash', label: 'Holdings only (excl. cash)' },
   { id: 'net_worth', label: 'Total assets (Dashboard)' },
-  { id: 'broker', label: 'Selected broker filter' },
-  { id: 'tickers', label: 'Selected tickers' },
+  { id: 'broker', label: 'One broker account' },
+  { id: 'tickers', label: 'Selected holdings' },
 ];
 
 export const GOAL_TYPE_OPTIONS = [
@@ -302,8 +371,9 @@ export const COMPOUNDING_OPTIONS = [
 export const DEFAULT_PLANNER = {
   mode: 'project',
   basis: 'portfolio',
-  selectedBrokers: [],
-  selectedTickers: [],
+  plannerBroker: '',
+  goalKind: 'balance',
+  goalDeadlineYears: 20,
   principal: 50000,
   monthlyContribution: 500,
   yearlyContribution: 0,

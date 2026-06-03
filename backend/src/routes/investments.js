@@ -963,8 +963,10 @@ router.get('/planner/baseline', async (req, res) => {
     const tickers = req.query.tickers
       ? String(req.query.tickers).split(',').map((t) => t.trim()).filter(Boolean)
       : [];
+    const broker =
+      req.query.plannerBroker || req.query.broker || '';
     const data = await getPlannerBaseline(db, {
-      broker: req.query.broker || '',
+      broker,
       tickers,
       excludeCash: req.query.excludeCash === '1',
     });

@@ -229,7 +229,12 @@ export const detectBroker = (file) => {
 };
 
 export const getInvestmentPlannerBaseline = (params = {}) =>
-  api.get('/investments/planner/baseline', { params });
+  api.get('/investments/planner/baseline', {
+    params: {
+      ...params,
+      plannerBroker: params.plannerBroker || params.broker,
+    },
+  });
 export const calculateInvestmentPlanner = (body) =>
   api.post('/investments/planner/calculate', body);
 export const getInvestmentPlannerScenarios = () => api.get('/investments/planner/scenarios');

@@ -4,9 +4,42 @@
 const { buildPortfolioValuation } = require('./investmentValuation');
 const { computeAssetTotals } = require('./assetTotals');
 
+function parseHoldingKeys(tickers = []) {
+  return tickers.map((raw) => {
+    const s = String(raw || '').trim();
+    const idx = s.indexOf(':');
+    if (idx === -1) {
+      return { key: s.toUpperCase(), broker: '', ticker: s.toUpperCase() };
+    }
+    return {
+      key: s,
+      broker: s.slice(0, idx),
+      ticker: s.slice(idx + 1).toUpperCase(),
+    };
+  });
+}
+
+function holdingKey(h) {
+  return `${h.broker}:${String(h.ticker || '').toUpperCase()}`;
+}
+
+function mapOpenHolding(h) {
+  const mv = h.marketValueEur ?? h.totalCostBasis ?? 0;
+  return {
+    broker: h.broker,
+    ticker: h.ticker,
+    currency: h.currency || 'EUR',
+    quantity: h.effectiveQuantity ?? h.quantity ?? null,
+    marketValueEur: Math.round(mv * 100) / 100,
+    fundName: h.fundName || h.binding?.securityName || null,
+    key: holdingKey(h),
+  };
+}
+
 async function getPlannerBaseline(db, options = {}) {
   const { broker = '', tickers = [], excludeCash = false } = options;
-  const tickerSet = tickers.length ? new Set(tickers.map((t) => String(t).toUpperCase())) : null;
+  const holdingKeys = parseHoldingKeys(tickers);
+  const keySet = holdingKeys.length ? new Set(holdingKeys.map((k) => k.key)) : null;
 
   const assets = await computeAssetTotals(db);
 
@@ -17,13 +50,18 @@ async function getPlannerBaseline(db, options = {}) {
     valuation = { primary: {}, openHoldings: [], brokerCash: { totalEur: 0, rows: [] } };
   }
 
+  const openHoldingsRaw = (valuation.openHoldings || []).filter(
+    (h) => h.ticker && (h.marketValueEur > 0 || h.totalCostBasis > 0 || (h.effectiveQuantity ?? h.quantity) > 0)
+  );
+  const openHoldings = openHoldingsRaw.map(mapOpenHolding);
+
   const p = valuation.primary || {};
   let holdingsValue = p.holdingsValue ?? 0;
   let cashBalance = p.cashBalance ?? valuation.manualCash?.amountEur ?? 0;
 
-  if (tickerSet && valuation.openHoldings) {
-    holdingsValue = valuation.openHoldings
-      .filter((h) => tickerSet.has(String(h.ticker || '').toUpperCase()))
+  if (keySet && openHoldingsRaw.length) {
+    holdingsValue = openHoldingsRaw
+      .filter((h) => keySet.has(holdingKey(h)))
       .reduce((s, h) => s + (h.marketValueEur ?? h.totalCostBasis ?? 0), 0);
     cashBalance = 0;
   }
@@ -60,17 +98,15 @@ async function getPlannerBaseline(db, options = {}) {
     ${broker ? 'AND broker = ?' : ''}
   `).get(...(broker ? [broker] : []))?.total ?? 0;
 
-  const tickersList = db.prepare(`
-    SELECT DISTINCT broker, ticker, currency
-    FROM investment_transactions
-    WHERE ticker IS NOT NULL AND ticker != ''
-    ${broker ? 'AND broker = ?' : ''}
-    ORDER BY ticker
-  `).all(...(broker ? [broker] : []));
-
   const brokers = db.prepare(`
-    SELECT DISTINCT broker FROM investment_transactions ORDER BY broker
+    SELECT DISTINCT broker FROM investment_transactions
+    WHERE broker IS NOT NULL AND broker != ''
+    ORDER BY broker
   `).all().map((r) => r.broker);
+
+  const filteredHoldings = broker
+    ? openHoldings.filter((h) => h.broker === broker)
+    : openHoldings;
 
   return {
     currency: 'EUR',
@@ -85,9 +121,9 @@ async function getPlannerBaseline(db, options = {}) {
     avgMonthlyContribution,
     dividendTrailing12m: Math.round(dividendAnnual * 100) / 100,
     contributionHistory: contribHistory.reverse(),
-    tickers: tickersList,
+    openHoldings: filteredHoldings,
     brokers,
-    openPositions: valuation.openHoldings?.length ?? 0,
+    openPositions: openHoldings.length,
     lastPriceUpdate: valuation.sync?.last_success_at ?? null,
   };
 }

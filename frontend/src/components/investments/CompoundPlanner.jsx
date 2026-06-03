@@ -2,7 +2,7 @@ import { useMemo, useState, useEffect, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, Legend, ReferenceLine,
+  ResponsiveContainer, Legend,
 } from 'recharts';
 import {
   Calculator, Target, TrendingUp, Sparkles, Save, Download, RefreshCw,
@@ -16,62 +16,14 @@ import {
   deleteInvestmentPlannerScenario,
 } from '../../api/client';
 import {
-  runProjection, runGoalSolver, runScenarioComparison, buildInsights,
-  DEFAULT_PLANNER, BASIS_OPTIONS, GOAL_TYPE_OPTIONS, SOLVE_FOR_OPTIONS, COMPOUNDING_OPTIONS,
-  portfolioForPassiveIncome,
+  runProjection, runScenarioComparison, buildInsights,
+  DEFAULT_PLANNER, COMPOUNDING_OPTIONS,
 } from '../../utils/compoundPlannerEngine';
-import { fmtEur, fmtPct } from '../../utils/investmentFormat';
+import { fmtEur } from '../../utils/investmentFormat';
 import LoadingSpinner from '../ui/LoadingSpinner';
-
-function NumericField({
-  label,
-  value,
-  onChange,
-  min = 0,
-  max,
-  step = 1,
-  unit = '',
-  showSlider = false,
-}) {
-  const handleNum = (raw) => {
-    if (raw === '' || raw == null) {
-      onChange(0);
-      return;
-    }
-    const v = Number(raw);
-    if (!Number.isNaN(v)) onChange(v);
-  };
-
-  return (
-    <div className="space-y-1.5">
-      <label className="block text-xs text-gray-500 dark:text-gray-400">{label}</label>
-      <div className="flex items-center gap-2">
-        <input
-          type="number"
-          inputMode="decimal"
-          min={min}
-          max={max}
-          step={step}
-          value={value ?? 0}
-          onChange={(e) => handleNum(e.target.value)}
-          className="input w-full text-sm tabular-nums"
-        />
-        {unit && <span className="text-xs text-gray-400 shrink-0">{unit}</span>}
-      </div>
-      {showSlider && max != null && (
-        <input
-          type="range"
-          min={min}
-          max={max}
-          step={step}
-          value={Math.min(max, Math.max(min, value ?? 0))}
-          onChange={(e) => onChange(Number(e.target.value))}
-          className="w-full accent-brand-600 h-1"
-        />
-      )}
-    </div>
-  );
-}
+import NumericField from './plannerNumericField';
+import PlannerBasisFields from './PlannerBasisFields';
+import GoalSolverView from './GoalSolverView';
 
 function toPlannerInput(form, withdrawalStartYear) {
   return {
@@ -109,15 +61,20 @@ export default function CompoundPlanner({ brokerFilter = '' }) {
   const [showSaved, setShowSaved] = useState(false);
   const [tickerPick, setTickerPick] = useState([]);
 
+  const plannerBrokerParam =
+    form.basis === 'broker' ? form.plannerBroker : brokerFilter || '';
+
   const baselineQ = useQuery({
-    queryKey: ['plannerBaseline', brokerFilter, tickerPick.join(',')],
+    queryKey: ['plannerBaseline', form.basis, plannerBrokerParam, tickerPick.join(',')],
     queryFn: () =>
       getInvestmentPlannerBaseline({
-        broker: brokerFilter || undefined,
-        tickers: tickerPick.length ? tickerPick.join(',') : undefined,
+        plannerBroker: form.basis === 'broker' ? form.plannerBroker || undefined : undefined,
+        broker: plannerBrokerParam || undefined,
+        tickers: form.basis === 'tickers' && tickerPick.length ? tickerPick.join(',') : undefined,
         excludeCash: form.basis === 'portfolio_no_cash' ? '1' : undefined,
       }),
     staleTime: 60_000,
+    enabled: form.basis !== 'broker' || !!form.plannerBroker,
   });
 
   const scenariosQ = useQuery({
@@ -138,20 +95,40 @@ export default function CompoundPlanner({ brokerFilter = '' }) {
 
   const loadFromBaseline = useCallback((baseline, basis) => {
     if (!baseline || basis === 'manual') return;
+    const monthly =
+      baseline.avgMonthlyContribution > 0 ? baseline.avgMonthlyContribution : DEFAULT_PLANNER.monthlyContribution;
     let principal = DEFAULT_PLANNER.principal;
     if (basis === 'portfolio') principal = baseline.portfolioTotal;
     else if (basis === 'portfolio_no_cash') principal = baseline.holdingsValue;
     else if (basis === 'net_worth') principal = baseline.totalAssets ?? baseline.netWorth;
-    const monthly =
-      baseline.avgMonthlyContribution > 0 ? baseline.avgMonthlyContribution : DEFAULT_PLANNER.monthlyContribution;
+    else if (basis === 'broker') principal = baseline.portfolioTotal;
+    else if (basis === 'tickers' && tickerPick.length && baseline.openHoldings?.length) {
+      principal = baseline.openHoldings
+        .filter((h) => tickerPick.includes(h.key))
+        .reduce((s, h) => s + h.marketValueEur, 0);
+    }
     setForm((f) => ({ ...f, basis, principal, monthlyContribution: monthly }));
-  }, []);
+  }, [tickerPick]);
 
   useEffect(() => {
     if (baselineQ.data && form.basis !== 'manual') {
       loadFromBaseline(baselineQ.data, form.basis);
     }
   }, [baselineQ.data, form.basis, loadFromBaseline]);
+
+  useEffect(() => {
+    if (form.basis !== 'tickers' || !baselineQ.data?.openHoldings || !tickerPick.length) return;
+    const sum = baselineQ.data.openHoldings
+      .filter((h) => tickerPick.includes(h.key))
+      .reduce((s, h) => s + h.marketValueEur, 0);
+    setForm((f) => (f.principal === sum ? f : { ...f, principal: sum }));
+  }, [tickerPick, baselineQ.data, form.basis]);
+
+  useEffect(() => {
+    if (brokerFilter && !form.plannerBroker) {
+      setForm((f) => ({ ...f, plannerBroker: brokerFilter }));
+    }
+  }, [brokerFilter]);
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 
@@ -161,21 +138,11 @@ export default function CompoundPlanner({ brokerFilter = '' }) {
   );
 
   const projection = useMemo(() => runProjection(input), [input]);
-  const goal = useMemo(() => {
-    if (form.mode !== 'goal') return null;
-    let target = form.targetValue;
-    if (form.goalType === 'passive_income' || form.goalType === 'fire') {
-      target = portfolioForPassiveIncome(form.targetMonthlyIncome, form.safeWithdrawalRate);
-    }
-    if (target <= 0) return null;
-    return runGoalSolver({ ...input, targetValue: target, goalType: form.goalType });
-  }, [input, form.mode, form.goalType, form.targetValue, form.targetMonthlyIncome, form.safeWithdrawalRate]);
-
-  const activeProjection = goal?.projectionAtRequired || projection;
+  const activeProjection = projection;
   const scenarios = useMemo(() => runScenarioComparison(input), [input]);
   const insights = useMemo(
-    () => buildInsights(activeProjection, input, goal?.targetValue),
-    [activeProjection, input, goal]
+    () => buildInsights(activeProjection, input),
+    [activeProjection, input]
   );
 
   const chartData = useMemo(() => {
@@ -216,7 +183,11 @@ export default function CompoundPlanner({ brokerFilter = '' }) {
     a.click();
   };
 
-  const passiveAtEnd = (activeProjection.finalValue * (form.safeWithdrawalRate / 100)) / 12;
+  const syncBaseline = () => {
+    baselineQ.refetch().then((r) => {
+      if (r.data) loadFromBaseline(r.data, form.basis);
+    });
+  };
 
   return (
     <div className="space-y-6">
@@ -235,15 +206,7 @@ export default function CompoundPlanner({ brokerFilter = '' }) {
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              className="btn-secondary text-xs gap-1"
-              onClick={() => {
-                baselineQ.refetch().then((r) => {
-                  if (r.data) loadFromBaseline(r.data, form.basis);
-                });
-              }}
-            >
+            <button type="button" className="btn-secondary text-xs gap-1" onClick={syncBaseline}>
               <RefreshCw size={14} /> Sync portfolio
             </button>
             <button type="button" className="btn-secondary text-xs gap-1" onClick={exportCsv}>
@@ -310,52 +273,29 @@ export default function CompoundPlanner({ brokerFilter = '' }) {
         ))}
       </div>
 
+      {form.mode === 'goal' ? (
+        <GoalSolverView
+          form={form}
+          setField={set}
+          baseline={baselineQ.data}
+          baselineLoading={baselineQ.isLoading}
+          tickerPick={tickerPick}
+          setTickerPick={setTickerPick}
+          input={input}
+          onSyncBaseline={syncBaseline}
+        />
+      ) : (
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         <div className="lg:col-span-4 space-y-4">
           <div className="card p-4 space-y-3">
             <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-500">Starting position</h3>
-            <label className="block text-xs text-gray-500">Data basis</label>
-            <select className="input w-full text-sm" value={form.basis} onChange={(e) => set('basis', e.target.value)}>
-              {BASIS_OPTIONS.map((o) => (
-                <option key={o.id} value={o.id}>{o.label}</option>
-              ))}
-            </select>
-            {form.basis === 'tickers' && baselineQ.data?.tickers && (
-              <div className="max-h-28 overflow-y-auto space-y-1 border rounded-lg p-2 dark:border-gray-700">
-                {baselineQ.data.tickers.map((t) => {
-                  const key = `${t.broker}:${t.ticker}`;
-                  const on = tickerPick.includes(key);
-                  return (
-                    <label key={key} className="flex items-center gap-2 text-xs">
-                      <input
-                        type="checkbox"
-                        checked={on}
-                        onChange={() =>
-                          setTickerPick((p) => (on ? p.filter((x) => x !== key) : [...p, key]))
-                        }
-                      />
-                      {t.ticker}
-                    </label>
-                  );
-                })}
-              </div>
-            )}
-            {baselineQ.isLoading && <p className="text-xs text-gray-400">Loading portfolio…</p>}
-            {baselineQ.data && form.basis !== 'manual' && (
-              <p className="text-[10px] text-gray-400 leading-relaxed">
-                Live: portfolio {fmtEur(baselineQ.data.portfolioTotal)} · total assets{' '}
-                {fmtEur(baselineQ.data.totalAssets ?? baselineQ.data.netWorth)}
-                {baselineQ.data.avgMonthlyContribution > 0 && (
-                  <> · avg contrib {fmtEur(baselineQ.data.avgMonthlyContribution)}/mo</>
-                )}
-              </p>
-            )}
-            <NumericField
-              label="Starting capital (€)"
-              value={form.principal}
-              onChange={(v) => set('principal', v)}
-              min={0}
-              step={100}
+            <PlannerBasisFields
+              form={form}
+              set={set}
+              baseline={baselineQ.data}
+              isLoading={baselineQ.isLoading}
+              tickerPick={tickerPick}
+              setTickerPick={setTickerPick}
             />
           </div>
 
@@ -429,50 +369,6 @@ export default function CompoundPlanner({ brokerFilter = '' }) {
             </select>
           </div>
 
-          {form.mode === 'goal' && (
-            <div className="card p-4 space-y-3 border-brand-200 dark:border-brand-800">
-              <h3 className="text-xs font-semibold uppercase tracking-wide text-brand-600">Goal</h3>
-              <select className="input w-full text-sm" value={form.goalType} onChange={(e) => set('goalType', e.target.value)}>
-                {GOAL_TYPE_OPTIONS.map((o) => (
-                  <option key={o.id} value={o.id}>{o.label}</option>
-                ))}
-              </select>
-              {(form.goalType === 'passive_income' || form.goalType === 'fire') ? (
-                <>
-                  <NumericField
-                    label="Target monthly income (€)"
-                    value={form.targetMonthlyIncome}
-                    onChange={(v) => set('targetMonthlyIncome', v)}
-                    min={0}
-                    step={50}
-                  />
-                  <NumericField
-                    label="Safe withdrawal rate"
-                    value={form.safeWithdrawalRate}
-                    onChange={(v) => set('safeWithdrawalRate', v)}
-                    min={2}
-                    max={8}
-                    step={0.1}
-                    unit="%"
-                  />
-                </>
-              ) : (
-                <NumericField
-                  label="Target amount (€)"
-                  value={form.targetValue}
-                  onChange={(v) => set('targetValue', v)}
-                  min={0}
-                  step={1000}
-                />
-              )}
-              <select className="input w-full text-sm" value={form.solveFor} onChange={(e) => set('solveFor', e.target.value)}>
-                {SOLVE_FOR_OPTIONS.map((o) => (
-                  <option key={o.id} value={o.id}>{o.label}</option>
-                ))}
-              </select>
-            </div>
-          )}
-
           <button
             type="button"
             className="text-xs text-gray-500 flex items-center gap-1"
@@ -516,38 +412,6 @@ export default function CompoundPlanner({ brokerFilter = '' }) {
             ))}
           </div>
 
-          {form.mode === 'goal' && goal && (
-            <div className="card p-4 bg-brand-50/50 dark:bg-brand-900/20 border-brand-200 dark:border-brand-800">
-              <h3 className="text-sm font-semibold text-brand-800 dark:text-brand-200 mb-2">Goal solver result</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
-                {goal.requiredMonthlyContribution != null && (
-                  <p>Required monthly: <strong>{fmtEur(goal.requiredMonthlyContribution)}</strong></p>
-                )}
-                {goal.requiredYears != null && (
-                  <p>Required timeline: <strong>{goal.requiredYears} years</strong></p>
-                )}
-                {goal.requiredAnnualReturn != null && (
-                  <p>Required return: <strong>{fmtPct(goal.requiredAnnualReturn)}</strong></p>
-                )}
-                {goal.requiredStartingCapital != null && (
-                  <p>Required starting capital: <strong>{fmtEur(goal.requiredStartingCapital)}</strong></p>
-                )}
-                {goal.estimatedFiDate && (
-                  <p>Est. FI date: <strong>{goal.estimatedFiDate}</strong></p>
-                )}
-                {goal.coastFire && (
-                  <p className="sm:col-span-2 text-xs text-gray-600 dark:text-gray-300">
-                    Coast FIRE: grow to {fmtEur(goal.coastFire.growTo)} with no new contributions over {goal.coastFire.yearsWithoutContributions}y.
-                  </p>
-                )}
-                <p className="sm:col-span-2 text-xs text-gray-500">
-                  Implied portfolio for passive income at {form.safeWithdrawalRate}% SWR: {fmtEur(goal.targetValue)}
-                  · ≈ {fmtEur(passiveAtEnd)}/mo at end balance
-                </p>
-              </div>
-            </div>
-          )}
-
           <div className="card p-4">
             <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Growth over time</h3>
             <div className="chart-h min-h-[220px]">
@@ -567,9 +431,6 @@ export default function CompoundPlanner({ brokerFilter = '' }) {
                   <Area type="monotone" dataKey="balance" name="Portfolio" stroke="#6366f1" fill="url(#balGrad)" />
                   {form.useRealReturns && (
                     <Area type="monotone" dataKey="real" name="Real" stroke="#f59e0b" fill="none" strokeDasharray="4 4" />
-                  )}
-                  {form.mode === 'goal' && form.targetValue > 0 && (
-                    <ReferenceLine y={goal?.targetValue ?? form.targetValue} stroke="#10b981" strokeDasharray="3 3" />
                   )}
                 </AreaChart>
               </ResponsiveContainer>
@@ -657,6 +518,7 @@ export default function CompoundPlanner({ brokerFilter = '' }) {
           </div>
         </div>
       </div>
+      )}
     </div>
   );
 }
