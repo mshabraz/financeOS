@@ -31,6 +31,7 @@ import PortfolioOverview from '../components/investments/PortfolioOverview';
 import PriceSyncCompact from '../components/investments/PriceSyncCompact';
 import ManualInvestmentTransactionModal from '../components/investments/ManualInvestmentTransactionModal';
 import CompoundPlanner from '../components/investments/CompoundPlanner';
+import InvestmentsChrome from '../components/investments/InvestmentsChrome';
 import { fmtCurrency, fmtNumber } from '../utils/displayFormat';
 import { usePrivacy } from '../context/PrivacyContext';
 
@@ -1386,16 +1387,6 @@ export default function Investments() {
   const valuationsFailed = valuations.isError;
   const valuationsPartial = !valuations.isLoading && !valuations.isError && valuedOpen.length === 0 && openHoldings.length > 0;
 
-  const TABS = [
-    { id: 'overview',  label: 'Overview'    },
-    { id: 'holdings',  label: 'Holdings'    },
-    { id: 'planner',   label: 'Wealth Planner' },
-    { id: 'ledger',    label: 'Activity'    },
-    { id: 'dividends', label: 'Dividends'   },
-    { id: 'history',   label: 'Import Log'  },
-    { id: 'import',    label: 'Import CSV'  },
-  ];
-
   const invalidateAll = () => {
     ['invHoldings','invValuations','invAnalytics','invPriceSync','invDividends','importHistory','invTx','assets'].forEach(
       (k) => qc.invalidateQueries({ queryKey: [k] })
@@ -1412,81 +1403,15 @@ export default function Investments() {
   const isPlannerTab = tab === 'planner';
 
   return (
-    <div className={clsx('space-y-6', isPlannerTab && 'space-y-3')}>
-      <div className={clsx('space-y-3 sm:space-y-4', isPlannerTab && 'space-y-2')}>
-        {isPlannerTab ? (
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
-            <h1 className="text-xl font-bold text-gray-900 dark:text-white shrink-0">Investments</h1>
-            <div className="w-full min-w-0 sm:max-w-2xl sm:ml-auto">
-              <div className="scroll-x touch-pan-x rounded-lg bg-gray-100 dark:bg-gray-800 p-0.5 text-sm">
-                {TABS.map((t) => (
-                  <button
-                    key={t.id}
-                    type="button"
-                    onClick={() => setTab(t.id)}
-                    className={clsx(
-                      'px-3 py-1.5 rounded-md font-medium transition-colors min-h-[36px]',
-                      tab === t.id
-                        ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
-                        : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
-                    )}
-                  >
-                    {t.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        ) : (
-          <>
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Investments</h1>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Live portfolio · allocation · performance</p>
-            </div>
-
-            <div className="w-full min-w-0">
-              <div className="scroll-x touch-pan-x rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-1">
-                {[['', 'All Brokers'], ...Object.entries(BROKER_LABELS)].map(([key, label]) => (
-                  <button
-                    key={key}
-                    type="button"
-                    onClick={() => setBrokerFilter(key)}
-                    className={clsx(
-                      'px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border',
-                      brokerFilter === key
-                        ? 'bg-brand-600 border-brand-600 text-white'
-                        : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-brand-400'
-                    )}
-                  >
-                    {key && <span className="inline-block w-1.5 h-1.5 rounded-full mr-1.5" style={{ background: BROKER_COLORS[key] }} />}
-                    {label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="w-full min-w-0">
-              <div className="scroll-x touch-pan-x rounded-lg bg-gray-100 dark:bg-gray-800 p-0.5 text-sm">
-                {TABS.map((t) => (
-                  <button
-                    key={t.id}
-                    type="button"
-                    onClick={() => setTab(t.id)}
-                    className={clsx(
-                      'px-3 py-1.5 rounded-md font-medium transition-colors min-h-[40px]',
-                      tab === t.id
-                        ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
-                        : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
-                    )}
-                  >
-                    {t.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </>
-        )}
-      </div>
+    <div className={clsx('space-y-5 sm:space-y-6', isPlannerTab && 'space-y-4')}>
+      <InvestmentsChrome
+        tab={tab}
+        onTabChange={setTab}
+        brokerFilter={brokerFilter}
+        onBrokerChange={setBrokerFilter}
+        hideBroker={isPlannerTab}
+        compact={isPlannerTab}
+      />
 
       {/* ── Overview — portfolio analytics ── */}
       {tab === 'overview' && (
@@ -1520,7 +1445,7 @@ export default function Investments() {
 
       {/* ── Holdings ── */}
       {tab === 'holdings' && (
-        <div className="space-y-4">
+        <div className="space-y-4 rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 sm:p-5 shadow-sm">
           {(valuationsFailed || valuationsPartial) && (
             <div className="rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 px-4 py-3 text-sm text-amber-800 dark:text-amber-200">
               {valuationsFailed ? (
@@ -1573,7 +1498,7 @@ export default function Investments() {
 
       {/* ── Dividends ── */}
       {tab === 'dividends' && (
-        <div className="space-y-4">
+        <div className="space-y-4 rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 sm:p-5 shadow-sm">
           <div className="grid grid-cols-3 gap-4">
             <StatCard label="Total Dividends" value={fmt(dividends.data?.dividends?.reduce((s,d) => s+d.net_amount,0))} icon={<DollarSign size={18}/>} color="green" />
             <StatCard label="Total Tax"       value={fmt(dividends.data?.dividends?.reduce((s,d) => s+d.tax_amount,0))} icon={<DollarSign size={18}/>} color="red" />

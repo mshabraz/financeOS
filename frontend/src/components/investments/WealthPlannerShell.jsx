@@ -32,7 +32,7 @@ export default function WealthPlannerShell({ mode, onModeChange, children }) {
         </div>
       </div>
 
-      <div className="flex flex-col lg:flex-row min-h-[min(70vh,720px)]">
+      <div className="flex flex-col lg:flex-row min-h-0 lg:min-h-[480px]">
         {/* Desktop sidebar */}
         <nav
           className="hidden lg:flex flex-col w-56 shrink-0 border-r border-gray-100 dark:border-gray-800 bg-gray-50/80 dark:bg-gray-950/50 p-3 gap-1"
@@ -72,8 +72,8 @@ export default function WealthPlannerShell({ mode, onModeChange, children }) {
           ))}
         </nav>
 
-        <div className="flex-1 min-w-0 overflow-y-auto">
-          <div className="p-4 sm:p-5 lg:p-6 max-w-6xl">{children}</div>
+        <div className="flex-1 min-w-0 min-h-[280px] overflow-y-auto">
+          <div className="p-4 sm:p-5 lg:p-6 w-full max-w-6xl mx-auto">{children}</div>
         </div>
       </div>
     </div>

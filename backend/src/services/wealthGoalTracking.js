@@ -187,10 +187,16 @@ function buildMonthlyProgress(goal, contribMap, requiredMonthly, fromMonth, toMo
 
 async function buildGoalProgress(db, goalIn) {
   let goal = goalIn;
-  const currentValue =
-    goal.basis === 'manual'
-      ? goal.starting_amount
-      : (await resolveCurrentValue(db, goal.basis, goal.broker || '')) ?? goal.starting_amount;
+  let currentValue = goal.starting_amount || 0;
+  if (goal.basis !== 'manual') {
+    try {
+      currentValue =
+        (await resolveCurrentValue(db, goal.basis, goal.broker || '')) ?? goal.starting_amount ?? 0;
+    } catch (err) {
+      console.error('[wealthGoalTracking] resolveCurrentValue failed:', err.message);
+      currentValue = goal.starting_amount ?? 0;
+    }
+  }
 
   const startingAmount = goal.starting_amount || 0;
   const achieved = Math.max(0, currentValue - startingAmount);
