@@ -7,6 +7,7 @@ import LoadingSpinner from '../ui/LoadingSpinner';
 import { fmt } from './investmentPageFmt';
 import { detectBroker } from './investmentPageApi';
 
+/** CSV import drop zone (lives here — not under `import/` which is gitignored). */
 export default function InvestmentImport({ onDone }) {
   const [stage,    setStage]    = useState('drop');
   const [file,     setFile]     = useState(null);
