@@ -23,7 +23,11 @@ function assert(cond, msg) {
 
 console.log('FinanceOS audit tests\n');
 
-const { sanitizeDateParam, sanitizeDateRange } = require(path.join(ROOT, 'backend/src/utils/dateParams.js'));
+const {
+  sanitizeDateParam,
+  sanitizeDateRange,
+  monthKeyToDateTo,
+} = require(path.join(ROOT, 'backend/src/utils/dateParams.js'));
 assert(sanitizeDateParam('2024-06-15') === '2024-06-15', 'valid date accepted');
 try {
   sanitizeDateParam("2024-06-15'; DROP TABLE--");
@@ -32,6 +36,8 @@ try {
   assert(true, 'invalid date rejected');
 }
 assert(sanitizeDateRange({ dateFrom: '2024-01-01', dateTo: '2024-12-31' }).dateFrom === '2024-01-01', 'date range ok');
+assert(monthKeyToDateTo('2026-06') === '2026-06-30', 'June last day not -31');
+assert(monthKeyToDateTo('2024-02') === '2024-02-29', 'Feb leap year last day');
 
 const {
   computeRevolutAmountFields,

@@ -4,7 +4,7 @@
  */
 const { ANALYTICS_LEDGER_SQL } = require('./unifiedLedger');
 const { sqlExpenseAmountCase, sqlIncomeAmountCase } = require('./categoryAnalytics');
-const { sanitizeDateParam } = require('../utils/dateParams');
+const { sanitizeDateParam, monthKeyToDateRange } = require('../utils/dateParams');
 
 function round2(n) {
   return Math.round(n * 100) / 100;
@@ -54,10 +54,8 @@ function queryMonthlyNetSavings(db, { dateFrom = null, dateTo = null, months = n
 
 /** Map YYYY-MM → net savings for each month in range (inclusive). */
 function getMonthlyNetSavingsMap(db, fromMonth, toMonth) {
-  const rows = queryMonthlyNetSavings(db, {
-    dateFrom: `${fromMonth}-01`,
-    dateTo: `${toMonth}-31`,
-  });
+  const { dateFrom, dateTo } = monthKeyToDateRange(fromMonth, toMonth);
+  const rows = queryMonthlyNetSavings(db, { dateFrom, dateTo });
   const map = new Map();
   for (const r of rows) {
     if (r.month >= fromMonth && r.month <= toMonth) {

@@ -27,6 +27,33 @@ function sanitizeDateRange({ dateFrom, dateTo } = {}) {
   return { dateFrom: from, dateTo: to };
 }
 
+/** YYYY-MM → first day of month (YYYY-MM-DD). */
+function monthKeyToDateFrom(monthKey) {
+  const m = String(monthKey ?? '').trim();
+  if (/^\d{4}-\d{2}$/.test(m)) return `${m}-01`;
+  return sanitizeDateParam(m, 'dateFrom');
+}
+
+/** YYYY-MM → last calendar day of that month (YYYY-MM-DD). */
+function monthKeyToDateTo(monthKey) {
+  const m = String(monthKey ?? '').trim();
+  if (/^\d{4}-\d{2}$/.test(m)) {
+    const [y, mo] = m.split('-').map(Number);
+    const last = new Date(y, mo, 0);
+    const d = String(last.getDate()).padStart(2, '0');
+    const mm = String(mo).padStart(2, '0');
+    return `${y}-${mm}-${d}`;
+  }
+  return sanitizeDateParam(m, 'dateTo');
+}
+
+function monthKeyToDateRange(fromMonth, toMonth) {
+  return {
+    dateFrom: monthKeyToDateFrom(fromMonth),
+    dateTo: monthKeyToDateTo(toMonth),
+  };
+}
+
 function middleware(req, res, next) {
   try {
     const sanitized = sanitizeDateRange({
@@ -44,5 +71,8 @@ module.exports = {
   isValidDateString,
   sanitizeDateParam,
   sanitizeDateRange,
+  monthKeyToDateFrom,
+  monthKeyToDateTo,
+  monthKeyToDateRange,
   validateDateQuery: middleware,
 };
