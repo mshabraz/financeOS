@@ -409,7 +409,7 @@ export const COMPOUNDING_OPTIONS = [
 ];
 
 export const DEFAULT_PLANNER = {
-  mode: 'project',
+  mode: 'tracking',
   basis: 'portfolio',
   plannerBroker: '',
   goalKind: 'balance',
