@@ -2,10 +2,10 @@ import { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { Upload, CheckCircle, AlertCircle } from 'lucide-react';
 import clsx from 'clsx';
-import { previewInvestmentImport, commitInvestmentImport } from '../../../api/client';
-import LoadingSpinner from '../../ui/LoadingSpinner';
-import { fmt } from '../investmentPageFmt';
-import { detectBroker } from '../investmentPageApi';
+import { previewInvestmentImport, commitInvestmentImport } from '../../api/client';
+import LoadingSpinner from '../ui/LoadingSpinner';
+import { fmt } from './investmentPageFmt';
+import { detectBroker } from './investmentPageApi';
 
 export default function InvestmentImport({ onDone }) {
   const [stage,    setStage]    = useState('drop');
@@ -176,4 +176,4 @@ export default function InvestmentImport({ onDone }) {
       )}
     </div>
   );
-}
+}
