@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { useDropzone } from 'react-dropzone';
 import {
@@ -1308,7 +1309,13 @@ function InvestmentLedger({ brokerFilter }) {
 export default function Investments() {
   usePrivacy();
   const qc = useQueryClient();
-  const [tab,          setTab]         = useState('overview');
+  const [searchParams] = useSearchParams();
+  const initialTab = searchParams.get('tab');
+  const [tab,          setTab]         = useState(
+    ['overview', 'holdings', 'ledger', 'dividends', 'planner', 'history', 'import'].includes(initialTab)
+      ? initialTab
+      : 'overview'
+  );
   const [brokerFilter, setBrokerFilter] = useState('');  // '' = all
   const [perfPeriod,   setPerfPeriod]  = useState('1Y');
   const [allocView,    setAllocView]   = useState('topHoldings');

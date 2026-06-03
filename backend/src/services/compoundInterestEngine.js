@@ -393,4 +393,5 @@ module.exports = {
   normalizePlannerInput,
   buildInsights,
   monthsFromTime,
+  solveForContribution,
 };

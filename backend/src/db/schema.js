@@ -931,7 +931,33 @@ const MIGRATION_V24 = {
   },
 };
 
-const ALL_MIGRATIONS = [...migrations.filter(m => m.version === 1), MIGRATION_V2, MIGRATION_V3, MIGRATION_V4, MIGRATION_V5, MIGRATION_V6, MIGRATION_V7, MIGRATION_V8, MIGRATION_V9, MIGRATION_V10, MIGRATION_V11, MIGRATION_V12, MIGRATION_V13, MIGRATION_V14, MIGRATION_V15, MIGRATION_V16, MIGRATION_V17, MIGRATION_V18, MIGRATION_V19, MIGRATION_V20, MIGRATION_V21, MIGRATION_V22, MIGRATION_V23, MIGRATION_V24];
+// ── Migration v25: Wealth goals (tracking) ─────────────────────────────────
+const MIGRATION_V25 = {
+  version: 25,
+  up: (db) => {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS wealth_goals (
+        id                    INTEGER PRIMARY KEY AUTOINCREMENT,
+        name                  TEXT NOT NULL,
+        target_amount         REAL NOT NULL,
+        target_date           TEXT,
+        starting_amount       REAL NOT NULL DEFAULT 0,
+        basis                 TEXT NOT NULL DEFAULT 'portfolio',
+        broker                TEXT,
+        annual_return         REAL NOT NULL DEFAULT 7,
+        contribution_growth   REAL NOT NULL DEFAULT 0,
+        status                TEXT NOT NULL DEFAULT 'active',
+        notes                 TEXT,
+        tracking_start_month  TEXT,
+        created_at            TEXT DEFAULT (datetime('now')),
+        updated_at            TEXT DEFAULT (datetime('now'))
+      );
+      CREATE INDEX IF NOT EXISTS idx_wealth_goals_status ON wealth_goals(status, updated_at DESC);
+    `);
+  },
+};
+
+const ALL_MIGRATIONS = [...migrations.filter(m => m.version === 1), MIGRATION_V2, MIGRATION_V3, MIGRATION_V4, MIGRATION_V5, MIGRATION_V6, MIGRATION_V7, MIGRATION_V8, MIGRATION_V9, MIGRATION_V10, MIGRATION_V11, MIGRATION_V12, MIGRATION_V13, MIGRATION_V14, MIGRATION_V15, MIGRATION_V16, MIGRATION_V17, MIGRATION_V18, MIGRATION_V19, MIGRATION_V20, MIGRATION_V21, MIGRATION_V22, MIGRATION_V23, MIGRATION_V24, MIGRATION_V25];
 
 function runMigrations(db) {
   db.exec(`CREATE TABLE IF NOT EXISTS schema_migrations (

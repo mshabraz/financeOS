@@ -1,5 +1,8 @@
 import { useMemo } from 'react';
-import { Target, Clock, PiggyBank, TrendingUp } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { format, addYears } from 'date-fns';
+import { Target, Clock, PiggyBank, TrendingUp, Flag } from 'lucide-react';
 import clsx from 'clsx';
 import {
   buildGoalSavingsPlan,
@@ -10,8 +13,15 @@ import {
   formatYearsToGoal,
 } from '../../utils/compoundPlannerEngine';
 import { fmtEur, fmtPct } from '../../utils/investmentFormat';
+import { createWealthGoal } from '../../api/client';
 import PlannerBasisFields from './PlannerBasisFields';
 import NumericField from './plannerNumericField';
+
+function mapBasisForTracking(basis) {
+  if (basis === 'broker' || basis === 'tickers') return 'portfolio';
+  if (['portfolio', 'net_worth', 'portfolio_no_cash', 'manual'].includes(basis)) return basis;
+  return 'portfolio';
+}
 
 const HORIZONS = [5, 10, 15, 20, 25, 30];
 
@@ -62,6 +72,28 @@ export default function GoalSolverView({
   }, [input, primaryRow]);
 
   const gap = Math.max(0, effectiveTarget - (form.principal || 0));
+
+  const navigate = useNavigate();
+  const qc = useQueryClient();
+  const trackMut = useMutation({
+    mutationFn: () => {
+      const years = form.goalDeadlineYears || 20;
+      const targetDate = format(addYears(new Date(), years), 'yyyy-MM-dd');
+      return createWealthGoal({
+        name: form.goalTrackName || 'Wealth target',
+        targetAmount: effectiveTarget,
+        targetDate,
+        basis: mapBasisForTracking(form.basis),
+        broker: form.basis === 'broker' ? form.plannerBroker || '' : '',
+        annualReturn: form.annualReturn ?? 7,
+        setActive: true,
+      });
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['wealth-goal-active'] });
+      navigate('/goals');
+    },
+  });
 
   return (
     <div className="space-y-6">
@@ -301,6 +333,36 @@ export default function GoalSolverView({
                   {' '}(target {fmtEur(effectiveTarget)}).
                 </p>
               )}
+
+              <div className="card p-4 border border-dashed border-brand-300 dark:border-brand-700">
+                <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-2 flex items-center gap-2">
+                  <Flag size={16} className="text-brand-600" />
+                  Track this goal over time
+                </h3>
+                <p className="text-xs text-gray-500 mb-3">
+                  Save as your active wealth goal to monitor monthly savings hits/misses, progress %, and required pace on the Goals page and Dashboard.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <input
+                    type="text"
+                    className="input flex-1 text-sm"
+                    placeholder="Goal name (e.g. FIRE 500k)"
+                    value={form.goalTrackName || ''}
+                    onChange={(e) => setField('goalTrackName', e.target.value)}
+                  />
+                  <button
+                    type="button"
+                    className="btn-primary shrink-0"
+                    disabled={trackMut.isPending || effectiveTarget <= 0}
+                    onClick={() => trackMut.mutate()}
+                  >
+                    {trackMut.isPending ? 'Saving…' : 'Set as tracking goal'}
+                  </button>
+                </div>
+                {trackMut.isError && (
+                  <p className="text-xs text-red-600 mt-2">{trackMut.error.message}</p>
+                )}
+              </div>
             </>
           )}
 

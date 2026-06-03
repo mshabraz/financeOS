@@ -244,6 +244,14 @@ export const updateInvestmentPlannerScenario = (id, body) =>
 export const deleteInvestmentPlannerScenario = (id) =>
   api.delete(`/investments/planner/scenarios/${id}`);
 
+// --- Wealth goals (tracking) ---
+export const getWealthGoals = () => api.get('/wealth-goals');
+export const getActiveWealthGoal = () => api.get('/wealth-goals/active');
+export const getWealthGoalProgress = (id) => api.get(`/wealth-goals/${id}/progress`);
+export const createWealthGoal = (body) => api.post('/wealth-goals', body);
+export const updateWealthGoal = (id, body) => api.patch(`/wealth-goals/${id}`, body);
+export const deleteWealthGoal = (id) => api.delete(`/wealth-goals/${id}`);
+
 // --- Watched-folder auto-import ---
 export const getWatchedImportConfig = () => api.get('/watched-import/config');
 export const updateWatchedImportConfig = (body) => api.put('/watched-import/config', body);

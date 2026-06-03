@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import {
-  LayoutDashboard, ArrowDownUp, Tag, Moon, Sun, TrendingUp, LineChart, Hash, Settings, UsersRound,
+  LayoutDashboard, ArrowDownUp, Tag, Moon, Sun, TrendingUp, LineChart, Hash, Settings, UsersRound, Target,
   LogOut, MoreHorizontal, X, Eye, EyeOff,
 } from 'lucide-react';
 import { useTheme } from '../../hooks/useTheme';
@@ -13,6 +13,7 @@ import FinanceLogo from '../ui/FinanceLogo';
 const PRIMARY_NAV = [
   { to: '/',             icon: LayoutDashboard, label: 'Home' },
   { to: '/transactions', icon: ArrowDownUp,     label: 'Txns' },
+  { to: '/goals',        icon: Target,          label: 'Goals' },
   { to: '/analytics',    icon: TrendingUp,      label: 'Stats' },
 ];
 
@@ -27,6 +28,7 @@ const MORE_NAV = [
 const DESKTOP_NAV = [
   { to: '/',             icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/transactions', icon: ArrowDownUp,     label: 'Transactions' },
+  { to: '/goals',         icon: Target,          label: 'Wealth goals' },
   { to: '/analytics',    icon: TrendingUp,      label: 'Analytics' },
   { to: '/investments',  icon: LineChart,       label: 'Investments' },
   { to: '/shared',       icon: UsersRound,      label: 'Shared Expenses' },
