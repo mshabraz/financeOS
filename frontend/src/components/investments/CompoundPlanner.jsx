@@ -5,7 +5,7 @@ import {
   ResponsiveContainer, Legend,
 } from 'recharts';
 import {
-  Target, TrendingUp, Sparkles,
+  Target, TrendingUp, Sparkles, Calculator,
   ChevronDown, ChevronUp, Wallet, PiggyBank, Flag,
 } from 'lucide-react';
 import clsx from 'clsx';
