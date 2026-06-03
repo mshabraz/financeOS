@@ -4,8 +4,8 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from 'recharts';
 import {
-  TrendingUp, TrendingDown, Wallet, PiggyBank, AlertTriangle,
-  Sparkles, Shield, ArrowUpRight, ArrowDownRight, Search, ChevronRight,
+  TrendingUp, TrendingDown, Wallet, PiggyBank,
+  Shield, ArrowUpRight, ArrowDownRight, Search, ChevronRight,
 } from 'lucide-react';
 import clsx from 'clsx';
 import LoadingSpinner from '../ui/LoadingSpinner';
@@ -17,6 +17,7 @@ import {
   BROKER_LABELS, BROKER_COLORS, CHART_COLORS, PERIOD_OPTIONS, ALLOCATION_VIEWS,
 } from './constants';
 import FundBenchmarkSection from './FundBenchmarkSection';
+import InvestmentInsightsPanel from './insights/InvestmentInsightsPanel';
 
 function TrendBadge({ value, pct, label }) {
   if (value == null && pct == null) return null;
@@ -98,81 +99,6 @@ function HeroSection({ hero, lastUpdated, onOpenHoldings }) {
           </div>
         ))}
       </div>
-    </div>
-  );
-}
-
-function InsightsPanel({ insights, diversification, onOpenHoldings }) {
-  const items = insights?.items ?? [];
-  const warnings = diversification?.warnings ?? [];
-
-  if (!items.length && !warnings.length) return null;
-
-  return (
-    <div className="card p-4">
-      <div className="flex items-center gap-2 mb-3">
-        <Sparkles size={16} className="text-brand-600" />
-        <h2 className="text-sm font-semibold text-gray-800 dark:text-gray-200">Insights</h2>
-      </div>
-      <div className="flex flex-wrap gap-2">
-        {warnings.map((w) => (
-          <span
-            key={w.code + w.message}
-            className={clsx(
-              'badge',
-              w.level === 'high' && 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
-              w.level === 'medium' && 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300',
-              w.level === 'low' && 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
-            )}
-          >
-            <AlertTriangle size={10} />
-            {w.message}
-          </span>
-        ))}
-        {items.map((ins, i) => (
-          <div
-            key={i}
-            className={clsx(
-              'rounded-lg px-3 py-2 text-xs border min-w-[140px] flex-1',
-              ins.severity === 'warning' && 'border-amber-200 bg-amber-50/50 dark:border-amber-800 dark:bg-amber-900/20',
-              ins.severity === 'error' && 'border-red-200 bg-red-50/50 dark:border-red-800 dark:bg-red-900/20',
-              ins.severity === 'positive' && 'border-emerald-200 bg-emerald-50/50 dark:border-emerald-800 dark:bg-emerald-900/20',
-              ins.severity === 'negative' && 'border-red-200 bg-red-50/50',
-              ins.severity === 'info' && 'border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800/50',
-            )}
-          >
-            <p className="font-medium text-gray-800 dark:text-gray-200">{ins.title}</p>
-            {ins.detail && <p className="text-gray-500 dark:text-gray-400 mt-0.5">{ins.detail}</p>}
-          </div>
-        ))}
-      </div>
-      {(insights?.bestPerformers?.length > 0 || insights?.worstPerformers?.length > 0) && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
-          <div>
-            <p className="text-[10px] uppercase text-gray-400 mb-1">Best performers</p>
-            {insights.bestPerformers.slice(0, 3).map((p) => (
-              <div key={p.ticker} className="flex justify-between text-xs py-0.5">
-                <span className="font-medium">{p.ticker}</span>
-                <span className="text-emerald-600">{fmtPct(p.pct, { sign: true })}</span>
-              </div>
-            ))}
-          </div>
-          <div>
-            <p className="text-[10px] uppercase text-gray-400 mb-1">Worst performers</p>
-            {insights.worstPerformers.slice(0, 3).map((p) => (
-              <div key={p.ticker} className="flex justify-between text-xs py-0.5">
-                <span className="font-medium">{p.ticker}</span>
-                <span className="text-red-600">{fmtPct(p.pct, { sign: true })}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-      {items.some((i) => i.type === 'action') && (
-        <button type="button" className="text-xs text-brand-600 mt-3 hover:underline" onClick={onOpenHoldings}>
-          Resolve on Holdings tab →
-        </button>
-      )}
     </div>
   );
 }
@@ -627,9 +553,11 @@ export default function PortfolioOverview({
   return (
     <div className="space-y-6">
       <HeroSection hero={hero} lastUpdated={lastUpdated} onOpenHoldings={onOpenHoldings} />
-      <InsightsPanel
+      <InvestmentInsightsPanel
         insights={analytics?.insights}
         diversification={analytics?.diversification}
+        allocations={analytics?.allocations}
+        hero={hero}
         onOpenHoldings={onOpenHoldings}
       />
 
