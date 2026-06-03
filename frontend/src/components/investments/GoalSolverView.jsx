@@ -6,6 +6,8 @@ import {
   monthlyContributionForGoal,
   resolveGoalTarget,
   runProjection,
+  yearsToReachGoal,
+  formatYearsToGoal,
 } from '../../utils/compoundPlannerEngine';
 import { fmtEur, fmtPct } from '../../utils/investmentFormat';
 import PlannerBasisFields from './PlannerBasisFields';
@@ -36,6 +38,11 @@ export default function GoalSolverView({
     );
     return buildGoalSavingsPlan(base, effectiveTarget, horizons);
   }, [input, effectiveTarget, form.goalDeadlineYears]);
+
+  const paceToGoal = useMemo(() => {
+    if (effectiveTarget <= 0) return null;
+    return yearsToReachGoal(input, effectiveTarget, form.monthlyContribution || 0);
+  }, [input, effectiveTarget, form.monthlyContribution]);
 
   const primaryRow = useMemo(() => {
     if (effectiveTarget <= 0) return null;
@@ -200,14 +207,15 @@ export default function GoalSolverView({
                   { label: 'Per year', value: fmtEur(primaryRow.yearly), icon: TrendingUp },
                   { label: 'Per week', value: fmtEur(primaryRow.weekly), icon: Clock },
                   {
-                    label: 'At current pace',
-                    value: savingsPlan?.yearsAtCurrentPace != null
-                      ? `${savingsPlan.yearsAtCurrentPace} yrs`
-                      : '—',
+                    label: 'At your savings rate',
+                    value: paceToGoal ? formatYearsToGoal(paceToGoal) : '—',
                     icon: Target,
-                    sub: form.monthlyContribution > 0
-                      ? `${fmtEur(form.monthlyContribution)}/mo`
-                      : 'Set monthly below',
+                    sub:
+                      form.monthlyContribution > 0
+                        ? `${fmtEur(form.monthlyContribution)}/mo`
+                        : paceToGoal?.alreadyReached
+                          ? 'Starting capital covers target'
+                          : 'Growth only (€0/mo saved)',
                   },
                 ].map((k) => (
                   <div key={k.label} className="card p-3">
@@ -273,9 +281,13 @@ export default function GoalSolverView({
                   min={0}
                   step={10}
                   hint={
-                    savingsPlan?.yearsAtCurrentPace != null && form.monthlyContribution > 0
-                      ? `At ${fmtEur(form.monthlyContribution)}/mo you'd reach the goal in about ${savingsPlan.yearsAtCurrentPace} years.`
-                      : 'Enter what you save today to see how long until you hit the target.'
+                    paceToGoal
+                      ? form.monthlyContribution > 0
+                        ? `Saving ${fmtEur(form.monthlyContribution)}/mo at ${fmtPct(form.annualReturn)} return → ${formatYearsToGoal(paceToGoal)} to reach ${fmtEur(effectiveTarget)}.`
+                        : paceToGoal.alreadyReached
+                          ? 'Your starting amount already meets the target.'
+                          : `With no new savings, growth alone → ${formatYearsToGoal(paceToGoal)} to reach the target.`
+                      : 'Enter what you save per month to see how long until you hit the target.'
                   }
                 />
               </div>

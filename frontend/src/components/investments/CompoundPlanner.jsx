@@ -107,7 +107,12 @@ export default function CompoundPlanner({ brokerFilter = '' }) {
         .filter((h) => tickerPick.includes(h.key))
         .reduce((s, h) => s + h.marketValueEur, 0);
     }
-    setForm((f) => ({ ...f, basis, principal, monthlyContribution: monthly }));
+    setForm((f) => ({
+      ...f,
+      basis,
+      principal,
+      ...(f.mode === 'project' ? { monthlyContribution: monthly } : {}),
+    }));
   }, [tickerPick]);
 
   useEffect(() => {

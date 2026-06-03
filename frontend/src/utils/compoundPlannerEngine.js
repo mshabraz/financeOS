@@ -155,13 +155,60 @@ function solveMonthlyForTarget(baseInput, effectiveTarget, years) {
   );
 }
 
-function solveYearsForContribution(baseInput, effectiveTarget, monthlyContribution) {
-  if (monthlyContribution <= 0 && baseInput.principal >= effectiveTarget) return 0;
-  return solveBinary(
-    (mid) => runProjection({ ...baseInput, monthlyContribution, years: mid }).finalValue >= effectiveTarget,
-    0.25,
-    80
-  );
+/**
+ * Months until finalValue >= target (binary search on month count).
+ */
+function solveMonthsToReach(baseInput, effectiveTarget, monthlyContribution = 0) {
+  const principal = baseInput.principal || 0;
+  if (principal >= effectiveTarget) return 0;
+
+  const immediate = runProjection({
+    ...baseInput,
+    monthlyContribution,
+    years: 0,
+    months: 1,
+  }).finalValue;
+  if (immediate >= effectiveTarget) return 1;
+
+  let lo = 1;
+  let hi = 12 * 80;
+  for (let i = 0; i < 48; i++) {
+    const mid = Math.floor((lo + hi) / 2);
+    const val = runProjection({
+      ...baseInput,
+      monthlyContribution,
+      years: 0,
+      months: mid,
+    }).finalValue;
+    if (val >= effectiveTarget) hi = mid;
+    else lo = mid + 1;
+  }
+  return hi;
+}
+
+export function yearsToReachGoal(baseInput, effectiveTarget, monthlyContribution = 0) {
+  const principal = baseInput.principal || 0;
+  if (effectiveTarget <= 0) return { years: null, months: null, alreadyReached: false };
+  if (principal >= effectiveTarget) {
+    return { years: 0, months: 0, alreadyReached: true };
+  }
+  const months = solveMonthsToReach(baseInput, effectiveTarget, monthlyContribution);
+  return {
+    years: round2(months / 12),
+    months,
+    alreadyReached: false,
+  };
+}
+
+export function formatYearsToGoal({ years, months, alreadyReached }) {
+  if (alreadyReached) return 'already at or above your target';
+  if (months == null && years == null) return '—';
+  const m = months ?? Math.round((years || 0) * 12);
+  if (m <= 1) return 'about 1 month';
+  if (m < 12) return `about ${m} months`;
+  const y = years ?? m / 12;
+  if (Math.abs(y - Math.round(y)) < 0.08) return `about ${Math.round(y)} years`;
+  return `about ${round2(y)} years`;
 }
 
 /**
@@ -193,15 +240,8 @@ export function buildGoalSavingsPlan(baseInput, effectiveTarget, horizons = [5, 
     };
   });
 
-  const yearsAtCurrentPace = solveYearsForContribution(
-    baseInput,
-    effectiveTarget,
-    baseInput.monthlyContribution || 0
-  );
-
   return {
     rows,
-    yearsAtCurrentPace,
     target: effectiveTarget,
   };
 }
