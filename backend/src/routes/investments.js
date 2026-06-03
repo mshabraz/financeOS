@@ -33,6 +33,14 @@ const {
   canonicalFingerprint,
 } = require('../services/investmentDedup');
 const logger = require('../services/logger');
+const {
+  runProjection,
+  runGoalSolver,
+  runScenarioComparison,
+  normalizePlannerInput,
+  buildInsights,
+} = require('../services/compoundInterestEngine');
+const { getPlannerBaseline } = require('../services/investmentPlannerBaseline');
 
 const INVESTMENT_PREVIEW_LIMIT = 100;
 const SUPPORTED_MANUAL_TYPES = new Set([
@@ -945,6 +953,131 @@ router.get('/activity', (req, res) => {
   `).all(...params, Math.min(parseInt(months), 60) * (broker ? 1 : 2));
 
   res.json(rows.reverse());
+});
+
+// ── Wealth planner (compound interest / FIRE projections) ─────────────────────
+
+router.get('/planner/baseline', async (req, res) => {
+  try {
+    const db = getDb();
+    const tickers = req.query.tickers
+      ? String(req.query.tickers).split(',').map((t) => t.trim()).filter(Boolean)
+      : [];
+    const data = await getPlannerBaseline(db, {
+      broker: req.query.broker || '',
+      tickers,
+      excludeCash: req.query.excludeCash === '1',
+    });
+    res.json(data);
+  } catch (err) {
+    logger.error('[investments/planner/baseline]', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/planner/calculate', (req, res) => {
+  try {
+    const input = normalizePlannerInput(req.body || {});
+    let projection;
+    let goal = null;
+
+    if (input.mode === 'goal' && input.targetValue > 0) {
+      goal = runGoalSolver(input);
+      projection = goal.projectionAtRequired || goal.projection;
+    } else {
+      projection = runProjection(input);
+    }
+
+    const scenarios = runScenarioComparison(input, [
+      { name: 'conservative', label: 'Conservative', assumptions: { annualReturn: Math.max(0, input.annualReturn - 3) } },
+      { name: 'base', label: 'Base', assumptions: { annualReturn: input.annualReturn } },
+      { name: 'aggressive', label: 'Aggressive', assumptions: { annualReturn: input.annualReturn + 3 } },
+    ]);
+
+    const insights = buildInsights(
+      projection,
+      input,
+      goal?.targetValue ?? input.targetValue,
+      200
+    );
+
+    const slimTimeline = projection.timeline.filter(
+      (_, i) => i % Math.max(1, Math.floor(projection.timeline.length / 120)) === 0 || i === projection.timeline.length - 1
+    );
+
+    res.json({
+      projection: { ...projection, timeline: slimTimeline },
+      goal,
+      scenarios: scenarios.map((s) => ({
+        name: s.name,
+        label: s.label,
+        finalValue: s.finalValue,
+        totalGains: s.totalGains,
+        years: s.years,
+        gainPctOfFinal: s.gainPctOfFinal,
+      })),
+      insights,
+      formula: 'FV ≈ PV×(1+r)^t + PMT×[((1+r)^t − 1) / r]  (monthly stepping with your compounding & inflation settings)',
+    });
+  } catch (err) {
+    logger.error('[investments/planner/calculate]', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/planner/scenarios', (req, res) => {
+  const db = getDb();
+  const rows = db.prepare(
+    'SELECT id, name, preset, payload_json, created_at, updated_at FROM investment_projection_scenarios ORDER BY updated_at DESC LIMIT 50'
+  ).all();
+  res.json(rows.map((r) => ({
+    id: r.id,
+    name: r.name,
+    preset: r.preset,
+    payload: JSON.parse(r.payload_json),
+    createdAt: r.created_at,
+    updatedAt: r.updated_at,
+  })));
+});
+
+router.post('/planner/scenarios', (req, res) => {
+  const db = getDb();
+  const { name, preset, payload } = req.body || {};
+  if (!name || !payload) return res.status(400).json({ error: 'name and payload required' });
+  const result = db.prepare(`
+    INSERT INTO investment_projection_scenarios (name, preset, payload_json, updated_at)
+    VALUES (?, ?, ?, datetime('now'))
+  `).run(name, preset || null, JSON.stringify(payload));
+  res.status(201).json({ id: result.lastInsertRowid, name });
+});
+
+router.put('/planner/scenarios/:id', (req, res) => {
+  const db = getDb();
+  const id = parseInt(req.params.id, 10);
+  const { name, preset, payload } = req.body || {};
+  const existing = db.prepare('SELECT id FROM investment_projection_scenarios WHERE id = ?').get(id);
+  if (!existing) return res.status(404).json({ error: 'Scenario not found' });
+  db.prepare(`
+    UPDATE investment_projection_scenarios
+    SET name = COALESCE(?, name),
+        preset = COALESCE(?, preset),
+        payload_json = COALESCE(?, payload_json),
+        updated_at = datetime('now')
+    WHERE id = ?
+  `).run(
+    name ?? null,
+    preset ?? null,
+    payload ? JSON.stringify(payload) : null,
+    id
+  );
+  res.json({ ok: true, id });
+});
+
+router.delete('/planner/scenarios/:id', (req, res) => {
+  const db = getDb();
+  const id = parseInt(req.params.id, 10);
+  db.prepare('DELETE FROM investment_projection_scenarios WHERE id = ?').run(id);
+  res.json({ ok: true });
 });
 
 // GET /api/investments/tickers

@@ -228,6 +228,17 @@ export const detectBroker = (file) => {
   return api.post('/investments/detect', form);
 };
 
+export const getInvestmentPlannerBaseline = (params = {}) =>
+  api.get('/investments/planner/baseline', { params });
+export const calculateInvestmentPlanner = (body) =>
+  api.post('/investments/planner/calculate', body);
+export const getInvestmentPlannerScenarios = () => api.get('/investments/planner/scenarios');
+export const saveInvestmentPlannerScenario = (body) => api.post('/investments/planner/scenarios', body);
+export const updateInvestmentPlannerScenario = (id, body) =>
+  api.put(`/investments/planner/scenarios/${id}`, body);
+export const deleteInvestmentPlannerScenario = (id) =>
+  api.delete(`/investments/planner/scenarios/${id}`);
+
 // --- Watched-folder auto-import ---
 export const getWatchedImportConfig = () => api.get('/watched-import/config');
 export const updateWatchedImportConfig = (body) => api.put('/watched-import/config', body);

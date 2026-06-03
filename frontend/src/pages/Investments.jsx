@@ -29,6 +29,7 @@ import UserNoteField from '../components/transactions/UserNoteField';
 import PortfolioOverview from '../components/investments/PortfolioOverview';
 import PriceSyncCompact from '../components/investments/PriceSyncCompact';
 import ManualInvestmentTransactionModal from '../components/investments/ManualInvestmentTransactionModal';
+import CompoundPlanner from '../components/investments/CompoundPlanner';
 import { fmtCurrency, fmtNumber } from '../utils/displayFormat';
 import { usePrivacy } from '../context/PrivacyContext';
 
@@ -1366,6 +1367,7 @@ export default function Investments() {
   const TABS = [
     { id: 'overview',  label: 'Overview'    },
     { id: 'holdings',  label: 'Holdings'    },
+    { id: 'planner',   label: 'Wealth Planner' },
     { id: 'ledger',    label: 'Activity'    },
     { id: 'dividends', label: 'Dividends'   },
     { id: 'history',   label: 'Import Log'  },
@@ -1459,6 +1461,11 @@ export default function Investments() {
             />
           }
         />
+      )}
+
+      {/* ── Wealth planner (compound interest / FIRE) ── */}
+      {tab === 'planner' && (
+        <CompoundPlanner brokerFilter={brokerFilter} />
       )}
 
       {/* ── Holdings ── */}
