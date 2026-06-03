@@ -56,9 +56,9 @@ function toPlannerInput(form, withdrawalStartYear) {
 }
 
 const PLANNER_MODES = [
+  { id: 'tracking', label: 'Goal tracking', icon: Flag },
   { id: 'project', label: 'Forward projection', icon: TrendingUp },
   { id: 'goal', label: 'Goal solver', icon: Target },
-  { id: 'tracking', label: 'Goal tracking', icon: Flag },
 ];
 
 export default function CompoundPlanner({ brokerFilter = '', plannerView }) {
