@@ -1,4 +1,4 @@
-import InvestmentImport from '../import/InvestmentImport';
+import InvestmentImport from '../InvestmentImportPanel';
 
 export default function ImportTab({ onDone }) {
   return (
