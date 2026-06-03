@@ -4,6 +4,7 @@
  */
 
 const { getDb } = require('../db/database');
+const { sanitizeDateParam } = require('../utils/dateParams');
 
 /** Core UNION — all rows; filter exclude_from_analytics in analytics queries */
 const UNIFIED_LEDGER_SQL = `
@@ -67,10 +68,12 @@ const ANALYTICS_LEDGER_SQL = `
 `;
 
 function wherePeriodUnified(dateFrom, dateTo, alias = 'u') {
+  const from = sanitizeDateParam(dateFrom, 'dateFrom');
+  const to = sanitizeDateParam(dateTo, 'dateTo');
   const parts = [];
   const col = `${alias}.date`;
-  if (dateFrom) parts.push(`${col} >= '${dateFrom}'`);
-  if (dateTo) parts.push(`${col} <= '${dateTo}'`);
+  if (from) parts.push(`${col} >= '${from}'`);
+  if (to) parts.push(`${col} <= '${to}'`);
   return parts.length ? `AND ${parts.join(' AND ')}` : '';
 }
 

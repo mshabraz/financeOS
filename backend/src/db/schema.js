@@ -957,11 +957,11 @@ const MIGRATION_V25 = {
   },
 };
 
-// ── Migration v26: Remove archived wealth goals (cleanup) ────────────────────
+// ── Migration v26: (no-op — archived/achieved goals are retained) ─────────────
 const MIGRATION_V26 = {
   version: 26,
-  up: (db) => {
-    db.prepare("DELETE FROM wealth_goals WHERE status != 'active'").run();
+  up: (_db) => {
+    /* Previously deleted non-active goals; now a no-op for upgrades that already ran. */
   },
 };
 

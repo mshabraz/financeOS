@@ -22,8 +22,9 @@ const upload = multer({
   },
 });
 
-// GET /api/revolut/transactions
+// GET /api/revolut/transactions — deprecated; use GET /api/transactions?source=revolut
 router.get('/transactions', (req, res) => {
+  res.set('X-FinanceOS-Deprecated', 'Use GET /api/transactions with source=revolut');
   try {
     const db = getDb();
     const {

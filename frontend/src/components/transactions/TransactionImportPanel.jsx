@@ -52,7 +52,11 @@ export default function TransactionImportPanel() {
   const qc = useQueryClient();
 
   const invalidateAll = () => {
-    qc.invalidateQueries();
+    const keys = [
+      'transactions', 'summary', 'trend', 'bycat', 'byincome', 'merchants', 'recurring',
+      'assets', 'tagSummary', 'tagAnalytics', 'categories', 'dashboard',
+    ];
+    keys.forEach((k) => qc.invalidateQueries({ queryKey: [k] }));
   };
 
   const runPreview = useCallback(async (f, kind) => {

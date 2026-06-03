@@ -1,5 +1,6 @@
 const express = require('express');
 const { getDb } = require('../db/database');
+const { sanitizeDateRange, sanitizeDateParam } = require('../utils/dateParams');
 const { ANALYTICS_LEDGER_SQL, wherePeriodUnified } = require('../services/unifiedLedger');
 const {
   sqlExpenseAmountCase,
@@ -81,6 +82,7 @@ router.get('/summary', (req, res) => {
 
 // GET /api/dashboard/by-category
 router.get('/by-category', (req, res) => {
+  try {
   const db = getDb();
   const { periodType, periodValue, type = 'expense',
     dateFrom: rawFrom, dateTo: rawTo } = req.query;
@@ -88,8 +90,7 @@ router.get('/by-category', (req, res) => {
   let dateFrom;
   let dateTo;
   if (rawFrom || rawTo) {
-    dateFrom = rawFrom || null;
-    dateTo = rawTo || null;
+    ({ dateFrom, dateTo } = sanitizeDateRange({ dateFrom: rawFrom, dateTo: rawTo }));
   } else {
     ({ dateFrom, dateTo } = resolvePeriod(periodType || 'all', periodValue));
   }
@@ -138,19 +139,25 @@ router.get('/by-category', (req, res) => {
   ).all();
 
   res.json(rows);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
 });
 
 // GET /api/dashboard/monthly-trend
 router.get('/monthly-trend', (req, res) => {
+  try {
   const db = getDb();
   const { dateFrom, dateTo, months } = req.query;
 
+  const from = sanitizeDateParam(dateFrom, 'dateFrom');
+  const to = sanitizeDateParam(dateTo, 'dateTo');
   const parts = [];
-  if (dateFrom) parts.push(`u.date >= '${dateFrom}'`);
-  if (dateTo) parts.push(`u.date <= '${dateTo}'`);
+  if (from) parts.push(`u.date >= '${from}'`);
+  if (to) parts.push(`u.date <= '${to}'`);
   const where = parts.length ? `WHERE ${parts.join(' AND ')}` : '';
 
-  const limitClause = !dateFrom && !dateTo
+  const limitClause = !from && !to
     ? `LIMIT ${Math.min(parseInt(months || 12), 120)}`
     : '';
 
@@ -173,6 +180,9 @@ router.get('/monthly-trend', (req, res) => {
   ).all();
 
   res.json(rows.reverse());
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
 });
 
 // GET /api/dashboard/quarterly-trend?year=2026

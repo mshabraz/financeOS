@@ -471,9 +471,9 @@ export default function WealthGoalTracking() {
                   sub: data.monthsLeft ? `${data.monthsLeft} mo left` : undefined,
                 },
                 {
-                  label: 'Need / month',
+                  label: 'Net savings target / mo',
                   value: data.completed ? '—' : fmtEur(data.requiredMonthly),
-                  sub: data.completed ? undefined : `${fmtEur(data.requiredYearly)}/yr`,
+                  sub: data.completed ? undefined : `${fmtEur(data.requiredYearly)}/yr from net savings`,
                 },
                 {
                   label: 'This month',

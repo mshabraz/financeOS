@@ -229,6 +229,7 @@ router.patch('/:id', (req, res) => {
     const parsed = parseTxnRouteId(req.params.id);
 
     if (parsed.source === 'revolut') {
+      const { splitRatio, excludeFromAnalytics } = req.body;
       const tx = db.prepare('SELECT * FROM revolut_transactions WHERE id = ?').get(parsed.revolutId);
       if (!tx) return res.status(404).json({ error: 'Not found' });
 
@@ -242,10 +243,47 @@ router.patch('/:id', (req, res) => {
         updates.push('notes = ?');
         vals.push(notes);
       }
+      let recompute = false;
+      if (splitRatio !== undefined) {
+        const r = splitRatio === null || splitRatio === '' ? null : Number(splitRatio);
+        if (r !== null && (!Number.isFinite(r) || r <= 0 || r > 1)) {
+          return res.status(400).json({ error: 'splitRatio must be between 0 and 1, or null to reset' });
+        }
+        updates.push('split_ratio = ?');
+        vals.push(r);
+        recompute = true;
+      }
+      if (excludeFromAnalytics !== undefined) {
+        updates.push('exclude_from_analytics = ?');
+        vals.push(excludeFromAnalytics ? 1 : 0);
+        recompute = true;
+      }
       if (!updates.length) return res.status(400).json({ error: 'Nothing to update' });
 
       vals.push(parsed.revolutId);
       db.prepare(`UPDATE revolut_transactions SET ${updates.join(', ')} WHERE id = ?`).run(...vals);
+
+      if (recompute) {
+        const { fieldsFromRow, getRevolutExpenseSplitRatio } = require('../services/revolutCalculations');
+        const row = db.prepare('SELECT * FROM revolut_transactions WHERE id = ?').get(parsed.revolutId);
+        const globalRatio = getRevolutExpenseSplitRatio(db);
+        const f = fieldsFromRow(row, row.split_ratio ?? globalRatio);
+        if (excludeFromAnalytics !== undefined && excludeFromAnalytics) {
+          f.exclude_from_analytics = 1;
+        }
+        db.prepare(`
+          UPDATE revolut_transactions
+          SET effective_amount = ?, split_ratio = ?, exclude_from_analytics = ?,
+              applies_shared_split = ?
+          WHERE id = ?
+        `).run(
+          f.effective_amount,
+          f.split_ratio,
+          f.exclude_from_analytics,
+          f.applies_shared_split,
+          parsed.revolutId
+        );
+      }
 
       const updated = db.prepare(
         `SELECT r.*, c.name AS category_name, c.icon AS category_icon, c.color AS category_color

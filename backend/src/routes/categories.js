@@ -56,6 +56,7 @@ router.delete('/:id', (req, res) => {
   const db = getDb();
   const def = db.prepare('SELECT id FROM categories WHERE is_default = 1').get();
   db.prepare('UPDATE transactions SET category_id = ? WHERE category_id = ?').run(def?.id, req.params.id);
+  db.prepare('UPDATE revolut_transactions SET category_id = ? WHERE category_id = ?').run(def?.id, req.params.id);
   db.prepare('DELETE FROM categories WHERE id = ? AND is_default = 0').run(req.params.id);
   res.json({ ok: true });
 });

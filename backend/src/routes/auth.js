@@ -96,12 +96,17 @@ async function verifyWithRateLimit(req, password) {
   if (!record || now - record.start > WINDOW_MS) {
     record = { start: now, count: 0 };
   }
-  record.count += 1;
-  loginAttempts.set(ip, record);
-  if (record.count > MAX_ATTEMPTS) {
+  if (record.count >= MAX_ATTEMPTS) {
     throw new Error('Too many login attempts. Try again in 15 minutes.');
   }
-  return authStore.verifyPassword(password);
+  const ok = await authStore.verifyPassword(password);
+  if (!ok) {
+    record.count += 1;
+    loginAttempts.set(ip, record);
+    return false;
+  }
+  loginAttempts.delete(ip);
+  return true;
 }
 
 module.exports = router;

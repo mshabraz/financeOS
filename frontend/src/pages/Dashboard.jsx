@@ -17,6 +17,7 @@ import {
 } from '../api/client';
 import StatCard from '../components/ui/StatCard';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
+import QueryErrorPanel from '../components/ui/QueryErrorPanel';
 import { fmtEur, fmtPkr, fmtCurrency, privText, fmtPct } from '../utils/displayFormat';
 import { usePrivacy } from '../context/PrivacyContext';
 
@@ -28,7 +29,7 @@ const RADIAN = Math.PI / 180;
 function renderCategoryPieLabel({
   cx, cy, midAngle, outerRadius, percent, name, icon,
 }) {
-  if (percent < 0.025) return null;
+  if (percent < 0.05) return null;
 
   const label = [icon, name].filter(Boolean).join(' ').trim() || name;
   const cos = Math.cos(-RADIAN * midAngle);
@@ -305,6 +306,24 @@ export default function Dashboard() {
   const totalAssetsPkr =
     assets.data?.totalAssetsPkr ?? Math.round(totalAssets * eurToPkrRate);
   const periodLabel = periodOptions.find((o) => o.value === periodValue)?.label ?? periodValue;
+  const loadError = summary.error || byCategory.error || assets.error;
+
+  if (loadError) {
+    return (
+      <div className="space-y-4">
+        <h1 className="page-title">Dashboard</h1>
+        <QueryErrorPanel
+          title="Could not load dashboard"
+          message={loadError.message}
+          onRetry={() => {
+            summary.refetch();
+            byCategory.refetch();
+            assets.refetch();
+          }}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

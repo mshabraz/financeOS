@@ -12,7 +12,12 @@ export function AuthProvider({ children }) {
       const s = await getAuthStatus();
       setStatus(s);
     } catch {
-      setStatus({ authEnabled: false, configured: false, authenticated: true });
+      setStatus({
+        authEnabled: true,
+        configured: false,
+        authenticated: false,
+        connectionFailed: true,
+      });
     } finally {
       setLoading(false);
     }

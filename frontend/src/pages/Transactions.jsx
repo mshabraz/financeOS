@@ -1,4 +1,4 @@
-import { useState, useMemo, Fragment } from 'react';
+import { useState, useMemo, Fragment, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -13,6 +13,7 @@ import {
 import TransactionSourceBadges, { TransactionAmountDetail } from '../components/transactions/TransactionSourceBadges';
 import CategoryBadge from '../components/ui/CategoryBadge';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
+import QueryErrorPanel from '../components/ui/QueryErrorPanel';
 import PageHeader from '../components/ui/PageHeader';
 import MonthFilterSelect from '../components/ui/MonthFilterSelect';
 import DatePicker from '../components/ui/DatePicker';
@@ -146,8 +147,15 @@ function signedAnalyticsAmount(tx) {
   return tx.direction === 'K' ? Math.abs(raw) : -Math.abs(raw);
 }
 
-function ExpandedRow({ tx, colSpan, onSaveNote }) {
+function ExpandedRow({ tx, colSpan, onSaveNote, onRevolutPatch }) {
   const copy = (text) => navigator.clipboard?.writeText(text);
+  const [splitRatio, setSplitRatio] = useState(tx.split_ratio ?? 0.5);
+  const [excludeAnalytics, setExcludeAnalytics] = useState(!!tx.exclude_from_analytics);
+
+  useEffect(() => {
+    setSplitRatio(tx.split_ratio ?? 0.5);
+    setExcludeAnalytics(!!tx.exclude_from_analytics);
+  }, [tx.id, tx.split_ratio, tx.exclude_from_analytics]);
 
   const fields = [
     { label: 'Merchant',         value: tx.merchant },
@@ -167,6 +175,45 @@ function ExpandedRow({ tx, colSpan, onSaveNote }) {
         <div className="mb-4 max-w-2xl">
           <TransactionAmountDetail tx={tx} />
         </div>
+        {tx.source === 'revolut' && onRevolutPatch && (
+          <div className="mb-4 max-w-md space-y-3 rounded-lg border border-purple-200 dark:border-purple-800 p-3 bg-purple-50/30 dark:bg-purple-950/20">
+            <p className="text-xs font-semibold text-purple-800 dark:text-purple-200">Revolut analytics</p>
+            <label className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
+              <input
+                type="checkbox"
+                checked={excludeAnalytics}
+                onChange={(e) => setExcludeAnalytics(e.target.checked)}
+              />
+              Exclude from analytics (e.g. top-ups / transfers)
+            </label>
+            {!excludeAnalytics && (
+              <label className="block text-xs">
+                <span className="text-gray-500">Expense split ratio (0–1)</span>
+                <input
+                  type="number"
+                  min={0.05}
+                  max={1}
+                  step={0.05}
+                  className="input w-full mt-1"
+                  value={splitRatio}
+                  onChange={(e) => setSplitRatio(Number(e.target.value))}
+                />
+              </label>
+            )}
+            <button
+              type="button"
+              className="btn-secondary text-xs"
+              onClick={() =>
+                onRevolutPatch({
+                  splitRatio: excludeAnalytics ? null : splitRatio,
+                  excludeFromAnalytics: excludeAnalytics,
+                })
+              }
+            >
+              Save Revolut settings
+            </button>
+          </div>
+        )}
         <div className="mb-4 max-w-2xl">
           <p className="text-xs font-medium text-gray-500 mb-1">Your note</p>
           <UserNoteField
@@ -239,7 +286,7 @@ export default function Transactions() {
   const { data: categories } = useQuery({ queryKey: ['categories'], queryFn: getCategories });
   const { data: allTags }    = useQuery({ queryKey: ['tags'],       queryFn: getTags });
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['transactions', page, search, category, direction, dateFrom, dateTo, tagFilter, sourceFilter, hasNotesOnly],
     queryFn: () => getTransactions({
       page, limit: 50, search,
@@ -284,6 +331,16 @@ export default function Transactions() {
   const notesMut = useMutation({
     mutationFn: ({ id, notes }) => updateTransaction(id, { notes }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['transactions'] }),
+  });
+
+  const revolutPatchMut = useMutation({
+    mutationFn: ({ id, ...body }) => updateTransaction(id, body),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['transactions'] });
+      qc.invalidateQueries({ queryKey: ['summary'] });
+      qc.invalidateQueries({ queryKey: ['trend'] });
+      qc.invalidateQueries({ queryKey: ['bycat'] });
+    },
   });
 
   const handleExport = async () => {
@@ -403,6 +460,14 @@ export default function Transactions() {
           merchant={bulkModal}
           onClose={() => setBulkModal(null)}
           onApplied={() => qc.invalidateQueries({ queryKey: ['transactions'] })}
+        />
+      )}
+
+      {tab === 'list' && isError && (
+        <QueryErrorPanel
+          title="Could not load transactions"
+          message={error?.message}
+          onRetry={() => refetch()}
         />
       )}
 
@@ -785,6 +850,11 @@ export default function Transactions() {
                           tx={tx}
                           colSpan={COL_COUNT}
                           onSaveNote={(v) => notesMut.mutate({ id: rowId, notes: v })}
+                          onRevolutPatch={
+                            tx.source === 'revolut'
+                              ? (body) => revolutPatchMut.mutate({ id: rowId, ...body })
+                              : undefined
+                          }
                         />
                       )}
                     </Fragment>

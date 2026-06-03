@@ -21,7 +21,7 @@ const MORE_NAV = [
   { to: '/shared',      icon: UsersRound, label: 'Shared' },
   { to: '/tags',        icon: Hash,      label: 'Tags' },
   { to: '/categories',  icon: Tag,       label: 'Categories' },
-  { to: '/settings',    icon: Settings,  label: 'Auto-import' },
+  { to: '/settings',    icon: Settings,  label: 'Settings' },
 ];
 
 const DESKTOP_NAV = [
@@ -32,7 +32,7 @@ const DESKTOP_NAV = [
   { to: '/shared',       icon: UsersRound,      label: 'Shared Expenses' },
   { to: '/tags',         icon: Hash,            label: 'Tags' },
   { to: '/categories',   icon: Tag,             label: 'Categories' },
-  { to: '/settings',     icon: Settings,        label: 'Auto-import' },
+  { to: '/settings',     icon: Settings,        label: 'Settings' },
 ];
 
 function NavItem({ to, icon: Icon, label, end, onClick, compact }) {

@@ -46,7 +46,14 @@ export const getAuthStatus   = () => api.get('/auth/status');
 export const login           = (password) => api.post('/auth/login', { password });
 export const setupPassword   = (password) => api.post('/auth/setup', { password });
 export const logout          = () => api.post('/auth/logout');
+export const changePassword  = (currentPassword, newPassword) =>
+  api.post('/auth/change-password', { currentPassword, newPassword });
 export const getNetworkInfo  = () => api.get('/network/info');
+
+// --- App settings ---
+export const getRevolutSplitSetting = () => api.get('/settings/revolut-split');
+export const updateRevolutSplitSetting = (ratio) =>
+  api.put('/settings/revolut-split', { ratio });
 
 // --- Transactions ---
 export const getTransactions = (params) =>
@@ -85,15 +92,7 @@ export const commitRevolutImport = (file) => {
   return api.post('/revolut/import/commit', form, { timeout: IMPORT_TIMEOUT_MS });
 };
 export const getRevolutImportSessions = () => api.get('/revolut/import/sessions');
-export const getRevolutTransactions = (params) =>
-  api.get('/revolut/transactions', { params: sanitizeTransactionParams(params) });
 export const getRevolutTypes = () => api.get('/revolut/types');
-export const updateRevolutTransaction = (id, data) => api.patch(`/revolut/transactions/${id}`, data);
-export const exportRevolutCSV = () =>
-  axios.get(`${apiBaseURL}/revolut/export/csv`, {
-    responseType: 'blob',
-    withCredentials: true,
-  });
 export const assignRevolutTag = (rxId, tagId) =>
   api.post(`/tags/revolut-transaction/${rxId}`, { tagId });
 export const removeRevolutTag = (rxId, tagId) =>

@@ -272,8 +272,8 @@ router.get('/summary/all', (_req, res) => {
          + (SELECT COUNT(*) FROM revolut_transaction_tags rt WHERE rt.tag_id = tg.id) AS txCount,
        COALESCE((
          SELECT SUM(CASE
-               WHEN COALESCE(c.type, 'expense') = 'expense' AND tx.direction = 'D' THEN ABS(tx.amount)
-               WHEN COALESCE(c.type, 'expense') = 'expense' AND tx.direction = 'K' THEN -ABS(tx.amount)
+               WHEN COALESCE(c.type, 'expense') = 'expense' AND tx.direction = 'D' THEN ABS(COALESCE(tx.amount, 0))
+               WHEN COALESCE(c.type, 'expense') = 'expense' AND tx.direction = 'K' THEN -ABS(COALESCE(tx.amount, 0))
                ELSE 0
              END)
          FROM transaction_tags tt

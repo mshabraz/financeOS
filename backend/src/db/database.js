@@ -58,18 +58,24 @@ function getDb() {
 function createWrapper(raw) {
   let _inTx = false;
   let _persistQueue = Promise.resolve();
+  let _persistTimer = null;
+  const PERSIST_DEBOUNCE_MS = 250;
 
-  /** Serialize disk writes — safe for concurrent LAN HTTP requests (single Node process). */
+  /** Serialize disk writes — debounced between rapid writes (single Node process). */
   function persist() {
     if (_inTx) return;
-    _persistQueue = _persistQueue.then(() => {
-      const data = raw.export();
-      const tmp = `${DB_PATH}.tmp`;
-      fs.writeFileSync(tmp, Buffer.from(data));
-      fs.renameSync(tmp, DB_PATH);
-    }).catch((err) => {
-      console.error('[DB] Persist failed:', err.message);
-    });
+    if (_persistTimer) clearTimeout(_persistTimer);
+    _persistTimer = setTimeout(() => {
+      _persistTimer = null;
+      _persistQueue = _persistQueue.then(() => {
+        const data = raw.export();
+        const tmp = `${DB_PATH}.tmp`;
+        fs.writeFileSync(tmp, Buffer.from(data));
+        fs.renameSync(tmp, DB_PATH);
+      }).catch((err) => {
+        console.error('[DB] Persist failed:', err.message);
+      });
+    }, PERSIST_DEBOUNCE_MS);
   }
 
   /**

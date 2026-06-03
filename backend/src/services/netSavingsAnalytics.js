@@ -4,6 +4,7 @@
  */
 const { ANALYTICS_LEDGER_SQL } = require('./unifiedLedger');
 const { sqlExpenseAmountCase, sqlIncomeAmountCase } = require('./categoryAnalytics');
+const { sanitizeDateParam } = require('../utils/dateParams');
 
 function round2(n) {
   return Math.round(n * 100) / 100;
@@ -13,13 +14,15 @@ function round2(n) {
  * Monthly rows: { month, income, expenses, netSavings }
  */
 function queryMonthlyNetSavings(db, { dateFrom = null, dateTo = null, months = null } = {}) {
+  const from = sanitizeDateParam(dateFrom, 'dateFrom');
+  const to = sanitizeDateParam(dateTo, 'dateTo');
   const parts = [];
-  if (dateFrom) parts.push(`u.date >= '${dateFrom}'`);
-  if (dateTo) parts.push(`u.date <= '${dateTo}'`);
+  if (from) parts.push(`u.date >= '${from}'`);
+  if (to) parts.push(`u.date <= '${to}'`);
   const where = parts.length ? `WHERE ${parts.join(' AND ')}` : '';
 
   const limitClause =
-    !dateFrom && !dateTo && months
+    !from && !to && months
       ? `LIMIT ${Math.min(parseInt(months, 10) || 36, 120)}`
       : '';
 

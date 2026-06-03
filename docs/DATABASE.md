@@ -10,7 +10,7 @@ The file is **gitignored**. Only schema **migrations** (code in `backend/src/db/
 
 ## How migrations work
 
-1. Each schema change is a numbered migration (`v1`, `v2`, … `v20`, …).
+1. Each schema change is a numbered migration (`v1`, `v2`, … through **v26** as of FinanceOS 1.0.1).
 2. On server start, `runMigrations()` applies any migration not yet recorded in `schema_migrations`.
 3. You can also run migrations manually:
 
@@ -20,6 +20,8 @@ npm run db:status
 ```
 
 A fresh install creates an empty database, runs all migrations, then seeds default categories.
+
+**Note:** Migration v26 is a no-op (archived wealth goals are kept). If your database was upgraded with an older v26 that deleted non-active goals, restore from backup to recover that history.
 
 ## Backups
 

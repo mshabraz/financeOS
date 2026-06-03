@@ -1198,7 +1198,20 @@ function InvestmentLedger({ brokerFilter }) {
         {list.isLoading ? (
           <LoadingSpinner />
         ) : (
-          <div className="overflow-x-auto">
+          <>
+          <ul className="md:hidden divide-y divide-gray-100 dark:divide-gray-800">
+            {rows.map((r) => (
+              <li key={r.id} className="px-4 py-3 space-y-1">
+                <div className="flex justify-between gap-2">
+                  <span className="font-mono text-sm font-semibold text-brand-600">{r.ticker || '—'}</span>
+                  <span className="text-sm font-medium tabular-nums">{fmt(r.net_amount, r.currency)}</span>
+                </div>
+                <p className="text-xs text-gray-500">{r.date} · {BROKER_LABELS[r.broker] || r.broker} · {r.type}</p>
+                {r.notes && <p className="text-xs text-gray-600 dark:text-gray-400 line-clamp-2">{r.notes}</p>}
+              </li>
+            ))}
+          </ul>
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-sm min-w-[1120px]">
               <thead className="bg-gray-50 dark:bg-gray-800/50">
                 <tr>
@@ -1275,6 +1288,7 @@ function InvestmentLedger({ brokerFilter }) {
               </tbody>
             </table>
           </div>
+          </>
         )}
         <div className="px-4 py-3 border-t border-gray-200 dark:border-gray-800 flex flex-col sm:flex-row sm:items-center gap-2 justify-between text-xs text-gray-500">
           <span>

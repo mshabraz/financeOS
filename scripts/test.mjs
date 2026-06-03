@@ -51,5 +51,13 @@ try {
   fail('schema.js load', e.message);
 }
 
-console.log(`\n${passed} passed, ${failed} failed`);
-process.exit(failed ? 1 : 0);
+console.log(`\nSmoke: ${passed} passed, ${failed} failed`);
+if (failed) process.exit(1);
+
+console.log('\n---\n');
+const { spawnSync } = await import('node:child_process');
+const auditRun = spawnSync(process.execPath, [path.join(__dirname, 'audit-tests.mjs')], {
+  cwd: ROOT,
+  stdio: 'inherit',
+});
+process.exit(auditRun.status ?? 1);

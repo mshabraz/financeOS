@@ -6,7 +6,7 @@ import { getNetworkInfo } from '../api/client';
 import { useQuery } from '@tanstack/react-query';
 
 export default function Login() {
-  const { needsSetup, login, setup } = useAuth();
+  const { needsSetup, login, setup, status } = useAuth();
   const [password, setPassword] = useState('');
   const [confirm, setConfirm]   = useState('');
   const [error, setError]       = useState('');
@@ -53,13 +53,19 @@ export default function Login() {
           </div>
         </div>
 
-        {needsSetup && (
+        {status?.connectionFailed && (
+          <p className="text-xs text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg px-3 py-2 mb-4">
+            Cannot verify login with the server. Check that FinanceOS is running, then refresh this page.
+          </p>
+        )}
+
+        {needsSetup && !status?.connectionFailed && (
           <p className="text-xs text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg px-3 py-2 mb-4">
             This password protects access from other devices on your network. There is no cloud reset.
           </p>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4" style={status?.connectionFailed ? { pointerEvents: 'none', opacity: 0.6 } : undefined}>
           <div>
             <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Password</label>
             <input

@@ -12,6 +12,7 @@ import {
   getTopMerchants, getRecurring,
 } from '../api/client';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
+import QueryErrorPanel from '../components/ui/QueryErrorPanel';
 import MonthFilterSelect from '../components/ui/MonthFilterSelect';
 import DatePicker from '../components/ui/DatePicker';
 import { getMonthRange } from '../utils/dateFilters';
@@ -103,15 +104,15 @@ export default function Analytics() {
 
   // Queries
   const trend    = useQuery({
-    queryKey: ['trend', dateFrom, dateTo],
+    queryKey: ['trend', rangeParams],
     queryFn:  () => getMonthlyTrend(rangeParams),
   });
   const byCat    = useQuery({
-    queryKey: ['bycat', dateFrom, dateTo],
+    queryKey: ['bycat', rangeParams],
     queryFn:  () => getByCategory({ ...rangeParams, type: 'expense' }),
   });
   const byIncome = useQuery({
-    queryKey: ['byincome', dateFrom, dateTo],
+    queryKey: ['byincome', rangeParams],
     queryFn:  () => getByCategory({ ...rangeParams, type: 'income' }),
   });
   const budgets  = useQuery({ queryKey: ['budgets', budgetMonth], queryFn: () => getBudgets(budgetMonth) });
@@ -138,6 +139,24 @@ export default function Analytics() {
   const totalIncome   = trend.data?.reduce((s, r) => s + (r.income   || 0), 0) ?? 0;
   const totalExpenses = trend.data?.reduce((s, r) => s + (r.expenses || 0), 0) ?? 0;
   const totalCatSpend = byCat.data?.reduce((s, r) => s + (r.total   || 0), 0) ?? 0;
+  const loadError = trend.error || byCat.error || byIncome.error;
+
+  if (loadError) {
+    return (
+      <div className="space-y-4">
+        <h1 className="page-title">Analytics</h1>
+        <QueryErrorPanel
+          title="Could not load analytics"
+          message={loadError.message}
+          onRetry={() => {
+            trend.refetch();
+            byCat.refetch();
+            byIncome.refetch();
+          }}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
