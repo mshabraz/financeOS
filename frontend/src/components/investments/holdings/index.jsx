@@ -543,10 +543,12 @@ export function MarketHoldingsTable({ data, valuation, onBind, onUnbind, showEur
                       </span>
                     </td>
                     <td className="px-3 py-2.5 font-mono font-bold text-brand-600">{h.ticker}</td>
-                    <td className="px-3 py-2.5 max-w-[140px]">
-                      <p className="truncate text-xs text-gray-700 dark:text-gray-300">
-                        {h.binding?.securityName || h.fundName || '—'}
-                      </p>
+                    <td className="px-3 py-2.5 max-w-[180px]">
+                      <SecurityDisplay
+                        row={h}
+                        primaryClassName="text-xs font-medium text-gray-700 dark:text-gray-300 truncate"
+                        secondaryClassName="text-[10px] text-gray-500 font-mono truncate"
+                      />
                       {badge && (
                         <div className="mt-0.5">
                           <span className={clsx('inline-block text-[10px] px-1.5 py-0.5 rounded', badge.cls)}>

@@ -4,6 +4,7 @@ import {
 } from 'lucide-react';
 import clsx from 'clsx';
 import { fmtEur, fmtPct } from '../../../utils/investmentFormat';
+import { resolveAllocationLabel } from '../../../utils/securityDisplay';
 import { BROKER_LABELS } from '../constants';
 
 const INSIGHT_ACCENT = {
@@ -138,7 +139,7 @@ function TopWeightsCard({ allocations }) {
       <ul className="space-y-2.5">
         {rows.map((r, i) => {
           const pct = r.pct ?? r.portfolioPct ?? r.weightPct ?? 0;
-          const label = r.label || r.ticker || r.name;
+          const label = resolveAllocationLabel(r);
           return (
             <li key={`${label}-${i}`} className="min-w-0">
               <div className="flex items-baseline justify-between gap-3 mb-1">

@@ -19,7 +19,7 @@ import {
 import FundBenchmarkSection from './FundBenchmarkSection';
 import InvestmentInsightsPanel from './insights/InvestmentInsightsPanel';
 import SecurityDisplay from './SecurityDisplay';
-import { resolveDisplayName } from '../../utils/securityDisplay';
+import { resolveDisplayName, enrichAllocationRows, resolveAllocationLabel } from '../../utils/securityDisplay';
 
 function TrendBadge({ value, pct, label }) {
   if (value == null && pct == null) return null;
@@ -126,8 +126,9 @@ function AllocationChart({ allocations, view, onViewChange }) {
       (key === 'region' ? allocations?.region : []) ||
       (key === 'commodities' ? allocations?.commodities : []) ||
       [];
-    return rows.map((a) => ({
-      name: a.label,
+    const enriched = key === 'topHoldings' ? enrichAllocationRows(rows) : rows;
+    return enriched.map((a) => ({
+      name: resolveAllocationLabel(a),
       value: a.valueEur,
       pct: a.pct,
     }));
@@ -369,6 +370,8 @@ function CompositionTable({ rows, brokerFilter }) {
       list = list.filter(
         (r) =>
           r.ticker?.toLowerCase().includes(q) ||
+          r.displayName?.toLowerCase().includes(q) ||
+          r.customDisplayName?.toLowerCase().includes(q) ||
           r.securityName?.toLowerCase().includes(q) ||
           r.sector?.toLowerCase().includes(q)
       );

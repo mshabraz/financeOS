@@ -25,6 +25,23 @@ export function resolveDisplayName(row) {
   return trim(row.ticker) || '—';
 }
 
+/** Chart / allocation rows — prefer user display names over stale API labels. */
+export function resolveAllocationLabel(row) {
+  if (!row) return '—';
+  if (row.displayName) return row.displayName;
+  const resolved = resolveDisplayName(row);
+  if (resolved && resolved !== '—') return resolved;
+  return trim(row.label) || trim(row.name) || trim(row.ticker) || '—';
+}
+
+/** Normalize allocation API rows for charts and breakdown lists. */
+export function enrichAllocationRows(rows) {
+  return (rows ?? []).map((r) => {
+    const label = resolveAllocationLabel(r);
+    return { ...r, label, displayName: r.displayName || label };
+  });
+}
+
 export function resolveDisplaySecondary(row) {
   if (row.displaySecondary) return row.displaySecondary;
   const ticker = trim(row.ticker);

@@ -11,6 +11,7 @@ const {
   sectorLabelForRow,
 } = require('./investmentAssetClassification');
 const logger = require('./logger');
+const { resolveDisplayName } = require('./securityDisplayNames');
 
 /** FTSE Developed (VGVE and peers) — justETF Mar 2026. */
 const FTSE_DEVELOPED_COUNTRIES = [
@@ -236,17 +237,21 @@ function groupAllocationDetailed(items, totalEur, { maxItems = 10, minPct = 1.2 
 }
 
 function buildTopHoldingsAllocation(composition, totalPortfolioEur) {
-  const map = new Map();
-  for (const c of composition) {
-    if (c.marketValueEur <= 0) continue;
-    const label = c.securityName || c.ticker;
-    addToMap(map, label, c.marketValueEur);
-  }
-  return groupAllocationDetailed(
-    mapToAllocationItems(map, totalPortfolioEur),
-    totalPortfolioEur,
-    { maxItems: 10, minPct: 1.0 }
-  );
+  const items = composition
+    .filter((c) => c.marketValueEur > 0)
+    .map((c) => {
+      const label = resolveDisplayName(c);
+      return {
+        key: `${c.broker}|${c.ticker}|${c.currency || 'EUR'}`,
+        label,
+        displayName: c.displayName || label,
+        ticker: c.ticker,
+        broker: c.broker,
+        valueEur: c.marketValueEur,
+        pct: totalPortfolioEur > 0 ? (c.marketValueEur / totalPortfolioEur) * 100 : 0,
+      };
+    });
+  return groupAllocationDetailed(items, totalPortfolioEur, { maxItems: 10, minPct: 1.0 });
 }
 
 /**

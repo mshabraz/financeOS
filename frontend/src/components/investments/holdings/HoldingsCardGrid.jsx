@@ -95,10 +95,11 @@ export function CostBasisHoldingCards({ data, open }) {
         >
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
-              <p className="font-mono font-bold text-brand-600">{h.ticker}</p>
-              {h.fundName && (
-                <p className="text-xs text-gray-500 line-clamp-2 mt-0.5">{h.fundName}</p>
-              )}
+              <SecurityDisplay
+                row={h}
+                primaryClassName="font-semibold text-gray-900 dark:text-white text-sm"
+                secondaryClassName="text-[10px] text-gray-500 mt-0.5 font-mono"
+              />
             </div>
             <BrokerBadge broker={h.broker} />
           </div>
@@ -137,7 +138,11 @@ export function DividendTickerCards({ rows }) {
           className="rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50/80 dark:bg-gray-800/40 p-3 space-y-2"
         >
           <div className="flex items-start justify-between gap-2">
-            <p className="font-mono font-bold text-brand-600">{r.ticker}</p>
+            <SecurityDisplay
+              row={r}
+              primaryClassName="font-semibold text-gray-900 dark:text-white text-sm"
+              secondaryClassName="text-[10px] text-gray-500 font-mono"
+            />
             <BrokerBadge broker={r.broker} />
           </div>
           <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs">

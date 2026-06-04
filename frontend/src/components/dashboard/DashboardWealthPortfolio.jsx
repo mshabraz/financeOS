@@ -2,7 +2,7 @@ import { lazy, Suspense } from 'react';
 import { Link } from 'react-router-dom';
 import { PieChart, Layers, TrendingUp, TrendingDown, Sparkles, AlertTriangle } from 'lucide-react';
 import { fmtEur, fmtPct } from '../../utils/displayFormat';
-import { resolveDisplayName } from '../../utils/securityDisplay';
+import { resolveDisplayName, resolveAllocationLabel, enrichAllocationRows } from '../../utils/securityDisplay';
 import { buildAssetSegments } from './assetOverviewUtils';
 import LoadingSpinner from '../ui/LoadingSpinner';
 
@@ -84,7 +84,7 @@ export default function DashboardWealthPortfolio({
   const worst = analytics?.insights?.worstPerformers?.[0];
   const divScore = analytics?.diversification?.score;
   const warnings = analytics?.diversification?.warnings ?? [];
-  const topHoldings = allocations.topHoldings?.slice(0, 5) ?? [];
+  const topHoldings = enrichAllocationRows(allocations.topHoldings?.slice(0, 5) ?? []);
   const narrativeInsights = (analytics?.insights?.items ?? []).filter((i) => i.type !== 'action').slice(0, 4);
 
   if (isLoading) {
@@ -222,7 +222,7 @@ export default function DashboardWealthPortfolio({
                 <BreakdownList
                   title="Largest weights"
                   rows={topHoldings.map((r) => ({
-                    label: r.label || r.ticker,
+                    label: resolveAllocationLabel(r),
                     valueEur: r.valueEur,
                     pct: r.pct ?? r.portfolioPct,
                   }))}

@@ -21,6 +21,9 @@ export function mergePortfolioRows(marketOpen = [], composition = [], totalPortf
     return attachSecurityDisplay({
       ...h,
       ...c,
+      customDisplayName:
+        c.customDisplayName ?? h.customDisplayName ?? h.binding?.customDisplayName,
+      nickname: c.nickname ?? h.nickname ?? h.binding?.nickname,
       securityName,
       portfolioPct,
       quantity: c.quantity ?? h.effectiveQuantity ?? h.quantity,

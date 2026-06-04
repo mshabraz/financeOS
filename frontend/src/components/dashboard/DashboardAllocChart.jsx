@@ -2,6 +2,7 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, LabelList,
 } from 'recharts';
 import { fmtEur, fmtPct } from '../../utils/displayFormat';
+import { resolveAllocationLabel } from '../../utils/securityDisplay';
 import { CHART_COLORS } from '../investments/constants';
 
 function labelText(row) {
@@ -20,7 +21,7 @@ export default function DashboardAllocChart({ data, dataKey = 'valueEur' }) {
     .filter((d) => (d[dataKey] ?? d.pct ?? 0) > 0)
     .map((d) => ({
       ...d,
-      label: d.label || d.name || '—',
+      label: resolveAllocationLabel(d),
       valueEur: d.valueEur ?? d.value ?? 0,
       pct: d.pct ?? d.portfolioPct ?? 0,
     }));

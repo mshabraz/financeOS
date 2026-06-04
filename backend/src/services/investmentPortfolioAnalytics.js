@@ -377,7 +377,7 @@ function computeDiversification(composition, totalPortfolioEur, cashEur) {
       warnings.push({
         level: 'high',
         code: 'single_position',
-        message: `${c.ticker} is ${c.portfolioPct.toFixed(1)}% of the portfolio`,
+        message: `${resolveDisplayName(c)} is ${c.portfolioPct.toFixed(1)}% of the portfolio`,
       });
     }
   }
@@ -561,9 +561,17 @@ function buildDividendAnalytics(db, broker) {
 
   const projectedAnnual = last12?.total ?? 0;
 
+  const topContributors = byTicker.map((row) => {
+    const binding = getBinding(db, row.broker, row.ticker, row.currency || 'EUR');
+    return attachSecurityDisplay(
+      { ...row, currency: row.currency || 'EUR' },
+      binding,
+    );
+  });
+
   return {
     byYear,
-    topContributors: byTicker,
+    topContributors,
     projectedAnnualIncome: Math.round(projectedAnnual * 100) / 100,
     trailing12Months: Math.round((last12?.total || 0) * 100) / 100,
   };
