@@ -1,8 +1,6 @@
 const express = require('express');
 const repo = require('../services/obligations/repository');
-const { listDueReminders, markReminderFired } = require('../services/obligations/reminders');
-const { getDb } = require('../db/database');
-const { OBLIGATION_KINDS, DIRECTIONS, DEFAULT_REMINDER_DAYS } = require('../services/obligations/constants');
+const { OBLIGATION_KINDS, DIRECTIONS } = require('../services/obligations/constants');
 const logger = require('../services/logger');
 
 const router = express.Router();
@@ -11,7 +9,6 @@ router.get('/meta', (_req, res) => {
   res.json({
     obligationKinds: OBLIGATION_KINDS,
     directions: DIRECTIONS,
-    defaultReminderDays: DEFAULT_REMINDER_DAYS,
   });
 });
 
@@ -20,30 +17,6 @@ router.get('/summary', (_req, res) => {
     res.json(repo.summary());
   } catch (err) {
     logger.error('[obligations/summary]', err);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-router.get('/reminders', (req, res) => {
-  try {
-    const db = getDb();
-    const includeLogged = req.query.includeLogged === '1';
-    const reminders = listDueReminders(db, { includeLogged });
-    res.json({ reminders });
-  } catch (err) {
-    logger.error('[obligations/reminders]', err);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-router.post('/reminders/:obligationId/ack', (req, res) => {
-  try {
-    const db = getDb();
-    const { reminderKey } = req.body || {};
-    if (!reminderKey) return res.status(400).json({ error: 'reminderKey required' });
-    markReminderFired(db, Number(req.params.obligationId), reminderKey);
-    res.json({ ok: true });
-  } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });

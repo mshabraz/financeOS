@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Bell, Wallet, ArrowDownLeft, ArrowUpRight, AlertCircle } from 'lucide-react';
+import { Plus, Wallet, ArrowDownLeft, ArrowUpRight, AlertCircle } from 'lucide-react';
 import { format, addDays } from 'date-fns';
 import clsx from 'clsx';
 import {
@@ -12,12 +12,10 @@ import {
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 import { fmtCurrency, privText } from '../utils/displayFormat';
 import { usePrivacy } from '../context/PrivacyContext';
-import { useObligationReminders } from '../hooks/useObligationReminders';
 import { TABS } from '../components/obligations/obligationConstants';
 import ObligationCard from '../components/obligations/ObligationCard';
 import ObligationFormModal from '../components/obligations/ObligationFormModal';
 import ObligationSettleModal from '../components/obligations/ObligationSettleModal';
-import NotificationPanel from '../components/obligations/NotificationPanel';
 import { Link } from 'react-router-dom';
 
 const fmt = (n) => fmtCurrency(n, 'EUR');
@@ -54,10 +52,8 @@ export default function Obligations() {
     enabled: tab === 'calendar',
   });
 
-  const reminders = useObligationReminders(true);
-
   const invalidate = () => {
-    ['obligations', 'obligationsSummary', 'obligationReminders', 'obligationsCalendar'].forEach((k) => {
+    ['obligations', 'obligationsSummary', 'obligationsCalendar'].forEach((k) => {
       qc.invalidateQueries({ queryKey: [k] });
     });
   };
@@ -96,7 +92,6 @@ export default function Obligations() {
 
   const s = summary.data;
   const rows = list.data ?? [];
-  const reminderCount = reminders.data?.reminders?.length ?? 0;
   const activeTab = TABS.find((t) => t.id === tab);
   const monthLabel = s?.monthLabel
     ? new Date(`${s.monthLabel}-01`).toLocaleString(undefined, { month: 'long', year: 'numeric' })
@@ -129,8 +124,8 @@ export default function Obligations() {
       {s && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <div className="card p-3">
-            <p className="text-[10px] uppercase text-gray-400 flex items-center gap-1"><Bell size={10} /> Reminders</p>
-            <p className="text-lg font-bold tabular-nums mt-1">{reminderCount}</p>
+            <p className="text-[10px] uppercase text-gray-400 flex items-center gap-1"><Wallet size={10} /> Due this month</p>
+            <p className="text-lg font-bold tabular-nums mt-1">{fmt(s.totals?.dueThisMonthEur)}</p>
           </div>
           <div className="card p-3">
             <p className="text-[10px] uppercase text-gray-400 flex items-center gap-1"><ArrowUpRight size={10} className="text-emerald-500" /> Owed to me</p>
@@ -177,8 +172,6 @@ export default function Obligations() {
           {monthLabel && (tab === 'upcoming' || tab === 'payable' || tab === 'receivable') ? ` · ${monthLabel}` : ''}
         </p>
       )}
-
-      <NotificationPanel />
 
       {tab !== 'calendar' && (
         <input

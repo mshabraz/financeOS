@@ -1,8 +1,7 @@
 const { getDb } = require('../../db/database');
-const { OBLIGATION_KINDS, DIRECTIONS, DEFAULT_REMINDER_DAYS } = require('./constants');
+const { OBLIGATION_KINDS, DIRECTIONS } = require('./constants');
 const { enrichRow, computeStatus, roundMoney, todayStr } = require('./status');
 const { ensureRecurringInstances, attachRecurrenceOnCreate, nextDueDate } = require('./recurrence');
-const { clearReminderLogForObligation } = require('./reminders');
 const { addDaysStr, monthRangeStr } = require('./dates');
 
 function excludeTemplates(rows) {
@@ -211,22 +210,13 @@ function validatePayload(body, partial = false) {
   return errors;
 }
 
-function serializeReminderDays(body) {
-  if (body.reminder_days !== undefined) {
-    const days = Array.isArray(body.reminder_days) ? body.reminder_days : [];
-    return JSON.stringify(days);
-  }
-  if (body.due_date) return JSON.stringify(DEFAULT_REMINDER_DAYS);
-  return '[]';
-}
-
 function create(body) {
   const db = getDb();
   const errors = validatePayload(body);
   if (errors.length) throw new Error(errors.join('; '));
 
   const recurrence = body.due_date ? attachRecurrenceOnCreate(body) : { series_id: null, is_series_template: 0, recurrence_rule: null };
-  const reminderDays = serializeReminderDays(body);
+  const reminderDays = '[]';
   const tags = body.tags?.length ? JSON.stringify(body.tags) : null;
 
   const result = db.prepare(`
@@ -281,14 +271,6 @@ function update(id, body) {
     }
   }
 
-  if (body.reminder_days !== undefined) {
-    fields.push('reminder_days = ?');
-    const days = Array.isArray(body.reminder_days) ? body.reminder_days : [];
-    params.push(JSON.stringify(days));
-  } else if (body.due_date === null) {
-    fields.push('reminder_days = ?');
-    params.push('[]');
-  }
   if (body.tags !== undefined) {
     fields.push('tags = ?');
     params.push(body.tags?.length ? JSON.stringify(body.tags) : null);
@@ -307,8 +289,6 @@ function update(id, body) {
   fields.push(`updated_at = datetime('now')`);
   params.push(id);
   db.prepare(`UPDATE money_obligations SET ${fields.join(', ')} WHERE id = ?`).run(...params);
-
-  if (body.due_date !== undefined) clearReminderLogForObligation(db, id);
 
   ensureRecurringInstances(db);
   return syncStatus(db, id);
@@ -338,8 +318,6 @@ function recordSettlement(id, { amount, paidAt, notes }) {
     db.prepare(`
       UPDATE money_obligations SET completed_at = datetime('now'), updated_at = datetime('now') WHERE id = ?
     `).run(id);
-    clearReminderLogForObligation(db, id);
-
     if (row.is_series_template && row.recurrence_rule && row.due_date) {
       const next = nextDueDate(row.due_date, row.recurrence_rule);
       if (next) {
@@ -375,7 +353,6 @@ function cancel(id) {
     SET cancelled_at = datetime('now'), status = 'cancelled', updated_at = datetime('now')
     WHERE id = ?
   `).run(id);
-  clearReminderLogForObligation(db, id);
   return getById(id);
 }
 

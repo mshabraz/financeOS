@@ -46,13 +46,6 @@ export const STATUS_STYLES = {
   cancelled: 'bg-gray-500/5 text-gray-400 border-gray-500/10',
 };
 
-export const REMINDER_PRESETS = [
-  { id: 'none', label: 'No reminders', days: [] },
-  { id: 'same_day', label: 'Same day, 1, 3, 7 days before', days: [0, 1, 3, 7] },
-  { id: 'minimal', label: 'Same day and 3 days before', days: [0, 3] },
-  { id: 'week_ahead', label: 'Up to 2 weeks before', days: [0, 1, 3, 7, 14] },
-];
-
 export const RECURRENCE_OPTIONS = [
   { id: '', label: 'One-time' },
   { id: 'weekly', label: 'Weekly' },

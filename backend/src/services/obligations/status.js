@@ -4,20 +4,6 @@ function roundMoney(n) {
   return Math.round((Number(n) || 0) * 100) / 100;
 }
 
-function parseReminderDays(raw) {
-  if (Array.isArray(raw)) return raw.map(Number).filter((n) => !Number.isNaN(n));
-  if (typeof raw === 'string') {
-    if (raw === '[]' || raw.trim() === '') return [];
-    try {
-      const parsed = JSON.parse(raw);
-      return Array.isArray(parsed) ? parsed.map(Number).filter((n) => !Number.isNaN(n)) : [];
-    } catch {
-      return [];
-    }
-  }
-  return [];
-}
-
 function isActive(row) {
   return !row.cancelled_at && !['paid', 'settled', 'cancelled'].includes(row.status);
 }
@@ -67,7 +53,6 @@ function enrichRow(row) {
     ...row,
     status,
     amount_remaining: roundMoney(Math.max(0, amount - amountPaid)),
-    reminder_days: parseReminderDays(row.reminder_days),
     tags,
     recurrence_rule,
     is_series_template: !!row.is_series_template,
@@ -77,7 +62,6 @@ function enrichRow(row) {
 module.exports = {
   todayStr,
   roundMoney,
-  parseReminderDays,
   isActive,
   computeStatus,
   enrichRow,

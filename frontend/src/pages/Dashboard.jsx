@@ -7,7 +7,7 @@ import {
   getAssets, getManualBalances, updateManualBalance, addManualBalance, deleteManualBalance,
   getBudgets, getWealthGoals, getWealthGoalProgress, getInvestmentAnalytics,
   getSharedEvents, getTagSummary,
-  getObligationsSummary, getObligations, getObligationReminders,
+  getObligationsSummary, getObligations,
 } from '../api/client';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 import QueryErrorPanel from '../components/ui/QueryErrorPanel';
@@ -26,7 +26,6 @@ import DashboardAttention from '../components/dashboard/DashboardAttention';
 import { DashboardRevolut, DashboardShared } from '../components/dashboard/DashboardSharedRevolut';
 import DashboardAssets from '../components/dashboard/DashboardAssets';
 import DashboardObligations from '../components/dashboard/DashboardObligations';
-import { useObligationReminders } from '../hooks/useObligationReminders';
 import {
   useDashboardFeaturedGoalId,
   resolveGoalFromList,
@@ -85,12 +84,6 @@ export default function Dashboard() {
   const obligationsMonth = useQuery({
     queryKey: ['obligations', 'upcoming'],
     queryFn: () => getObligations({ filter: 'upcoming' }),
-  });
-  useObligationReminders(true);
-  const obligationReminders = useQuery({
-    queryKey: ['obligationReminders'],
-    queryFn: getObligationReminders,
-    refetchInterval: 120_000,
   });
   const [featuredGoalId, setFeaturedGoalId] = useDashboardFeaturedGoalId();
 
@@ -319,7 +312,6 @@ export default function Dashboard() {
       <DashboardObligations
         summary={obligationsSummary.data}
         upcoming={obligationsMonth.data}
-        reminders={obligationReminders.data?.reminders}
       />
 
       <DashboardGoals

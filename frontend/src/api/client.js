@@ -304,9 +304,6 @@ export const getObligationsSummary = () => api.get('/obligations/summary');
 export const getObligations = (params) => api.get('/obligations', { params });
 export const getObligation = (id) => api.get(`/obligations/${id}`);
 export const getObligationsCalendar = (params) => api.get('/obligations/calendar', { params });
-export const getObligationReminders = () => api.get('/obligations/reminders');
-export const ackObligationReminder = (obligationId, reminderKey) =>
-  api.post(`/obligations/reminders/${obligationId}/ack`, { reminderKey });
 export const createObligation = (body) => api.post('/obligations', body);
 export const updateObligation = (id, body) => api.patch(`/obligations/${id}`, body);
 export const settleObligation = (id, body) => api.post(`/obligations/${id}/settle`, body);

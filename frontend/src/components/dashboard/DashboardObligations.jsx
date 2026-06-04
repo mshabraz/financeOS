@@ -1,9 +1,9 @@
 import { Link } from 'react-router-dom';
-import { ChevronRight, Bell, AlertCircle, ArrowUpRight, ArrowDownLeft } from 'lucide-react';
+import { ChevronRight, Wallet, AlertCircle, ArrowUpRight, ArrowDownLeft } from 'lucide-react';
 import { fmtEur } from '../../utils/displayFormat';
 
-export default function DashboardObligations({ summary, upcoming = [], reminders = [] }) {
-  if (!summary && !upcoming?.length && !reminders?.length) return null;
+export default function DashboardObligations({ summary, upcoming = [] }) {
+  if (!summary && !upcoming?.length) return null;
 
   const s = summary ?? {};
   const hasOverdue = (s.counts?.overdue ?? 0) > 0;
@@ -24,7 +24,7 @@ export default function DashboardObligations({ summary, upcoming = [], reminders
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
         <div className="rounded-lg bg-gray-50 dark:bg-gray-800/50 p-2.5">
-          <p className="text-[10px] text-gray-400 flex items-center gap-1"><Bell size={10} /> This month</p>
+          <p className="text-[10px] text-gray-400 flex items-center gap-1"><Wallet size={10} /> This month</p>
           <p className="text-sm font-bold tabular-nums">{fmtEur(s.totals?.dueThisMonthEur ?? 0)}</p>
         </div>
         <div className="rounded-lg bg-emerald-500/5 border border-emerald-500/15 p-2.5">
@@ -40,14 +40,6 @@ export default function DashboardObligations({ summary, upcoming = [], reminders
           <p className="text-sm font-bold tabular-nums">{s.counts?.overdue ?? 0}</p>
         </div>
       </div>
-
-      {reminders.length > 0 && (
-        <div className="mb-3 rounded-lg border border-brand-500/20 bg-brand-500/5 px-3 py-2">
-          <p className="text-xs font-medium text-brand-700 dark:text-brand-300">
-            {reminders.length} reminder{reminders.length > 1 ? 's' : ''} today
-          </p>
-        </div>
-      )}
 
       {upcoming.length > 0 && (
         <ul className="space-y-1.5">
