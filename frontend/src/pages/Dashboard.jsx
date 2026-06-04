@@ -22,7 +22,7 @@ import DashboardSpending from '../components/dashboard/DashboardSpending';
 import DashboardWealthPortfolio from '../components/dashboard/DashboardWealthPortfolio';
 import DashboardGoals from '../components/dashboard/DashboardGoals';
 import DashboardAttention from '../components/dashboard/DashboardAttention';
-import DashboardSecondary from '../components/dashboard/DashboardSecondary';
+import { DashboardRevolut, DashboardShared } from '../components/dashboard/DashboardSharedRevolut';
 import DashboardAssets from '../components/dashboard/DashboardAssets';
 import {
   useDashboardFeaturedGoalId,
@@ -301,23 +301,20 @@ export default function Dashboard() {
         hidePeriodTotal
       />
 
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
-        <div className="xl:col-span-2">
-          <DashboardGoals
-            goals={goals.data}
-            progressById={progressById}
-            featuredGoalId={featuredGoalId}
-            onFeaturedGoalChange={setFeaturedGoalId}
-          />
-        </div>
-        <div className="space-y-4">
-          <DashboardSecondary
-            assets={assets.data}
-            tagSummary={sortedTags}
-            monthLabel={periodLabel}
-            sharedEvents={sharedEvents.data}
-          />
-        </div>
+      <DashboardGoals
+        goals={goals.data}
+        progressById={progressById}
+        featuredGoalId={featuredGoalId}
+        onFeaturedGoalChange={setFeaturedGoalId}
+      />
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <DashboardRevolut
+          assets={assets.data}
+          tagSummary={sortedTags}
+          monthLabel={periodLabel}
+        />
+        <DashboardShared events={sharedEvents.data} />
       </div>
 
       <DashboardAssets

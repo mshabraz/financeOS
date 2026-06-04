@@ -1,39 +1,46 @@
 import clsx from 'clsx';
 
-const SRC = {
-  icon: '/logo-icon.svg',
-  full: '/logo-full.svg',
-};
+const ICON_SRC = '/logo-icon.svg';
 
 /**
- * FinanceOS brand mark.
- * @param {'icon'|'full'} variant — icon-only squircle, or horizontal wordmark
+ * FinanceOS brand mark — icon + full wordmark (Finance + OS).
+ * @param {'icon'|'full'} variant — icon-only, or icon with complete FinanceOS text
  */
 export default function FinanceLogo({
   variant = 'icon',
   size = 32,
   className = '',
-  showText = false,
 }) {
-  if (variant === 'full' || showText) {
+  if (variant === 'full') {
+    const iconSize = Math.round(size * 0.95);
+    const textSize = Math.max(14, Math.round(size * 0.42));
     return (
-      <img
-        src={SRC.full}
-        alt="FinanceOS"
-        height={size}
-        className={clsx('w-auto object-contain flex-shrink-0', className)}
-        style={{ maxHeight: size }}
-      />
+      <div className={clsx('flex items-center gap-2 min-w-0', className)} aria-label="FinanceOS">
+        <img
+          src={ICON_SRC}
+          alt=""
+          width={iconSize}
+          height={iconSize}
+          className="rounded-[22%] object-contain shrink-0"
+          aria-hidden
+        />
+        <span
+          className="font-bold leading-none whitespace-nowrap text-gray-900 dark:text-white"
+          style={{ fontSize: textSize }}
+        >
+          Finance<span className="text-emerald-500 dark:text-emerald-400">OS</span>
+        </span>
+      </div>
     );
   }
 
   return (
     <img
-      src={SRC.icon}
+      src={ICON_SRC}
       alt="FinanceOS"
       width={size}
       height={size}
-      className={clsx('rounded-[22%] object-contain flex-shrink-0', className)}
+      className={clsx('rounded-[22%] object-contain shrink-0', className)}
     />
   );
 }
