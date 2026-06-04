@@ -53,7 +53,7 @@ export default function Investments() {
     refetchInterval: 120_000,
     retry: 1,
     staleTime: 30_000,
-    enabled: tab === 'overview',
+    enabled: tab === 'overview' || tab === 'holdings',
   });
   const syncStatus = useQuery({
     queryKey: ['invPriceSync'],
@@ -164,6 +164,8 @@ export default function Investments() {
           closedHoldings={closedHoldings}
           refreshValuation={refreshValuation}
           onUnbind={(h) => unbindMut.mutate(h)}
+          analytics={analytics.data}
+          onOpenLedger={() => setTab('ledger')}
         />
       )}
 
