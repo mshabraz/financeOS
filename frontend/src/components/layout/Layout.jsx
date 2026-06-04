@@ -76,11 +76,8 @@ export default function Layout({ children }) {
   return (
     <div className="flex h-[100dvh] overflow-hidden bg-gray-50 dark:bg-gray-950">
       <aside className="hidden lg:flex w-56 flex-shrink-0 flex-col border-r border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
-        <div className="h-14 flex items-center px-5 border-b border-gray-200 dark:border-gray-800">
-          <div className="flex items-center gap-2">
-            <FinanceLogo size={32} />
-            <span className="font-semibold text-gray-900 dark:text-white">FinanceOS</span>
-          </div>
+        <div className="h-14 flex items-center px-4 border-b border-gray-200 dark:border-gray-800">
+          <FinanceLogo variant="full" size={36} />
         </div>
         <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto">
           {DESKTOP_NAV.map(({ to, icon, label }) => (

@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="FinanceOS">
+  <defs>
+    <linearGradient id="fg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#A3E635"/>
+      <stop offset="100%" stop-color="#10B981"/>
+    </linearGradient>
+  </defs>
+  <rect x="32" y="32" width="448" height="448" rx="96" fill="#1A2138"/>
+  <rect x="120" y="280" width="52" height="96" rx="10" fill="url(#fg)"/>
+  <rect x="188" y="248" width="52" height="128" rx="10" fill="url(#fg)"/>
+  <rect x="256" y="216" width="52" height="160" rx="10" fill="url(#fg)"/>
+  <rect x="324" y="184" width="52" height="192" rx="10" fill="url(#fg)"/>
+  <path fill="none" stroke="url(#fg)" stroke-width="20" stroke-linecap="round" stroke-linejoin="round" d="M132 320 L200 268 L268 228 L360 148"/>
+  <path fill="url(#fg)" d="M360 148 L328 168 L344 204 Z"/>
+</svg>

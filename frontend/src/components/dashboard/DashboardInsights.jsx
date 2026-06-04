@@ -22,7 +22,7 @@ export default function DashboardInsights({ insights }) {
     <section className="card p-4 sm:p-5">
       <div className="flex items-center gap-2 mb-3">
         <Sparkles size={16} className="text-brand-500" />
-        <h2 className="text-sm font-semibold text-gray-800 dark:text-gray-200">Financial health</h2>
+        <h2 className="text-sm font-semibold text-gray-800 dark:text-gray-200">Contextual insights</h2>
       </div>
       <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
         {insights.map((ins, i) => {

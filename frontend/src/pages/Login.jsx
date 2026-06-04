@@ -43,14 +43,11 @@ export default function Login() {
   return (
     <div className="min-h-[100dvh] flex items-center justify-center p-4 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))] bg-gray-100 dark:bg-gray-950">
       <div className="w-full max-w-md card p-6 sm:p-8 shadow-xl">
-        <div className="flex items-center gap-3 mb-6">
-          <FinanceLogo size={48} />
-          <div>
-            <h1 className="text-xl font-bold text-gray-900 dark:text-white">FinanceOS</h1>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              {needsSetup ? 'Create your LAN password' : 'Sign in to continue'}
-            </p>
-          </div>
+        <div className="flex flex-col items-center text-center gap-3 mb-6">
+          <FinanceLogo variant="full" size={44} />
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            {needsSetup ? 'Create your LAN password' : 'Sign in to continue'}
+          </p>
         </div>
 
         {status?.connectionFailed && (

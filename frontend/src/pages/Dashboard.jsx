@@ -15,14 +15,14 @@ import {
   currentPeriodValue, buildPeriodOptions, prevMonthValue,
   buildDashboardInsights, buildAttentionItems,
 } from '../components/dashboard/dashboardUtils';
+import { buildDashboardSnapshot } from '../components/dashboard/dashboardSnapshot';
 import DashboardHero from '../components/dashboard/DashboardHero';
 import DashboardInsights from '../components/dashboard/DashboardInsights';
 import DashboardSpending from '../components/dashboard/DashboardSpending';
-import DashboardInvestments from '../components/dashboard/DashboardInvestments';
+import DashboardWealthPortfolio from '../components/dashboard/DashboardWealthPortfolio';
 import DashboardGoals from '../components/dashboard/DashboardGoals';
 import DashboardAttention from '../components/dashboard/DashboardAttention';
-import { DashboardRevolut, DashboardShared } from '../components/dashboard/DashboardSharedRevolut';
-import DashboardAssetOverview from '../components/dashboard/DashboardAssetOverview';
+import DashboardSecondary from '../components/dashboard/DashboardSecondary';
 import DashboardAssets from '../components/dashboard/DashboardAssets';
 import {
   useDashboardFeaturedGoalId,
@@ -145,13 +145,22 @@ export default function Dashboard() {
   const savingsRate =
     s?.totalIncome > 0 ? ((s.totalIncome - s.totalExpenses) / s.totalIncome) * 100 : null;
 
+  const snapshot = useMemo(
+    () =>
+      buildDashboardSnapshot({
+        assets: assets.data,
+        portfolio,
+        summary: s,
+        prevSummary: prevSummary.data,
+        savingsRate,
+      }),
+    [assets.data, portfolio, s, prevSummary.data, savingsRate],
+  );
+
   const featuredGoal = resolveGoalFromList(activeGoals, featuredGoalId);
   const featuredProgress = featuredGoal ? progressById[featuredGoal.id] : null;
   const goalSnapshot = featuredGoal
-    ? {
-        name: featuredGoal.name,
-        pct: featuredProgress?.progressPct,
-      }
+    ? { name: featuredGoal.name, pct: featuredProgress?.progressPct }
     : null;
 
   const insights = useMemo(
@@ -217,11 +226,13 @@ export default function Dashboard() {
       : null;
 
   return (
-    <div className="space-y-6 max-w-[1400px] mx-auto">
-      <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
+    <div className="space-y-5 max-w-[1400px] mx-auto pb-8">
+      <header className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
         <div>
           <h1 className="page-title">Command center</h1>
-          <p className="page-subtitle">Net worth, cash flow, investments, and what needs your attention</p>
+          <p className="page-subtitle">
+            One view of net worth, portfolio, spending, and what needs action
+          </p>
         </div>
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
           <div className="flex bg-gray-100 dark:bg-gray-800 rounded-lg p-0.5 text-sm">
@@ -251,7 +262,7 @@ export default function Dashboard() {
             ))}
           </select>
         </div>
-      </div>
+      </header>
 
       {heroLoading ? (
         <div className="card p-16 flex justify-center">
@@ -259,26 +270,27 @@ export default function Dashboard() {
         </div>
       ) : (
         <DashboardHero
-          totalAssets={assets.data?.totalAssets ?? 0}
+          snapshot={snapshot}
           totalAssetsPkr={assets.data?.totalAssetsPkr}
           fxNote={fxNote}
-          bankBalance={assets.data?.bankBalance ?? 0}
-          cashTotal={portfolio?.cashBalance ?? 0}
-          investmentsTotal={portfolio?.totalPortfolio ?? assets.data?.manuals?.find((m) => m.key === 'investments')?.amount ?? 0}
           portfolio={portfolio}
           summary={s}
-          prevSummary={prevSummary.data}
-          savingsRate={savingsRate}
           goalSnapshot={goalSnapshot}
           trendSpark={trendData.map((r) => r.expenses)}
         />
       )}
 
-      <DashboardAssetOverview assets={assets.data} isLoading={assets.isLoading} />
+      {attention.length > 0 && <DashboardAttention items={attention} />}
 
-      <DashboardInsights insights={insights} />
+      {insights.length > 0 && <DashboardInsights insights={insights} />}
 
-      <DashboardAttention items={attention} />
+      <DashboardWealthPortfolio
+        assets={assets.data}
+        portfolio={portfolio}
+        analytics={invAnalytics.data}
+        snapshot={snapshot}
+        isLoading={assets.isLoading}
+      />
 
       <DashboardSpending
         periodLabel={periodLabel}
@@ -286,11 +298,11 @@ export default function Dashboard() {
         trendLoading={monthlyTrend.isLoading}
         categories={byCategory.data}
         categoriesLoading={byCategory.isLoading}
+        hidePeriodTotal
       />
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
-        <div className="xl:col-span-2 space-y-4">
-          <DashboardInvestments portfolio={portfolio} analytics={invAnalytics.data} />
+        <div className="xl:col-span-2">
           <DashboardGoals
             goals={goals.data}
             progressById={progressById}
@@ -299,12 +311,12 @@ export default function Dashboard() {
           />
         </div>
         <div className="space-y-4">
-          <DashboardRevolut
+          <DashboardSecondary
             assets={assets.data}
             tagSummary={sortedTags}
             monthLabel={periodLabel}
+            sharedEvents={sharedEvents.data}
           />
-          <DashboardShared events={sharedEvents.data} />
         </div>
       </div>
 

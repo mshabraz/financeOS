@@ -12,16 +12,22 @@ export default function DashboardSpending({
   trendLoading,
   categories,
   categoriesLoading,
+  hidePeriodTotal = false,
 }) {
   const topCats = (categories ?? []).slice(0, 8);
   const maxCat = Math.max(...topCats.map((c) => c.total), 1);
 
   return (
-    <section className="space-y-4">
+    <section className="space-y-4" aria-labelledby="spending-title">
       <div className="flex items-center justify-between gap-2 px-1">
         <div>
-          <h2 className="text-base font-semibold text-gray-900 dark:text-white">Spending</h2>
-          <p className="text-xs text-gray-500">{periodLabel}</p>
+          <h2 id="spending-title" className="text-base font-semibold text-gray-900 dark:text-white">
+            Spending intelligence
+          </h2>
+          <p className="text-xs text-gray-500">
+            {periodLabel}
+            {hidePeriodTotal ? ' · period total in snapshot above' : ''}
+          </p>
         </div>
         <Link to="/analytics" className="text-xs text-brand-600 hover:underline inline-flex items-center gap-0.5">
           Full analytics <ChevronRight size={12} />

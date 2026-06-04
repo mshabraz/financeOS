@@ -10,7 +10,7 @@ export default function MiniSparkline({ data, dataKey = 'v', positive, height = 
   const color = positive == null ? '#6366f1' : positive ? '#10b981' : '#ef4444';
 
   return (
-    <div style={{ height }} className="w-20 shrink-0">
+    <div style={{ height }} className="w-full max-w-[140px] shrink-0">
       <ResponsiveContainer width="100%" height="100%">
         <AreaChart data={rows} margin={{ top: 2, right: 0, left: 0, bottom: 2 }}>
           <Area

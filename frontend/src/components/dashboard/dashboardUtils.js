@@ -73,15 +73,7 @@ export function buildDashboardInsights({
     }
   }
 
-  if (s?.totalIncome > 0) {
-    const savingsRate = ((s.totalIncome - s.totalExpenses) / s.totalIncome) * 100;
-    if (savingsRate >= 0) {
-      lines.push({
-        level: savingsRate >= 20 ? 'positive' : 'info',
-        text: `Savings rate ${savingsRate.toFixed(0)}% this period (income − spending).`,
-      });
-    }
-  }
+  /* Savings rate shown only in Financial Snapshot hero — skip duplicate */
 
   const overBudget = (budgets ?? []).filter((b) => b.budgeted > 0 && b.spent > b.budgeted);
   if (overBudget.length) {
@@ -92,13 +84,7 @@ export function buildDashboardInsights({
     });
   }
 
-  if (portfolio?.unrealizedPnLEur != null && Math.abs(portfolio.unrealizedPnLEur) > 1) {
-    const sign = portfolio.unrealizedPnLEur >= 0 ? 'gained' : 'lost';
-    lines.push({
-      level: portfolio.unrealizedPnLEur >= 0 ? 'positive' : 'negative',
-      text: `Portfolio ${sign} €${Math.abs(portfolio.unrealizedPnLEur).toLocaleString('et-EE', { maximumFractionDigits: 0 })} unrealized.`,
-    });
-  }
+  /* Unrealized P/L € shown only in hero — use diversification warnings below instead */
 
   const warnings = analytics?.diversification?.warnings ?? [];
   if (warnings[0]) {
@@ -111,9 +97,9 @@ export function buildDashboardInsights({
     } else if (goalsProgress.onTrack === 'behind') {
       lines.push({
         level: 'warning',
-        text: `“${goalsProgress.goalName}” is behind plan.`,
+        text: `“${goalsProgress.goalName}” is behind plan — see Goals section.`,
       });
-    } else if (goalsProgress.projectedHint) {
+    } else if (goalsProgress.projectedHint && goalsProgress.onTrack !== 'on_track') {
       lines.push({ level: 'info', text: goalsProgress.projectedHint });
     }
   }

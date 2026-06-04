@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import {
-  Wallet, TrendingUp, TrendingDown, PiggyBank, Layers, Target, ArrowUpRight, ArrowDownRight,
+  Wallet, TrendingUp, TrendingDown, PiggyBank, Layers, Target,
+  ArrowUpRight, ArrowDownRight, Landmark,
 } from 'lucide-react';
 import clsx from 'clsx';
 import { fmtEur, fmtPct, fmtPkr } from '../../utils/displayFormat';
@@ -63,105 +64,84 @@ function HeroKpi({
   return <div className="min-w-0">{inner}</div>;
 }
 
+/** Sole location for top-level financial KPIs (single source of truth). */
 export default function DashboardHero({
-  totalAssets,
+  snapshot,
   totalAssetsPkr,
   fxNote,
-  bankBalance,
-  cashTotal,
-  investmentsTotal,
   portfolio,
   summary,
-  prevSummary,
-  savingsRate,
   goalSnapshot,
   trendSpark,
 }) {
-  const expenseDelta = summary && prevSummary?.totalExpenses != null
-    ? ((summary.totalExpenses - prevSummary.totalExpenses) / Math.abs(prevSummary.totalExpenses || 1)) * 100
-    : null;
-
-  const incomeDelta = summary && prevSummary?.totalIncome != null
-    ? ((summary.totalIncome - prevSummary.totalIncome) / Math.abs(prevSummary.totalIncome || 1)) * 100
-    : null;
-
-  const netFlow = (summary?.totalIncome ?? 0) - (summary?.totalExpenses ?? 0);
+  if (!snapshot) return null;
 
   return (
-    <section className="card overflow-hidden">
-      <div className="px-4 sm:px-6 py-4 border-b border-gray-100 dark:border-gray-800 bg-gradient-to-r from-brand-500/8 via-transparent to-emerald-500/5">
-        <div className="flex flex-col gap-3">
-          <div className="min-w-0">
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">Net worth</p>
-            <p className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 dark:text-white tabular-nums mt-0.5 break-words [overflow-wrap:anywhere] leading-tight">
-              {fmtEur(totalAssets)}
+    <section className="card overflow-hidden" aria-labelledby="dash-snapshot-title">
+      <div className="px-4 sm:px-6 py-4 border-b border-gray-100 dark:border-gray-800 bg-gradient-to-r from-[#1A2138]/10 via-transparent to-emerald-500/8">
+        <p id="dash-snapshot-title" className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">
+          Financial snapshot
+        </p>
+        <div className="mt-1 min-w-0">
+          <p className="text-[10px] font-medium uppercase tracking-wider text-gray-500">Net worth</p>
+          <p className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 dark:text-white tabular-nums break-words [overflow-wrap:anywhere] leading-tight">
+            {fmtEur(snapshot.netWorth)}
+          </p>
+          {totalAssetsPkr > 0 && (
+            <p className="text-xs sm:text-sm text-gray-500 mt-1 tabular-nums break-words">
+              ≈ {fmtPkr(totalAssetsPkr)}{fxNote ? ` · ${fxNote}` : ''}
             </p>
-            {totalAssetsPkr > 0 && (
-              <p className="text-xs sm:text-sm text-gray-500 mt-1 tabular-nums break-words">
-                ≈ {fmtPkr(totalAssetsPkr)}{fxNote ? ` · ${fxNote}` : ''}
-              </p>
-            )}
-          </div>
-          <div className="flex flex-wrap gap-2 text-xs">
-            <span className="rounded-full border border-gray-200 dark:border-gray-700 px-3 py-1 text-gray-600 dark:text-gray-300 tabular-nums">
-              Bank {fmtEur(bankBalance)}
-            </span>
-            {cashTotal > 0 && (
-              <span className="rounded-full border border-gray-200 dark:border-gray-700 px-3 py-1 text-gray-600 dark:text-gray-300 tabular-nums">
-                Inv. cash {fmtEur(cashTotal)}
-              </span>
-            )}
-          </div>
+          )}
         </div>
       </div>
 
-      <div className="p-3 sm:p-5 grid grid-cols-1 min-[420px]:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
+      <div className="p-3 sm:p-5 grid grid-cols-1 min-[400px]:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
         <HeroKpi
-          label="Investments"
-          value={fmtEur(investmentsTotal)}
-          sub={portfolio ? `${portfolio.pricedPositions ?? 0}/${portfolio.openPositions ?? 0} priced` : null}
+          label="Total investments"
+          value={fmtEur(snapshot.investmentsTotal)}
+          sub={snapshot.contextLine('Portfolio', snapshot.investmentsPct)}
           spark={portfolio?.sparkline?.map((p) => p.value ?? p.totalPortfolio) ?? trendSpark}
           positive={(portfolio?.unrealizedPnLEur ?? 0) >= 0}
           icon={Layers}
           href="/investments"
         />
         <HeroKpi
-          label="Unrealized P/L"
-          value={portfolio?.unrealizedPnLEur != null ? fmtEur(portfolio.unrealizedPnLEur, { sign: true }) : '—'}
-          sub={portfolio?.unrealizedPnLPct != null ? fmtPct(portfolio.unrealizedPnLPct, { sign: true }) : null}
-          positive={(portfolio?.unrealizedPnLEur ?? 0) >= 0}
-          icon={(portfolio?.unrealizedPnLEur ?? 0) >= 0 ? TrendingUp : TrendingDown}
-          href="/investments?tab=holdings"
+          label="Total cash"
+          value={fmtEur(snapshot.totalCash)}
+          sub={snapshot.contextLine('Liquid', snapshot.cashPct)}
+          positive
+          icon={Landmark}
         />
         <HeroKpi
           label="Period spending"
-          value={fmtEur(summary?.totalExpenses)}
-          delta={expenseDelta}
+          value={fmtEur(snapshot.periodSpending)}
+          delta={snapshot.expenseDelta}
           positive={false}
           icon={TrendingDown}
           href="/analytics"
         />
         <HeroKpi
-          label="Period income"
-          value={fmtEur(summary?.totalIncome)}
-          delta={incomeDelta}
-          positive
-          icon={TrendingUp}
+          label="Savings rate"
+          value={snapshot.savingsRate != null ? fmtPct(snapshot.savingsRate) : '—'}
+          sub={summary?.totalSavings > 0 ? `Transfers ${fmtEur(summary.totalSavings)}` : 'Income − spending'}
+          positive={snapshot.savingsRate >= 15}
+          icon={PiggyBank}
+          href="/analytics?focus=savings-rate"
         />
         <HeroKpi
           label="Cash flow"
-          value={fmtEur(netFlow, { sign: true })}
-          sub="Income − spending"
-          positive={netFlow >= 0}
+          value={fmtEur(snapshot.netFlow, { sign: true })}
+          sub="This period"
+          positive={snapshot.netFlow >= 0}
           icon={Wallet}
         />
         <HeroKpi
-          label="Savings rate"
-          value={savingsRate != null ? fmtPct(savingsRate) : '—'}
-          sub={summary?.totalSavings > 0 ? `Transfers ${fmtEur(summary.totalSavings)}` : null}
-          positive={savingsRate >= 15}
-          icon={PiggyBank}
-          href="/analytics?focus=savings-rate"
+          label="Unrealized P/L"
+          value={snapshot.unrealizedPnLEur != null ? fmtEur(snapshot.unrealizedPnLEur, { sign: true }) : '—'}
+          sub={snapshot.unrealizedPnLPct != null ? fmtPct(snapshot.unrealizedPnLPct, { sign: true }) : null}
+          positive={(snapshot.unrealizedPnLEur ?? 0) >= 0}
+          icon={(snapshot.unrealizedPnLEur ?? 0) >= 0 ? TrendingUp : TrendingDown}
+          href="/investments?tab=holdings"
         />
         {goalSnapshot && (
           <HeroKpi
