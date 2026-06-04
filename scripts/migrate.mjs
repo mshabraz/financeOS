@@ -27,27 +27,37 @@ try {
 const statusOnly = process.argv.includes('--status');
 
 async function main() {
-  const { initDb, getDb } = require(path.join(ROOT, 'backend', 'src', 'db', 'database.js'));
+  const { initDb, migrateAllUserDatabases } = require(path.join(ROOT, 'backend', 'src', 'db', 'database.js'));
   const config = require(path.join(ROOT, 'backend', 'src', 'config.js'));
 
-  console.log(`[migrate] Database: ${path.join(config.DATA_DIR, 'finance.db')}`);
+  console.log(`[migrate] Data dir: ${config.DATA_DIR}`);
+  console.log(`[migrate] Per-user DBs: ${config.USERS_DIR}`);
 
   await initDb();
-  const db = getDb();
+  const result = migrateAllUserDatabases();
 
-  const rows = db.prepare('SELECT version, applied_at FROM schema_migrations ORDER BY version').all();
-  console.log(`[migrate] Applied migrations: ${rows.length ? rows.map((r) => `v${r.version}`).join(', ') : '(none yet)'}`);
-
-  if (statusOnly) {
-    const max = rows.length ? Math.max(...rows.map((r) => r.version)) : 0;
-    console.log(`[migrate] Latest applied version: v${max || 0}`);
-    console.log('[migrate] Migrations also run automatically when the server starts.');
+  if (result.message) {
+    console.log(`[migrate] ${result.message}`);
+    if (statusOnly) return;
+    console.log('[migrate] Migrations complete.');
     return;
   }
 
-  const { runMigrations } = require(path.join(ROOT, 'backend', 'src', 'db', 'schema.js'));
-  runMigrations(db);
-  console.log('[migrate] Migrations complete.');
+  for (const u of result.users) {
+    const label = u.migrations.length
+      ? `v${u.migrations.join(', v')}`
+      : '(none yet)';
+    console.log(`[migrate] ${u.email}`);
+    console.log(`          ${u.dbPath}`);
+    console.log(`          applied: ${label} (latest v${u.latestVersion})`);
+  }
+
+  if (statusOnly) {
+    console.log('[migrate] Migrations also run automatically when each user DB is opened.');
+    return;
+  }
+
+  console.log(`[migrate] Migrations complete for ${result.users.length} user(s).`);
 }
 
 main().catch((err) => {

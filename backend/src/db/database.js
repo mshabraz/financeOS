@@ -239,6 +239,36 @@ function forEachRegisteredUser(fn) {
   }
 }
 
+/**
+ * Apply schema migrations for every registered user (CLI / deploy — no HTTP session).
+ */
+function migrateAllUserDatabases() {
+  const userRegistry = require('../services/userRegistry');
+  const accounts = userRegistry.listUsers();
+
+  if (!accounts.length) {
+    return {
+      users: [],
+      message: 'No user accounts yet; migrations run when users register or on first login.',
+    };
+  }
+
+  const users = [];
+  for (const u of accounts) {
+    const db = openUserDatabase(u.id);
+    const rows = db.prepare('SELECT version, applied_at FROM schema_migrations ORDER BY version').all();
+    users.push({
+      userId: u.id,
+      email: u.email,
+      dbPath: userDbPath(u.id),
+      migrations: rows.map((r) => r.version),
+      latestVersion: rows.length ? Math.max(...rows.map((r) => r.version)) : 0,
+    });
+  }
+
+  return { users };
+}
+
 module.exports = {
   initDb,
   getDb,
@@ -248,4 +278,5 @@ module.exports = {
   userDbPath,
   listCachedUserIds,
   forEachRegisteredUser,
+  migrateAllUserDatabases,
 };
