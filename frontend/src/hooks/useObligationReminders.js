@@ -20,10 +20,7 @@ export function useObligationReminders(enabled = true) {
 
   useEffect(() => {
     if (!enabled || !reminders.data?.reminders?.length) return;
-    if (typeof Notification === 'undefined') return;
-    if (Notification.permission === 'default') {
-      Notification.requestPermission().catch(() => {});
-    }
+    if (typeof Notification === 'undefined' || !window.isSecureContext) return;
     if (Notification.permission !== 'granted') return;
 
     for (const r of reminders.data.reminders) {
