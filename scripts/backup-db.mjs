@@ -34,6 +34,7 @@ const destDir = path.join(DATA_DIR, 'backups', folderName);
 const FILES = [
   'finance.db',
   'auth.json',
+  'users-registry.json',
   '.session-secret',
 ];
 
@@ -52,6 +53,14 @@ for (const name of FILES) {
     copied++;
     console.log(`[backup] ${name}`);
   }
+}
+
+const usersDir = path.join(DATA_DIR, 'users');
+if (fs.existsSync(usersDir)) {
+  const usersDest = path.join(destDir, 'users');
+  fs.cpSync(usersDir, usersDest, { recursive: true });
+  console.log('[backup] users/ (per-account databases)');
+  copied++;
 }
 
 const certsDir = path.join(DATA_DIR, 'certs');
@@ -74,8 +83,12 @@ const meta = {
 };
 fs.writeFileSync(path.join(destDir, 'manifest.json'), JSON.stringify(meta, null, 2));
 
-if (!fs.existsSync(path.join(DATA_DIR, 'finance.db'))) {
-  console.warn('[backup] No finance.db yet — backup folder created for future use.');
+const hasData =
+  fs.existsSync(path.join(DATA_DIR, 'finance.db'))
+  || fs.existsSync(path.join(DATA_DIR, 'users-registry.json'))
+  || fs.existsSync(usersDir);
+if (!hasData) {
+  console.warn('[backup] No user databases yet — backup folder created for future use.');
 }
 
 console.log(`\n[backup] Saved ${copied} item(s) → ${destDir}`);

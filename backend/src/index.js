@@ -19,7 +19,7 @@ const https = require('https');
 const { initDb } = require('./db/database');
 const { createApp } = require('./app');
 const config = require('./config');
-const authStore = require('./services/authStore');
+const userRegistry = require('./services/userRegistry');
 const { getLanUrls, getPrimaryLanIp, hostname } = require('./services/networkInfo');
 const logger = require('./services/logger');
 
@@ -77,10 +77,10 @@ function printStartupBanner(scheme) {
   }
 
   if (config.AUTH_ENABLED) {
-    if (!authStore.isConfigured()) {
-      console.log('  ⚠  First visit: open the app URL and set your LAN password.\n');
+    if (!userRegistry.hasUsers()) {
+      console.log('  ⚠  First visit: open the app URL and register an admin account.\n');
     } else {
-      console.log('  🔒  Authentication enabled — login required on other devices.\n');
+      console.log('  🔒  Authentication enabled — sign in required on other devices.\n');
     }
   }
 
@@ -106,7 +106,7 @@ function printStartupBanner(scheme) {
       '  On this computer:\n',
       `    ${scheme}://localhost:${port}`,
       '',
-      '  First visit: create a password (stored only on this PC).',
+      '  First visit: register an account (stored only on this server).',
       '  Keep START-LAN.bat open while using the app.',
       '',
     ].filter(Boolean);

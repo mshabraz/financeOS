@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, useCallback } from 'react';
-import { getAuthStatus, login as apiLogin, setupPassword as apiSetup, logout as apiLogout } from '../api/client';
+import { getAuthStatus, login as apiLogin, register as apiRegister, logout as apiLogout } from '../api/client';
 
 const AuthContext = createContext(null);
 
@@ -30,13 +30,13 @@ export function AuthProvider({ children }) {
     return () => window.removeEventListener('financeos:auth-required', handler);
   }, [refresh]);
 
-  const login = async (password) => {
-    await apiLogin(password);
+  const login = async (email, password) => {
+    await apiLogin(email, password);
     await refresh();
   };
 
-  const setup = async (password) => {
-    await apiSetup(password);
+  const register = async (email, password) => {
+    await apiRegister(email, password);
     await refresh();
   };
 
@@ -45,9 +45,10 @@ export function AuthProvider({ children }) {
     await refresh();
   };
 
-  const needsSetup = status?.authEnabled && !status?.configured;
+  const needsRegister = status?.authEnabled && !status?.configured;
   const needsLogin = status?.authEnabled && status?.configured && !status?.authenticated;
-  const needsAuth  = needsSetup || needsLogin;
+  const needsAuth = needsRegister || needsLogin;
+  const isAdmin = status?.user?.role === 'admin';
 
   return (
     <AuthContext.Provider
@@ -55,10 +56,12 @@ export function AuthProvider({ children }) {
         status,
         loading,
         needsAuth,
-        needsSetup,
+        needsRegister,
         needsLogin,
+        isAdmin,
+        user: status?.user ?? null,
         login,
-        setup,
+        register,
         logout,
         refresh,
       }}

@@ -193,18 +193,45 @@ async function runPriceSync() {
   }
 }
 
+async function runPriceSyncAllUsers() {
+  const userRegistry = require('./userRegistry');
+  const { runWithUserId } = require('../db/requestContext');
+  const { openUserDatabase } = require('../db/database');
+
+  if (!userRegistry.hasUsers()) return;
+
+  for (const u of userRegistry.listUsers()) {
+    try {
+      await new Promise((resolve, reject) => {
+        runWithUserId(u.id, () => {
+          try {
+            openUserDatabase(u.id);
+            Promise.resolve(runPriceSync())
+              .then(resolve)
+              .catch(reject);
+          } catch (e) {
+            reject(e);
+          }
+        });
+      });
+    } catch (e) {
+      logger.warn(`[priceSync] user ${u.email}: ${e.message}`);
+    }
+  }
+}
+
 function startPriceSyncScheduler(intervalMs = DEFAULT_INTERVAL_MS) {
   if (intervalHandle) return;
 
   setTimeout(() => {
-    runPriceSync().catch((e) => logger.warn(`[priceSync] initial: ${e.message}`));
+    runPriceSyncAllUsers().catch((e) => logger.warn(`[priceSync] initial: ${e.message}`));
   }, 5000);
 
   intervalHandle = setInterval(() => {
-    runPriceSync().catch((e) => logger.warn(`[priceSync] scheduled: ${e.message}`));
+    runPriceSyncAllUsers().catch((e) => logger.warn(`[priceSync] scheduled: ${e.message}`));
   }, intervalMs);
 
-  logger.info(`[priceSync] Scheduler started (every ${Math.round(intervalMs / 60000)} min)`);
+  logger.info(`[priceSync] Scheduler started (every ${Math.round(intervalMs / 60000)} min), per-user`);
 }
 
 function stopPriceSyncScheduler() {
@@ -218,6 +245,7 @@ function isSyncRunning() {
 
 module.exports = {
   runPriceSync,
+  runPriceSyncAllUsers,
   startPriceSyncScheduler,
   stopPriceSyncScheduler,
   isSyncRunning,

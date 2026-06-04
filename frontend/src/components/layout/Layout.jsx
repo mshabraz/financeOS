@@ -70,7 +70,7 @@ function NavItem({ to, icon: Icon, label, end, onClick, compact }) {
 
 export default function Layout({ children }) {
   const { dark, toggle } = useTheme();
-  const { status, logout } = useAuth();
+  const { status, logout, user } = useAuth();
   const { privacyMode, togglePrivacy } = usePrivacy();
   const [moreOpen, setMoreOpen] = useState(false);
   const location = useLocation();
@@ -108,10 +108,18 @@ export default function Layout({ children }) {
             {dark ? 'Light mode' : 'Dark mode'}
           </button>
           {status?.authEnabled && (
-            <button type="button" onClick={() => logout()} className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 min-h-[44px]">
-              <LogOut size={18} />
-              Sign out
-            </button>
+            <>
+              {user?.email && (
+                <p className="px-3 py-1 text-[10px] text-gray-400 truncate" title={user.email}>
+                  {user.email}
+                  {user.role === 'admin' ? ' · admin' : ''}
+                </p>
+              )}
+              <button type="button" onClick={() => logout()} className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 min-h-[44px]">
+                <LogOut size={18} />
+                Sign out
+              </button>
+            </>
           )}
         </div>
       </aside>

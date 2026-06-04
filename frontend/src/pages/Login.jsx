@@ -6,11 +6,15 @@ import { getNetworkInfo } from '../api/client';
 import { useQuery } from '@tanstack/react-query';
 
 export default function Login() {
-  const { needsSetup, login, setup, status } = useAuth();
+  const { needsRegister, login, register, status } = useAuth();
+  const [mode, setMode] = useState('login');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [confirm, setConfirm]   = useState('');
-  const [error, setError]       = useState('');
-  const [busy, setBusy]         = useState(false);
+  const [confirm, setConfirm] = useState('');
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  const showRegister = needsRegister || mode === 'register';
 
   const network = useQuery({
     queryKey: ['networkInfo'],
@@ -21,7 +25,7 @@ export default function Login() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    if (needsSetup && password !== confirm) {
+    if (password !== confirm && (showRegister || mode === 'register')) {
       setError('Passwords do not match');
       return;
     }
@@ -29,10 +33,17 @@ export default function Login() {
       setError('Password must be at least 8 characters');
       return;
     }
+    if (!email.trim().includes('@')) {
+      setError('Enter a valid email address');
+      return;
+    }
     setBusy(true);
     try {
-      if (needsSetup) await setup(password);
-      else await login(password);
+      if (showRegister || mode === 'register') {
+        await register(email.trim(), password);
+      } else {
+        await login(email.trim(), password);
+      }
     } catch (err) {
       setError(err.message || 'Authentication failed');
     } finally {
@@ -46,23 +57,39 @@ export default function Login() {
         <div className="flex flex-col items-center text-center gap-3 mb-6">
           <FinanceLogo variant="full" size={44} />
           <p className="text-sm text-gray-500 dark:text-gray-400">
-            {needsSetup ? 'Create your LAN password' : 'Sign in to continue'}
+            {needsRegister
+              ? 'Create the first account (admin)'
+              : showRegister
+                ? 'Create your account'
+                : 'Sign in to continue'}
           </p>
         </div>
 
         {status?.connectionFailed && (
           <p className="text-xs text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg px-3 py-2 mb-4">
-            Cannot verify login with the server. Check that FinanceOS is running, then refresh this page.
+            Cannot reach the server. Check that FinanceOS is running, then refresh this page.
           </p>
         )}
 
-        {needsSetup && !status?.connectionFailed && (
+        {needsRegister && !status?.connectionFailed && (
           <p className="text-xs text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg px-3 py-2 mb-4">
-            This password protects access from other devices on your network. There is no cloud reset.
+            The first account becomes admin and owns any existing data migrated from a single-user install.
           </p>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4" style={status?.connectionFailed ? { pointerEvents: 'none', opacity: 0.6 } : undefined}>
+          <div>
+            <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Email</label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="input w-full mt-1"
+              autoComplete="email"
+              autoFocus
+              required
+            />
+          </div>
           <div>
             <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Password</label>
             <input
@@ -70,11 +97,10 @@ export default function Login() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="input w-full mt-1"
-              autoComplete={needsSetup ? 'new-password' : 'current-password'}
-              autoFocus
+              autoComplete={showRegister ? 'new-password' : 'current-password'}
             />
           </div>
-          {needsSetup && (
+          {(showRegister || mode === 'register') && (
             <div>
               <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Confirm password</label>
               <input
@@ -88,9 +114,29 @@ export default function Login() {
           )}
           {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
           <button type="submit" disabled={busy} className="btn-primary w-full">
-            {busy ? 'Please wait…' : needsSetup ? 'Set password & continue' : 'Sign in'}
+            {busy ? 'Please wait…' : showRegister || mode === 'register' ? 'Register & continue' : 'Sign in'}
           </button>
         </form>
+
+        {!needsRegister && (
+          <p className="text-center text-xs text-gray-500 mt-4">
+            {mode === 'login' ? (
+              <>
+                New here?{' '}
+                <button type="button" className="text-brand-600 hover:underline" onClick={() => setMode('register')}>
+                  Register
+                </button>
+              </>
+            ) : (
+              <>
+                Already have an account?{' '}
+                <button type="button" className="text-brand-600 hover:underline" onClick={() => setMode('login')}>
+                  Sign in
+                </button>
+              </>
+            )}
+          </p>
+        )}
 
         {network.data?.urls?.length > 0 && (
           <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-800">

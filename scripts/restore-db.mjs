@@ -68,7 +68,7 @@ if (!force) {
 
 fs.mkdirSync(DATA_DIR, { recursive: true });
 
-for (const name of ['finance.db', 'auth.json', '.session-secret']) {
+for (const name of ['finance.db', 'auth.json', 'users-registry.json', '.session-secret']) {
   const src = path.join(srcDir, name);
   if (fs.existsSync(src)) {
     const dest = path.join(DATA_DIR, name);
@@ -80,6 +80,18 @@ for (const name of ['finance.db', 'auth.json', '.session-secret']) {
     fs.copyFileSync(src, dest);
     console.log(`[restore] Restored ${name}`);
   }
+}
+
+const usersSrc = path.join(srcDir, 'users');
+if (fs.existsSync(usersSrc)) {
+  const usersDest = path.join(DATA_DIR, 'users');
+  if (fs.existsSync(usersDest)) {
+    const pre = `${usersDest}.pre-restore-${Date.now()}`;
+    fs.cpSync(usersDest, pre, { recursive: true });
+    console.log(`[restore] Previous users/ → ${path.basename(pre)}`);
+  }
+  fs.cpSync(usersSrc, usersDest, { recursive: true });
+  console.log('[restore] Restored users/');
 }
 
 const certSrc = path.join(srcDir, 'certs');

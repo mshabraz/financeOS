@@ -1,11 +1,11 @@
 const config = require('../config');
-const authStore = require('../services/authStore');
+const userRegistry = require('../services/userRegistry');
 
 /** Paths that never require a session (auth + public network info). */
 const PUBLIC_PATHS = [
   '/api/auth/status',
   '/api/auth/login',
-  '/api/auth/setup',
+  '/api/auth/register',
   '/api/auth/logout',
   '/api/network/info',
 ];
@@ -20,12 +20,12 @@ function requireAuth(req, res, next) {
   if (!config.AUTH_ENABLED) return next();
   if (isPublicPath(req)) return next();
 
-  if (req.session?.authenticated) return next();
+  if (req.session?.authenticated && req.session?.userId) return next();
 
   return res.status(401).json({
     error: 'Authentication required',
     code: 'AUTH_REQUIRED',
-    configured: authStore.isConfigured(),
+    configured: userRegistry.hasUsers(),
   });
 }
 

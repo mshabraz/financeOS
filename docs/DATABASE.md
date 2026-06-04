@@ -1,12 +1,13 @@
 # Database & migrations
 
-FinanceOS uses **SQLite** stored at:
+FinanceOS uses **SQLite** per user account:
 
 ```
-backend/data/finance.db
+backend/data/users/<user-id>/finance.db
+backend/data/users-registry.json   # accounts (email, roles — no transaction data)
 ```
 
-The file is **gitignored**. Only schema **migrations** (code in `backend/src/db/schema.js`) are versioned in Git.
+Legacy single-user installs are migrated automatically on first server start. Only schema **migrations** (code in `backend/src/db/schema.js`) are versioned in Git. All files under `backend/data/` are **gitignored**.
 
 ## How migrations work
 
@@ -35,10 +36,11 @@ Backups are stored under:
 
 ```
 backend/data/backups/<timestamp>/
-  finance.db
-  auth.json
+  users/                  # per-account databases
+  users-registry.json
   .session-secret
   manifest.json
+  (legacy: finance.db, auth.json if present)
 ```
 
 Optional label:

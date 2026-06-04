@@ -43,11 +43,14 @@ api.interceptors.response.use(
 );
 
 export const getAuthStatus   = () => api.get('/auth/status');
-export const login           = (password) => api.post('/auth/login', { password });
-export const setupPassword   = (password) => api.post('/auth/setup', { password });
+export const register        = (email, password) => api.post('/auth/register', { email, password });
+export const login           = (email, password) => api.post('/auth/login', { email, password });
 export const logout          = () => api.post('/auth/logout');
 export const changePassword  = (currentPassword, newPassword) =>
   api.post('/auth/change-password', { currentPassword, newPassword });
+export const getAdminUsers   = () => api.get('/admin/users');
+export const adminResetUserPassword = (userId, newPassword) =>
+  api.post(`/admin/users/${userId}/reset-password`, { newPassword });
 export const getNetworkInfo  = () => api.get('/network/info');
 
 // --- App settings ---

@@ -19,6 +19,10 @@ try {
 
 const ROOT = path.join(__dirname, '../..');
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '../data');
+const USERS_DIR = path.join(DATA_DIR, 'users');
+const REGISTRY_PATH = path.join(DATA_DIR, 'users-registry.json');
+const LEGACY_DB_PATH = path.join(DATA_DIR, 'finance.db');
+const PENDING_LEGACY_DIR = path.join(DATA_DIR, '.pending-legacy');
 
 function envBool(key, defaultValue = false) {
   const v = process.env[key];
@@ -66,6 +70,10 @@ const COOKIE_SECURE = envBool('COOKIE_SECURE', HTTPS_ENABLED);
 module.exports = {
   ROOT,
   DATA_DIR,
+  USERS_DIR,
+  REGISTRY_PATH,
+  LEGACY_DB_PATH,
+  PENDING_LEGACY_DIR,
   HOST,
   PORT,
   FRONTEND_PORT,

@@ -22,10 +22,20 @@ frontend/.env.local
 # Session secrets & auth (generated locally)
 backend/data/.session-secret
 backend/data/auth.json
+backend/data/users-registry.json
+backend/data/users/
 **/data/.session-secret
 **/data/auth.json
+**/data/users-registry.json
+**/data/users/
 
 # ── SQLite & local data (your finance data stays on this machine) ─────────────
+data/*.db
+data/*.db-*
+data/backups/
+data/auth.json
+data/.session-secret
+!data/.gitkeep
 backend/data/*.db
 backend/data/*.db-journal
 backend/data/*.db-wal

@@ -10,9 +10,12 @@ const session = require('express-session');
 const config = require('./config');
 const { createCorsMiddleware } = require('./middleware/cors');
 const { requireAuth } = require('./middleware/auth');
+const { attachUserContext } = require('./middleware/userContext');
+const { requireAdmin } = require('./middleware/requireAdmin');
 const logger = require('./services/logger');
 
 const authRoutes        = require('./routes/auth');
+const adminRoutes       = require('./routes/admin');
 const networkRoutes     = require('./routes/network');
 const importRoutes      = require('./routes/import');
 const transactionRoutes = require('./routes/transactions');
@@ -60,20 +63,24 @@ function createApp() {
 
   app.get('/api/health', async (req, res) => {
     try {
-      const { getDb } = require('./db/database');
-      const db = getDb();
-      const row = db.prepare('SELECT COUNT(*) as count FROM transactions').get();
+      const userRegistry = require('./services/userRegistry');
       const payload = {
         status: 'ok',
-        transactions: row?.count ?? 0,
         timestamp: new Date().toISOString(),
         lanMode: config.LAN_MODE,
         authRequired: config.AUTH_ENABLED && !req.session?.authenticated,
+        userCount: userRegistry.hasUsers() ? userRegistry.listUsers().length : 0,
         sharedExpensesApi: true,
       };
 
-      // Yahoo probe only when caller has a session (e.g. logged-in browser tab)
-      if (req.session?.authenticated) {
+      if (req.session?.userId) {
+        const { openUserDatabase } = require('./db/database');
+        const db = openUserDatabase(req.session.userId);
+        const row = db.prepare('SELECT COUNT(*) as count FROM transactions').get();
+        payload.transactions = row?.count ?? 0;
+      }
+
+      if (req.session?.authenticated && req.session?.userId) {
         try {
           const { searchSecurities } = require('./services/marketData/yahooProvider');
           const hits = await searchSecurities('AAPL', 2);
@@ -100,6 +107,8 @@ function createApp() {
 
   // Protected API
   app.use('/api', requireAuth);
+  app.use('/api', attachUserContext);
+  app.use('/api/admin', requireAdmin, adminRoutes);
   app.use('/api/import', importRoutes);
   app.use('/api/transactions', transactionRoutes);
   app.use('/api/categories', categoryRoutes);
