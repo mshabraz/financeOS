@@ -122,8 +122,6 @@ async function main() {
   const { startPriceSyncScheduler } = require('./services/investmentPriceSync');
   startPriceSyncScheduler();
 
-  const { startWatchedFolderScheduler } = require('./services/watchedFolderImport');
-  startWatchedFolderScheduler();
   if (process.env.YAHOO_TLS_RELAXED === 'true') {
     logger.info('[market] YAHOO_TLS_RELAXED=true — TLS certificate verification disabled for Yahoo API');
   }

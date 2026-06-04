@@ -253,18 +253,6 @@ export const createWealthGoal = (body) => api.post('/wealth-goals', body);
 export const updateWealthGoal = (id, body) => api.patch(`/wealth-goals/${id}`, body);
 export const deleteWealthGoal = (id) => api.delete(`/wealth-goals/${id}`);
 
-// --- Watched-folder auto-import ---
-export const getWatchedImportConfig = () => api.get('/watched-import/config');
-export const updateWatchedImportConfig = (body) => api.put('/watched-import/config', body);
-export const validateWatchedFolderPath = (folderPath) =>
-  api.post('/watched-import/validate-path', { folderPath });
-export const getWatchedImportHistory = (limit = 50) =>
-  api.get('/watched-import/history', { params: { limit } });
-export const getWatchedImportNotifications = (limit = 20) =>
-  api.get('/watched-import/notifications', { params: { limit } });
-export const getWatchedImportStatus = () => api.get('/watched-import/status');
-export const scanWatchedFolderNow = () => api.post('/watched-import/scan-now');
-
 // --- Bulk categorization ---
 export const bulkCategorizePrev = (body) => api.post('/transactions/bulk-categorize/preview', body);
 export const bulkCategorizeApply = (body) => api.post('/transactions/bulk-categorize/apply', body);

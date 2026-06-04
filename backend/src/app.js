@@ -21,7 +21,6 @@ const dashboardRoutes   = require('./routes/dashboard');
 const tagRoutes         = require('./routes/tags');
 const investmentRoutes  = require('./routes/investments');
 const revolutRoutes     = require('./routes/revolut');
-const watchedImportRoutes = require('./routes/watchedImport');
 const sharedExpensesRoutes = require('./routes/sharedExpenses');
 const wealthGoalsRoutes    = require('./routes/wealthGoals');
 const obligationsRoutes    = require('./routes/obligations');
@@ -108,7 +107,6 @@ function createApp() {
   app.use('/api/tags', tagRoutes);
   app.use('/api/investments', investmentRoutes);
   app.use('/api/revolut', revolutRoutes);
-  app.use('/api/watched-import', watchedImportRoutes);
   app.use('/api/shared', sharedExpensesRoutes);
   app.use('/api/wealth-goals', wealthGoalsRoutes);
   app.use('/api/obligations', obligationsRoutes);

@@ -1,5 +1,5 @@
 /**
- * Investment CSV commit (shared by manual upload and watched-folder import).
+ * Investment CSV commit (manual upload).
  */
 
 const { getDb } = require('../db/database');
