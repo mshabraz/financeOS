@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { fmt } from '../investmentPageFmt';
-import { CostBasisHoldingCards } from './HoldingsCardGrid';
+import { HoldingsTable } from './index';
 
 export default function ClosedPositionsSection({ data }) {
   const [open, setOpen] = useState(false);
@@ -25,8 +25,8 @@ export default function ClosedPositionsSection({ data }) {
         {open ? <ChevronUp size={18} className="text-gray-400" /> : <ChevronDown size={18} className="text-gray-400" />}
       </button>
       {open && (
-        <div className="p-3 border-t border-gray-100 dark:border-gray-800">
-          <CostBasisHoldingCards data={data} open={false} />
+        <div className="border-t border-gray-100 dark:border-gray-800">
+          <HoldingsTable data={data} open={false} />
         </div>
       )}
     </section>
