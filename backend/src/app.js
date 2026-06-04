@@ -24,6 +24,7 @@ const revolutRoutes     = require('./routes/revolut');
 const watchedImportRoutes = require('./routes/watchedImport');
 const sharedExpensesRoutes = require('./routes/sharedExpenses');
 const wealthGoalsRoutes    = require('./routes/wealthGoals');
+const obligationsRoutes    = require('./routes/obligations');
 const settingsRoutes       = require('./routes/settings');
 
 function createApp() {
@@ -109,6 +110,7 @@ function createApp() {
   app.use('/api/watched-import', watchedImportRoutes);
   app.use('/api/shared', sharedExpensesRoutes);
   app.use('/api/wealth-goals', wealthGoalsRoutes);
+  app.use('/api/obligations', obligationsRoutes);
   app.use('/api/settings', settingsRoutes);
 
   // Serve built React app when dist exists (LAN / production)

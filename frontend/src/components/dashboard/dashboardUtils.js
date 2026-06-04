@@ -119,7 +119,7 @@ export function buildDashboardInsights({
   return lines.slice(0, 6);
 }
 
-export function buildAttentionItems({ portfolio, budgets, sharedEvents }) {
+export function buildAttentionItems({ portfolio, budgets, sharedEvents, obligationsSummary }) {
   const items = [];
   if (portfolio?.unboundCount > 0) {
     items.push({
@@ -162,6 +162,24 @@ export function buildAttentionItems({ portfolio, budgets, sharedEvents }) {
       severity: 'info',
       title: `${activeShared.length} shared expense event${activeShared.length === 1 ? '' : 's'} active`,
       href: '/shared',
+    });
+  }
+  const overdueCount = obligationsSummary?.counts?.overdue ?? 0;
+  if (overdueCount > 0) {
+    items.push({
+      id: 'obligations-overdue',
+      severity: 'error',
+      title: `${overdueCount} overdue payment${overdueCount === 1 ? '' : 's'}`,
+      href: '/due?tab=overdue',
+    });
+  }
+  const dueWeek = obligationsSummary?.counts?.dueNext7Days ?? 0;
+  if (dueWeek > 0 && overdueCount === 0) {
+    items.push({
+      id: 'obligations-week',
+      severity: 'warning',
+      title: `${dueWeek} due in the next 7 days`,
+      href: '/due',
     });
   }
   return items;

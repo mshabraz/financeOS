@@ -298,4 +298,21 @@ export const createSharedExpense = (eventId, body) =>
 export const updateSharedExpense = (id, body) => api.patch(`/shared/expenses/${id}`, body);
 export const deleteSharedExpense = (id) => api.delete(`/shared/expenses/${id}`);
 
+// --- Due & Owed (obligations) ---
+export const getObligationsMeta = () => api.get('/obligations/meta');
+export const getObligationsSummary = () => api.get('/obligations/summary');
+export const getObligations = (params) => api.get('/obligations', { params });
+export const getObligation = (id) => api.get(`/obligations/${id}`);
+export const getObligationsCalendar = (params) => api.get('/obligations/calendar', { params });
+export const getObligationReminders = () => api.get('/obligations/reminders');
+export const ackObligationReminder = (obligationId, reminderKey) =>
+  api.post(`/obligations/reminders/${obligationId}/ack`, { reminderKey });
+export const createObligation = (body) => api.post('/obligations', body);
+export const updateObligation = (id, body) => api.patch(`/obligations/${id}`, body);
+export const settleObligation = (id, body) => api.post(`/obligations/${id}/settle`, body);
+export const markObligationPaid = (id) => api.post(`/obligations/${id}/mark-paid`);
+export const snoozeObligation = (id, until) => api.post(`/obligations/${id}/snooze`, { until });
+export const cancelObligation = (id) => api.post(`/obligations/${id}/cancel`);
+export const deleteObligation = (id) => api.delete(`/obligations/${id}`);
+
 export default api;

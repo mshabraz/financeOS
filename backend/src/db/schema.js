@@ -965,6 +965,65 @@ const MIGRATION_V26 = {
   },
 };
 
+// ── Migration v28: Payments & money owed (obligations) ─────────────────────
+const MIGRATION_V28 = {
+  version: 28,
+  up: (db) => {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS money_obligations (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        direction TEXT NOT NULL CHECK (direction IN ('payable', 'receivable')),
+        obligation_kind TEXT NOT NULL DEFAULT 'custom',
+        title TEXT NOT NULL,
+        amount REAL NOT NULL,
+        currency TEXT NOT NULL DEFAULT 'EUR',
+        amount_paid REAL NOT NULL DEFAULT 0,
+        due_date TEXT,
+        counterparty TEXT,
+        category TEXT,
+        description TEXT,
+        status TEXT NOT NULL DEFAULT 'upcoming',
+        reminder_days TEXT DEFAULT '[1,3,7]',
+        recurrence_rule TEXT,
+        series_id TEXT,
+        is_series_template INTEGER NOT NULL DEFAULT 0,
+        tags TEXT,
+        shared_event_id INTEGER,
+        linked_transaction_id INTEGER,
+        snoozed_until TEXT,
+        completed_at TEXT,
+        cancelled_at TEXT,
+        created_at TEXT DEFAULT (datetime('now')),
+        updated_at TEXT DEFAULT (datetime('now'))
+      );
+      CREATE INDEX IF NOT EXISTS idx_money_obligations_due ON money_obligations(due_date);
+      CREATE INDEX IF NOT EXISTS idx_money_obligations_direction ON money_obligations(direction);
+      CREATE INDEX IF NOT EXISTS idx_money_obligations_status ON money_obligations(status);
+      CREATE INDEX IF NOT EXISTS idx_money_obligations_series ON money_obligations(series_id);
+
+      CREATE TABLE IF NOT EXISTS money_obligation_settlements (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        obligation_id INTEGER NOT NULL,
+        amount REAL NOT NULL,
+        paid_at TEXT NOT NULL DEFAULT (date('now')),
+        notes TEXT,
+        created_at TEXT DEFAULT (datetime('now')),
+        FOREIGN KEY (obligation_id) REFERENCES money_obligations(id) ON DELETE CASCADE
+      );
+      CREATE INDEX IF NOT EXISTS idx_obligation_settlements_ob ON money_obligation_settlements(obligation_id);
+
+      CREATE TABLE IF NOT EXISTS money_obligation_reminder_log (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        obligation_id INTEGER NOT NULL,
+        reminder_key TEXT NOT NULL,
+        fired_at TEXT DEFAULT (datetime('now')),
+        FOREIGN KEY (obligation_id) REFERENCES money_obligations(id) ON DELETE CASCADE,
+        UNIQUE(obligation_id, reminder_key)
+      );
+    `);
+  },
+};
+
 // ── Migration v27: User-friendly security display names on bindings ───────────
 const MIGRATION_V27 = {
   version: 27,
@@ -981,7 +1040,7 @@ const MIGRATION_V27 = {
   },
 };
 
-const ALL_MIGRATIONS = [...migrations.filter(m => m.version === 1), MIGRATION_V2, MIGRATION_V3, MIGRATION_V4, MIGRATION_V5, MIGRATION_V6, MIGRATION_V7, MIGRATION_V8, MIGRATION_V9, MIGRATION_V10, MIGRATION_V11, MIGRATION_V12, MIGRATION_V13, MIGRATION_V14, MIGRATION_V15, MIGRATION_V16, MIGRATION_V17, MIGRATION_V18, MIGRATION_V19, MIGRATION_V20, MIGRATION_V21, MIGRATION_V22, MIGRATION_V23, MIGRATION_V24, MIGRATION_V25, MIGRATION_V26, MIGRATION_V27];
+const ALL_MIGRATIONS = [...migrations.filter(m => m.version === 1), MIGRATION_V2, MIGRATION_V3, MIGRATION_V4, MIGRATION_V5, MIGRATION_V6, MIGRATION_V7, MIGRATION_V8, MIGRATION_V9, MIGRATION_V10, MIGRATION_V11, MIGRATION_V12, MIGRATION_V13, MIGRATION_V14, MIGRATION_V15, MIGRATION_V16, MIGRATION_V17, MIGRATION_V18, MIGRATION_V19, MIGRATION_V20, MIGRATION_V21, MIGRATION_V22, MIGRATION_V23, MIGRATION_V24, MIGRATION_V25, MIGRATION_V26, MIGRATION_V27, MIGRATION_V28];
 
 function runMigrations(db) {
   db.exec(`CREATE TABLE IF NOT EXISTS schema_migrations (

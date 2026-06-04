@@ -7,6 +7,7 @@ import {
   getAssets, getManualBalances, updateManualBalance, addManualBalance, deleteManualBalance,
   getBudgets, getWealthGoals, getWealthGoalProgress, getInvestmentAnalytics,
   getSharedEvents, getTagSummary,
+  getObligationsSummary, getObligations, getObligationReminders,
 } from '../api/client';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 import QueryErrorPanel from '../components/ui/QueryErrorPanel';
@@ -24,6 +25,8 @@ import DashboardGoals from '../components/dashboard/DashboardGoals';
 import DashboardAttention from '../components/dashboard/DashboardAttention';
 import { DashboardRevolut, DashboardShared } from '../components/dashboard/DashboardSharedRevolut';
 import DashboardAssets from '../components/dashboard/DashboardAssets';
+import DashboardObligations from '../components/dashboard/DashboardObligations';
+import { useObligationReminders } from '../hooks/useObligationReminders';
 import {
   useDashboardFeaturedGoalId,
   resolveGoalFromList,
@@ -78,6 +81,17 @@ export default function Dashboard() {
   const goals = useQuery({ queryKey: ['wealthGoals'], queryFn: () => getWealthGoals({ status: 'active' }) });
   const sharedEvents = useQuery({ queryKey: ['sharedEvents'], queryFn: getSharedEvents });
   const tagSummary = useQuery({ queryKey: ['tagSummary'], queryFn: getTagSummary });
+  const obligationsSummary = useQuery({ queryKey: ['obligationsSummary'], queryFn: getObligationsSummary });
+  const obligationsWeek = useQuery({
+    queryKey: ['obligations', 'due_week'],
+    queryFn: () => getObligations({ filter: 'due_week' }),
+  });
+  useObligationReminders(true);
+  const obligationReminders = useQuery({
+    queryKey: ['obligationReminders'],
+    queryFn: getObligationReminders,
+    refetchInterval: 120_000,
+  });
   const [featuredGoalId, setFeaturedGoalId] = useDashboardFeaturedGoalId();
 
   const activeGoals = useMemo(
@@ -190,8 +204,9 @@ export default function Dashboard() {
         portfolio,
         budgets: budgets.data,
         sharedEvents: sharedEvents.data,
+        obligationsSummary: obligationsSummary.data,
       }),
-    [portfolio, budgets.data, sharedEvents.data],
+    [portfolio, budgets.data, sharedEvents.data, obligationsSummary.data],
   );
 
   const sortedTags = useMemo(() => {
@@ -299,6 +314,12 @@ export default function Dashboard() {
         categories={byCategory.data}
         categoriesLoading={byCategory.isLoading}
         hidePeriodTotal
+      />
+
+      <DashboardObligations
+        summary={obligationsSummary.data}
+        upcoming={obligationsWeek.data}
+        reminders={obligationReminders.data?.reminders}
       />
 
       <DashboardGoals
