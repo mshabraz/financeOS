@@ -33,13 +33,26 @@ function nextDueDate(fromDateStr, rule) {
   return next;
 }
 
-function ensureRecurringInstances(db, horizonDays = 120) {
+/**
+ * Generate recurring instances only through `throughDate` (default: end of current month).
+ * Avoids cluttering "this month" views with next month's rent.
+ */
+function ensureRecurringInstances(db, options = {}) {
+  let throughDate;
+  if (typeof options === 'number') {
+    throughDate = addDaysStr(todayStr(), options);
+  } else if (typeof options === 'string') {
+    throughDate = options;
+  } else {
+    throughDate = options.throughDate;
+  }
+  const { monthEnd } = require('./dates').monthRangeStr();
+  const horizon = throughDate || monthEnd;
+
   const templates = db.prepare(`
     SELECT * FROM money_obligations
     WHERE is_series_template = 1 AND cancelled_at IS NULL AND recurrence_rule IS NOT NULL
   `).all();
-
-  const horizon = addDaysStr(todayStr(), horizonDays);
   let created = 0;
 
   for (const tpl of templates) {

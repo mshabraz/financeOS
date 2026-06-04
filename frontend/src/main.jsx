@@ -18,6 +18,7 @@ import Investments from './pages/Investments';
 import SharedExpenses from './pages/SharedExpenses';
 import SharedExpenseEvent from './pages/SharedExpenseEvent';
 import Obligations from './pages/Obligations';
+import Tasks from './pages/Tasks';
 import LoadingSpinner from './components/ui/LoadingSpinner';
 import ErrorBoundary from './components/ui/ErrorBoundary';
 
@@ -67,6 +68,7 @@ function AppRoutes() {
           <Route path="/shared/:eventId" element={<SharedExpenseEvent />} />
           <Route path="/due"        element={<Obligations />} />
           <Route path="/obligations" element={<Navigate to="/due" replace />} />
+          <Route path="/tasks"      element={<Tasks />} />
           <Route path="*"            element={<Navigate to="/" replace />} />
         </Routes>
       </ErrorBoundary>

@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getObligationReminders, ackObligationReminder } from '../api/client';
 import { fmtCurrency } from '../utils/displayFormat';
+import { showDueReminder } from '../utils/browserNotifications';
 
 /**
  * Poll due reminders and surface browser notifications when permitted.
@@ -30,11 +31,12 @@ export function useObligationReminders(enabled = true) {
       notifiedRef.current.add(r.reminderKey);
       const label = r.direction === 'receivable' ? 'Collect' : 'Pay';
       const body = `${label} ${fmtCurrency(r.amount, r.currency)}${r.counterparty ? ` · ${r.counterparty}` : ''} · due ${r.dueDate}`;
-      const n = new Notification(`Due & Owed: ${r.title}`, { body, tag: r.reminderKey });
-      n.onclick = () => {
-        window.focus();
-        window.location.href = '/due';
-      };
+      showDueReminder({
+        title: `Due & Owed: ${r.title}`,
+        body,
+        tag: r.reminderKey,
+        href: '/due',
+      });
       ackObligationReminder(r.obligationId, r.reminderKey).catch(() => {});
     }
   }, [enabled, reminders.data]);

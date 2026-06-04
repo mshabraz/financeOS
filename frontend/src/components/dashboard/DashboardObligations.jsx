@@ -15,7 +15,7 @@ export default function DashboardObligations({ summary, upcoming = [], reminders
           <h2 id="due-owed-dash-title" className="text-sm font-semibold text-gray-900 dark:text-white">
             Due & Owed
           </h2>
-          <p className="text-xs text-gray-500">Next 7 days & balances</p>
+          <p className="text-xs text-gray-500">Due this month & balances</p>
         </div>
         <Link to="/due" className="text-xs text-brand-600 hover:underline inline-flex items-center gap-0.5">
           Open <ChevronRight size={12} />
@@ -24,8 +24,8 @@ export default function DashboardObligations({ summary, upcoming = [], reminders
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
         <div className="rounded-lg bg-gray-50 dark:bg-gray-800/50 p-2.5">
-          <p className="text-[10px] text-gray-400 flex items-center gap-1"><Bell size={10} /> Due 7d</p>
-          <p className="text-sm font-bold tabular-nums">{fmtEur(s.totals?.dueWeekEur ?? 0)}</p>
+          <p className="text-[10px] text-gray-400 flex items-center gap-1"><Bell size={10} /> This month</p>
+          <p className="text-sm font-bold tabular-nums">{fmtEur(s.totals?.dueThisMonthEur ?? 0)}</p>
         </div>
         <div className="rounded-lg bg-emerald-500/5 border border-emerald-500/15 p-2.5">
           <p className="text-[10px] text-gray-400 flex items-center gap-1"><ArrowUpRight size={10} className="text-emerald-500" /> To collect</p>

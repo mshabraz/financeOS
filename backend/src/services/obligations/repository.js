@@ -3,7 +3,39 @@ const { OBLIGATION_KINDS, DIRECTIONS, DEFAULT_REMINDER_DAYS } = require('./const
 const { enrichRow, computeStatus, roundMoney, todayStr } = require('./status');
 const { ensureRecurringInstances, attachRecurrenceOnCreate, nextDueDate } = require('./recurrence');
 const { clearReminderLogForObligation } = require('./reminders');
-const { addDaysStr } = require('./dates');
+const { addDaysStr, monthRangeStr } = require('./dates');
+
+function excludeTemplates(rows) {
+  return rows.filter((r) => !r.is_series_template);
+}
+
+/** Active obligation with a due date in the current calendar month. */
+function isDueThisMonth(r, monthStart, monthEnd) {
+  if (!r.due_date) return false;
+  return r.due_date >= monthStart && r.due_date <= monthEnd;
+}
+
+/** Payable still owed: this month's dues, past overdue, or undated one-offs — never future months. */
+function isPayableThisMonth(r, monthStart, monthEnd) {
+  if (r.is_series_template) return false;
+  if (r.direction !== 'payable') return false;
+  if (['paid', 'settled', 'cancelled'].includes(r.status)) return false;
+  if (!r.due_date) return true;
+  if (r.due_date > monthEnd) return false;
+  if (r.status === 'overdue') return true;
+  return r.due_date >= monthStart && r.due_date <= monthEnd;
+}
+
+/** Receivable to collect this month (or overdue), not future months. */
+function isReceivableThisMonth(r, monthStart, monthEnd) {
+  if (r.is_series_template) return false;
+  if (r.direction !== 'receivable') return false;
+  if (['settled', 'cancelled'].includes(r.status)) return false;
+  if (!r.due_date) return true;
+  if (r.due_date > monthEnd) return false;
+  if (r.status === 'overdue') return true;
+  return r.due_date >= monthStart && r.due_date <= monthEnd;
+}
 
 function syncStatus(db, id) {
   const row = db.prepare('SELECT * FROM money_obligations WHERE id = ?').get(id);
@@ -30,9 +62,21 @@ function getById(id) {
   return enriched;
 }
 
-function list({ filter, direction, from, to, q } = {}) {
+function list({ filter, direction, from, to, q, horizon } = {}) {
   const db = getDb();
-  ensureRecurringInstances(db);
+  const { monthStart, monthEnd } = monthRangeStr();
+  const recurThrough = filter === 'calendar' || filter === 'active'
+    ? (horizon || addDaysStr(todayStr(), 90))
+    : monthEnd;
+  ensureRecurringInstances(db, { throughDate: recurThrough });
+
+  if (recurThrough === monthEnd) {
+    db.prepare(`
+      DELETE FROM money_obligations
+      WHERE is_series_template = 0 AND series_id IS NOT NULL
+        AND due_date > ? AND cancelled_at IS NULL
+    `).run(monthEnd);
+  }
 
   const conds = ['cancelled_at IS NULL'];
   const params = [];
@@ -70,23 +114,23 @@ function list({ filter, direction, from, to, q } = {}) {
   const weekEnd = addDaysStr(today, 7);
 
   if (filter === 'upcoming') {
-    rows = rows.filter((r) =>
-      ['upcoming', 'due_today', 'waiting', 'partial'].includes(r.status)
-      && (!r.due_date || r.due_date >= today));
+    rows = excludeTemplates(rows).filter((r) =>
+      !['paid', 'settled', 'cancelled'].includes(r.status)
+      && isDueThisMonth(r, monthStart, monthEnd));
   } else if (filter === 'overdue') {
-    rows = rows.filter((r) => r.status === 'overdue');
+    rows = excludeTemplates(rows).filter((r) => r.status === 'overdue');
   } else if (filter === 'due_week') {
-    rows = rows.filter((r) =>
+    rows = excludeTemplates(rows).filter((r) =>
       r.due_date && r.due_date >= today && r.due_date <= weekEnd
       && !['paid', 'settled', 'cancelled'].includes(r.status));
   } else if (filter === 'payable') {
-    rows = rows.filter((r) => r.direction === 'payable' && !['paid', 'settled', 'cancelled'].includes(r.status));
+    rows = excludeTemplates(rows).filter((r) => isPayableThisMonth(r, monthStart, monthEnd));
   } else if (filter === 'receivable') {
-    rows = rows.filter((r) => r.direction === 'receivable' && !['settled', 'cancelled'].includes(r.status));
+    rows = excludeTemplates(rows).filter((r) => isReceivableThisMonth(r, monthStart, monthEnd));
   } else if (filter === 'settled') {
     rows = rows.filter((r) => ['paid', 'settled'].includes(r.status));
   } else if (filter === 'recurring') {
-    rows = rows.filter((r) => r.is_series_template || r.series_id);
+    rows = rows.filter((r) => r.is_series_template);
   } else if (filter === 'active') {
     rows = rows.filter((r) => !['paid', 'settled', 'cancelled'].includes(r.status));
   }
@@ -96,7 +140,8 @@ function list({ filter, direction, from, to, q } = {}) {
 
 function summary() {
   const db = getDb();
-  ensureRecurringInstances(db);
+  const { monthStart, monthEnd, monthLabel } = monthRangeStr();
+  ensureRecurringInstances(db, { throughDate: monthEnd });
   const all = db.prepare(
     `SELECT * FROM money_obligations WHERE cancelled_at IS NULL`
   ).all().map(enrichRow);
@@ -104,11 +149,12 @@ function summary() {
   const today = todayStr();
   const weekEnd = addDaysStr(today, 7);
 
-  const active = all.filter((r) => !['paid', 'settled', 'cancelled'].includes(r.status));
+  const active = excludeTemplates(all).filter((r) => !['paid', 'settled', 'cancelled'].includes(r.status));
   const overdue = active.filter((r) => r.status === 'overdue');
   const dueWeek = active.filter((r) => r.due_date && r.due_date >= today && r.due_date <= weekEnd);
-  const owedToMe = active.filter((r) => r.direction === 'receivable');
-  const iOwe = active.filter((r) => r.direction === 'payable');
+  const dueThisMonth = active.filter((r) => isDueThisMonth(r, monthStart, monthEnd));
+  const owedToMe = active.filter((r) => isReceivableThisMonth(r, monthStart, monthEnd));
+  const iOwe = active.filter((r) => isPayableThisMonth(r, monthStart, monthEnd));
 
   const sumRemaining = (rows) => roundMoney(rows.reduce((s, r) => s + r.amount_remaining, 0));
 
@@ -120,10 +166,14 @@ function summary() {
   const subscriptions = active.filter((r) => r.obligation_kind === 'subscription');
 
   return {
+    monthLabel,
+    monthStart,
+    monthEnd,
     counts: {
       active: active.length,
       overdue: overdue.length,
       dueNext7Days: dueWeek.length,
+      dueThisMonth: dueThisMonth.length,
       owedToMe: owedToMe.length,
       iOwe: iOwe.length,
       recurring: all.filter((r) => r.is_series_template).length,
@@ -133,6 +183,7 @@ function summary() {
       iOweEur: sumRemaining(iOwe),
       overduePayableEur: sumRemaining(overdue.filter((r) => r.direction === 'payable')),
       dueWeekEur: sumRemaining(dueWeek),
+      dueThisMonthEur: sumRemaining(dueThisMonth),
     },
     byKind,
     subscriptionsCount: subscriptions.length,
@@ -318,7 +369,7 @@ function remove(id) {
 }
 
 function calendar({ from, to }) {
-  const rows = list({ from, to });
+  const rows = list({ filter: 'active', from, to, horizon: to });
   const byDate = {};
   for (const r of rows) {
     const d = r.due_date || 'no_date';

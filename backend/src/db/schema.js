@@ -1024,6 +1024,29 @@ const MIGRATION_V28 = {
   },
 };
 
+// ── Migration v29: Tasks (notes & due dates, Google Tasks–style) ─────────────
+const MIGRATION_V29 = {
+  version: 29,
+  up: (db) => {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS finance_tasks (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT NOT NULL,
+        notes TEXT,
+        due_date TEXT,
+        due_time TEXT,
+        completed_at TEXT,
+        list_name TEXT NOT NULL DEFAULT 'Tasks',
+        sort_order INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT DEFAULT (datetime('now')),
+        updated_at TEXT DEFAULT (datetime('now'))
+      );
+      CREATE INDEX IF NOT EXISTS idx_finance_tasks_due ON finance_tasks(due_date);
+      CREATE INDEX IF NOT EXISTS idx_finance_tasks_completed ON finance_tasks(completed_at);
+    `);
+  },
+};
+
 // ── Migration v27: User-friendly security display names on bindings ───────────
 const MIGRATION_V27 = {
   version: 27,
@@ -1040,7 +1063,7 @@ const MIGRATION_V27 = {
   },
 };
 
-const ALL_MIGRATIONS = [...migrations.filter(m => m.version === 1), MIGRATION_V2, MIGRATION_V3, MIGRATION_V4, MIGRATION_V5, MIGRATION_V6, MIGRATION_V7, MIGRATION_V8, MIGRATION_V9, MIGRATION_V10, MIGRATION_V11, MIGRATION_V12, MIGRATION_V13, MIGRATION_V14, MIGRATION_V15, MIGRATION_V16, MIGRATION_V17, MIGRATION_V18, MIGRATION_V19, MIGRATION_V20, MIGRATION_V21, MIGRATION_V22, MIGRATION_V23, MIGRATION_V24, MIGRATION_V25, MIGRATION_V26, MIGRATION_V27, MIGRATION_V28];
+const ALL_MIGRATIONS = [...migrations.filter(m => m.version === 1), MIGRATION_V2, MIGRATION_V3, MIGRATION_V4, MIGRATION_V5, MIGRATION_V6, MIGRATION_V7, MIGRATION_V8, MIGRATION_V9, MIGRATION_V10, MIGRATION_V11, MIGRATION_V12, MIGRATION_V13, MIGRATION_V14, MIGRATION_V15, MIGRATION_V16, MIGRATION_V17, MIGRATION_V18, MIGRATION_V19, MIGRATION_V20, MIGRATION_V21, MIGRATION_V22, MIGRATION_V23, MIGRATION_V24, MIGRATION_V25, MIGRATION_V26, MIGRATION_V27, MIGRATION_V28, MIGRATION_V29];
 
 function runMigrations(db) {
   db.exec(`CREATE TABLE IF NOT EXISTS schema_migrations (

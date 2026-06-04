@@ -315,4 +315,13 @@ export const snoozeObligation = (id, until) => api.post(`/obligations/${id}/snoo
 export const cancelObligation = (id) => api.post(`/obligations/${id}/cancel`);
 export const deleteObligation = (id) => api.delete(`/obligations/${id}`);
 
+// --- Tasks ---
+export const getTasks = (params) => api.get('/tasks', { params });
+export const getTasksGrouped = () => api.get('/tasks', { params: { grouped: '1' } });
+export const createTask = (body) => api.post('/tasks', body);
+export const updateTask = (id, body) => api.patch(`/tasks/${id}`, body);
+export const completeTask = (id, completed = true) =>
+  api.post(`/tasks/${id}/complete`, { completed });
+export const deleteTask = (id) => api.delete(`/tasks/${id}`);
+
 export default api;

@@ -15,9 +15,9 @@ export const OBLIGATION_KINDS = [
 ];
 
 export const TABS = [
-  { id: 'upcoming', label: 'Upcoming' },
-  { id: 'payable', label: 'I owe' },
-  { id: 'receivable', label: 'Owed to me' },
+  { id: 'upcoming', label: 'Due this month', hint: 'Payments with a due date in the current month' },
+  { id: 'payable', label: 'I owe', hint: 'What you still need to pay this month (not future months)' },
+  { id: 'receivable', label: 'Owed to me', hint: 'What to collect this month' },
   { id: 'overdue', label: 'Overdue' },
   { id: 'recurring', label: 'Recurring' },
   { id: 'settled', label: 'Settled' },

@@ -82,9 +82,9 @@ export default function Dashboard() {
   const sharedEvents = useQuery({ queryKey: ['sharedEvents'], queryFn: getSharedEvents });
   const tagSummary = useQuery({ queryKey: ['tagSummary'], queryFn: getTagSummary });
   const obligationsSummary = useQuery({ queryKey: ['obligationsSummary'], queryFn: getObligationsSummary });
-  const obligationsWeek = useQuery({
-    queryKey: ['obligations', 'due_week'],
-    queryFn: () => getObligations({ filter: 'due_week' }),
+  const obligationsMonth = useQuery({
+    queryKey: ['obligations', 'upcoming'],
+    queryFn: () => getObligations({ filter: 'upcoming' }),
   });
   useObligationReminders(true);
   const obligationReminders = useQuery({
@@ -318,7 +318,7 @@ export default function Dashboard() {
 
       <DashboardObligations
         summary={obligationsSummary.data}
-        upcoming={obligationsWeek.data}
+        upcoming={obligationsMonth.data}
         reminders={obligationReminders.data?.reminders}
       />
 

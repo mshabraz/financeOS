@@ -17,6 +17,8 @@ import { TABS } from '../components/obligations/obligationConstants';
 import ObligationCard from '../components/obligations/ObligationCard';
 import ObligationFormModal from '../components/obligations/ObligationFormModal';
 import ObligationSettleModal from '../components/obligations/ObligationSettleModal';
+import NotificationPanel from '../components/obligations/NotificationPanel';
+import { Link } from 'react-router-dom';
 
 const fmt = (n) => fmtCurrency(n, 'EUR');
 
@@ -95,6 +97,10 @@ export default function Obligations() {
   const s = summary.data;
   const rows = list.data ?? [];
   const reminderCount = reminders.data?.reminders?.length ?? 0;
+  const activeTab = TABS.find((t) => t.id === tab);
+  const monthLabel = s?.monthLabel
+    ? new Date(`${s.monthLabel}-01`).toLocaleString(undefined, { month: 'long', year: 'numeric' })
+    : null;
 
   const calendarDays = useMemo(() => {
     if (!calendar.data?.byDate) return [];
@@ -157,7 +163,22 @@ export default function Obligations() {
             {t.label}
           </button>
         ))}
+        <Link
+          to="/tasks"
+          className="shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:text-brand-600"
+        >
+          Tasks →
+        </Link>
       </div>
+
+      {activeTab?.hint && tab !== 'calendar' && tab !== 'recurring' && tab !== 'settled' && (
+        <p className="text-xs text-gray-500 px-1">
+          {activeTab.hint}
+          {monthLabel && (tab === 'upcoming' || tab === 'payable' || tab === 'receivable') ? ` · ${monthLabel}` : ''}
+        </p>
+      )}
+
+      <NotificationPanel />
 
       {tab !== 'calendar' && (
         <input
@@ -207,7 +228,11 @@ export default function Obligations() {
           {!rows.length && (
             <div className="card p-8 text-center text-sm text-gray-400">
               <Wallet size={32} className="mx-auto mb-2 opacity-40" />
-              Nothing here yet. Add a bill, subscription, or IOU.
+              {tab === 'upcoming' && monthLabel
+                ? `Nothing due in ${monthLabel}. Add rent or bills with a due date this month.`
+                : tab === 'payable'
+                  ? `Nothing to pay this month. Future months stay hidden until their month.`
+                  : 'Nothing here. Add a bill, subscription, or IOU.'}
             </div>
           )}
         </ul>

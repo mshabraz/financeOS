@@ -48,6 +48,16 @@ function daysBetween(fromStr, toStr) {
   return Math.round(ms / (24 * 60 * 60 * 1000));
 }
 
+/** First and last calendar day of the month (YYYY-MM-DD). */
+function monthRangeStr(refDate = new Date()) {
+  const y = refDate.getFullYear();
+  const m = refDate.getMonth();
+  const monthStart = `${y}-${pad(m + 1)}-01`;
+  const lastDay = new Date(y, m + 1, 0).getDate();
+  const monthEnd = `${y}-${pad(m + 1)}-${pad(lastDay)}`;
+  return { monthStart, monthEnd, monthLabel: `${y}-${pad(m + 1)}` };
+}
+
 module.exports = {
   toDateStr,
   todayStr,
@@ -57,4 +67,5 @@ module.exports = {
   addMonthsStr,
   addYearsStr,
   daysBetween,
+  monthRangeStr,
 };
