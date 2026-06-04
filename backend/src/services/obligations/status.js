@@ -7,14 +7,15 @@ function roundMoney(n) {
 function parseReminderDays(raw) {
   if (Array.isArray(raw)) return raw.map(Number).filter((n) => !Number.isNaN(n));
   if (typeof raw === 'string') {
+    if (raw === '[]' || raw.trim() === '') return [];
     try {
       const parsed = JSON.parse(raw);
-      return Array.isArray(parsed) ? parsed.map(Number).filter((n) => !Number.isNaN(n)) : [1, 3, 7];
+      return Array.isArray(parsed) ? parsed.map(Number).filter((n) => !Number.isNaN(n)) : [];
     } catch {
-      return [1, 3, 7];
+      return [];
     }
   }
-  return [0, 1, 3, 7];
+  return [];
 }
 
 function isActive(row) {

@@ -46,9 +46,10 @@ export default function ObligationCard({
               </h3>
               <p className="text-xs text-gray-500 mt-0.5">
                 {row.counterparty ? privText(row.counterparty) : kindLabel(row.obligation_kind)}
-                {row.due_date && (
-                  <span className="tabular-nums"> · {row.due_date}</span>
-                )}
+                <span className="tabular-nums">
+                  {' · '}
+                  {row.due_date || 'No due date'}
+                </span>
               </p>
             </div>
             <div className="text-right shrink-0">

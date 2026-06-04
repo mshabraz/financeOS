@@ -205,7 +205,19 @@ function validatePayload(body, partial = false) {
   if (body.obligation_kind && !OBLIGATION_KINDS.includes(body.obligation_kind)) {
     errors.push('Invalid obligation kind');
   }
+  if (body.recurrence_rule?.frequency && !body.due_date) {
+    errors.push('Recurrence requires a due date');
+  }
   return errors;
+}
+
+function serializeReminderDays(body) {
+  if (body.reminder_days !== undefined) {
+    const days = Array.isArray(body.reminder_days) ? body.reminder_days : [];
+    return JSON.stringify(days);
+  }
+  if (body.due_date) return JSON.stringify(DEFAULT_REMINDER_DAYS);
+  return '[]';
 }
 
 function create(body) {
@@ -213,10 +225,8 @@ function create(body) {
   const errors = validatePayload(body);
   if (errors.length) throw new Error(errors.join('; '));
 
-  const recurrence = attachRecurrenceOnCreate(body);
-  const reminderDays = JSON.stringify(
-    body.reminder_days?.length ? body.reminder_days : DEFAULT_REMINDER_DAYS,
-  );
+  const recurrence = body.due_date ? attachRecurrenceOnCreate(body) : { series_id: null, is_series_template: 0, recurrence_rule: null };
+  const reminderDays = serializeReminderDays(body);
   const tags = body.tags?.length ? JSON.stringify(body.tags) : null;
 
   const result = db.prepare(`
@@ -273,14 +283,21 @@ function update(id, body) {
 
   if (body.reminder_days !== undefined) {
     fields.push('reminder_days = ?');
-    params.push(JSON.stringify(body.reminder_days));
+    const days = Array.isArray(body.reminder_days) ? body.reminder_days : [];
+    params.push(JSON.stringify(days));
+  } else if (body.due_date === null) {
+    fields.push('reminder_days = ?');
+    params.push('[]');
   }
   if (body.tags !== undefined) {
     fields.push('tags = ?');
     params.push(body.tags?.length ? JSON.stringify(body.tags) : null);
   }
   if (body.recurrence_rule !== undefined) {
-    const rec = attachRecurrenceOnCreate({ recurrence_rule: body.recurrence_rule });
+    const due = body.due_date !== undefined ? body.due_date : existing.due_date;
+    const rec = due && body.recurrence_rule
+      ? attachRecurrenceOnCreate({ recurrence_rule: body.recurrence_rule })
+      : { recurrence_rule: null, series_id: null, is_series_template: 0 };
     fields.push('recurrence_rule = ?', 'series_id = ?', 'is_series_template = ?');
     params.push(rec.recurrence_rule, rec.series_id, rec.is_series_template);
   }

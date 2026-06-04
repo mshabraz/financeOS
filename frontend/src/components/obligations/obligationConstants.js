@@ -47,9 +47,10 @@ export const STATUS_STYLES = {
 };
 
 export const REMINDER_PRESETS = [
-  { id: 'same_day', days: [0, 1, 3, 7] },
-  { id: 'minimal', days: [0, 3] },
-  { id: 'week_ahead', days: [0, 1, 3, 7, 14] },
+  { id: 'none', label: 'No reminders', days: [] },
+  { id: 'same_day', label: 'Same day, 1, 3, 7 days before', days: [0, 1, 3, 7] },
+  { id: 'minimal', label: 'Same day and 3 days before', days: [0, 3] },
+  { id: 'week_ahead', label: 'Up to 2 weeks before', days: [0, 1, 3, 7, 14] },
 ];
 
 export const RECURRENCE_OPTIONS = [

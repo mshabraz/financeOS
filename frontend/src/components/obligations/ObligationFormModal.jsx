@@ -1,21 +1,27 @@
 import { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
-import { format, addDays } from 'date-fns';
 import { OBLIGATION_KINDS, REMINDER_PRESETS, RECURRENCE_OPTIONS } from './obligationConstants';
 
-const defaultDue = format(addDays(new Date(), 7), 'yyyy-MM-dd');
+function reminderPresetFromDays(days) {
+  if (!days?.length) return 'none';
+  const key = days.slice().sort((a, b) => a - b).join(',');
+  const match = REMINDER_PRESETS.find(
+    (p) => p.id !== 'none' && p.days.slice().sort((a, b) => a - b).join(',') === key,
+  );
+  return match?.id || 'same_day';
+}
 
 export default function ObligationFormModal({ open, onClose, onSubmit, initial, saving }) {
   const [direction, setDirection] = useState('payable');
   const [obligationKind, setObligationKind] = useState('bill');
   const [title, setTitle] = useState('');
   const [amount, setAmount] = useState('');
-  const [dueDate, setDueDate] = useState(defaultDue);
+  const [dueDate, setDueDate] = useState('');
   const [counterparty, setCounterparty] = useState('');
   const [category, setCategory] = useState('');
   const [description, setDescription] = useState('');
   const [recurrence, setRecurrence] = useState('');
-  const [reminderPreset, setReminderPreset] = useState('same_day');
+  const [reminderPreset, setReminderPreset] = useState('none');
 
   useEffect(() => {
     if (!open) return;
@@ -24,27 +30,29 @@ export default function ObligationFormModal({ open, onClose, onSubmit, initial, 
       setObligationKind(initial.obligation_kind || 'custom');
       setTitle(initial.title || '');
       setAmount(String(initial.amount ?? ''));
-      setDueDate(initial.due_date || defaultDue);
+      setDueDate(initial.due_date || '');
       setCounterparty(initial.counterparty || '');
       setCategory(initial.category || '');
       setDescription(initial.description || '');
       setRecurrence(initial.recurrence_rule?.frequency || '');
+      setReminderPreset(reminderPresetFromDays(initial.reminder_days));
     } else {
       setDirection('payable');
       setObligationKind('bill');
       setTitle('');
       setAmount('');
-      setDueDate(defaultDue);
+      setDueDate('');
       setCounterparty('');
       setCategory('');
       setDescription('');
       setRecurrence('');
-      setReminderPreset('same_day');
+      setReminderPreset('none');
     }
   }, [open, initial]);
 
   if (!open) return null;
 
+  const hasDueDate = !!dueDate;
   const preset = REMINDER_PRESETS.find((p) => p.id === reminderPreset) || REMINDER_PRESETS[0];
 
   const handleSubmit = (e) => {
@@ -58,8 +66,8 @@ export default function ObligationFormModal({ open, onClose, onSubmit, initial, 
       counterparty: counterparty.trim() || null,
       category: category.trim() || null,
       description: description.trim() || null,
-      reminder_days: preset.days,
-      recurrence_rule: recurrence
+      reminder_days: hasDueDate && preset.id !== 'none' ? preset.days : [],
+      recurrence_rule: hasDueDate && recurrence
         ? { frequency: recurrence, interval: 1 }
         : null,
     };
@@ -121,8 +129,35 @@ export default function ObligationFormModal({ open, onClose, onSubmit, initial, 
               <input className="input w-full mt-1 tabular-nums" type="number" min="0.01" step="0.01" required value={amount} onChange={(e) => setAmount(e.target.value)} />
             </label>
             <label className="block">
-              <span className="text-xs font-medium text-gray-600 dark:text-gray-300">Due date</span>
-              <input className="input w-full mt-1" type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+              <span className="text-xs font-medium text-gray-600 dark:text-gray-300">
+                Due date <span className="text-gray-400 font-normal">(optional)</span>
+              </span>
+              <input
+                className="input w-full mt-1"
+                type="date"
+                value={dueDate}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setDueDate(v);
+                  if (!v) {
+                    setReminderPreset('none');
+                    setRecurrence('');
+                  }
+                }}
+              />
+              {dueDate && (
+                <button
+                  type="button"
+                  className="text-[10px] text-brand-600 mt-1 hover:underline"
+                  onClick={() => {
+                    setDueDate('');
+                    setReminderPreset('none');
+                    setRecurrence('');
+                  }}
+                >
+                  Clear due date
+                </button>
+              )}
             </label>
           </div>
 
@@ -136,8 +171,15 @@ export default function ObligationFormModal({ open, onClose, onSubmit, initial, 
               </select>
             </label>
             <label className="block">
-              <span className="text-xs font-medium text-gray-600 dark:text-gray-300">Recurrence</span>
-              <select className="input w-full mt-1" value={recurrence} onChange={(e) => setRecurrence(e.target.value)}>
+              <span className="text-xs font-medium text-gray-600 dark:text-gray-300">
+                Recurrence <span className="text-gray-400 font-normal">(needs due date)</span>
+              </span>
+              <select
+                className="input w-full mt-1"
+                value={recurrence}
+                disabled={!hasDueDate}
+                onChange={(e) => setRecurrence(e.target.value)}
+              >
                 {RECURRENCE_OPTIONS.map((r) => (
                   <option key={r.id || 'none'} value={r.id}>{r.label}</option>
                 ))}
@@ -151,14 +193,22 @@ export default function ObligationFormModal({ open, onClose, onSubmit, initial, 
           </label>
 
           <label className="block">
-            <span className="text-xs font-medium text-gray-600 dark:text-gray-300">Reminders</span>
-            <select className="input w-full mt-1" value={reminderPreset} onChange={(e) => setReminderPreset(e.target.value)}>
+            <span className="text-xs font-medium text-gray-600 dark:text-gray-300">
+              Reminders <span className="text-gray-400 font-normal">(optional, needs due date)</span>
+            </span>
+            <select
+              className="input w-full mt-1"
+              value={hasDueDate ? reminderPreset : 'none'}
+              disabled={!hasDueDate}
+              onChange={(e) => setReminderPreset(e.target.value)}
+            >
               {REMINDER_PRESETS.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.days.includes(0) ? 'Same day' : ''}{p.days.filter((d) => d > 0).map((d) => ` ${d}d before`).join(',') || ' Custom'}
-                </option>
+                <option key={p.id} value={p.id}>{p.label}</option>
               ))}
             </select>
+            {!hasDueDate && (
+              <p className="text-[10px] text-gray-400 mt-1">Add a due date to enable reminders.</p>
+            )}
           </label>
 
           <label className="block">
