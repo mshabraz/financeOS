@@ -23,6 +23,11 @@ import QueryErrorPanel from '../ui/QueryErrorPanel';
 import PlannerMetricStrip from '../investments/PlannerMetricStrip';
 import { fmtEur, fmtPct } from '../../utils/displayFormat';
 import { usePrivacy } from '../../context/PrivacyContext';
+import {
+  normalizeGoalId,
+  useGoalsPageDefaultGoalId,
+  resolveGoalFromActiveAndArchives,
+} from '../../hooks/useGoalPreferences';
 
 const BASIS_OPTIONS = [
   { id: 'portfolio', label: 'Portfolio (holdings + cash)' },
@@ -72,13 +77,10 @@ function onTrackDetail(data) {
   return 'Monthly checks use net savings (Analytics).';
 }
 
-function normalizeGoalId(id) {
-  if (id == null || id === '') return null;
-  const n = Number(id);
-  return Number.isFinite(n) ? n : null;
-}
-
-function GoalPicker({ goals, archives, selectedId, panel, onSelect, onCreate, showArchives, onToggleArchives }) {
+function GoalPicker({
+  goals, archives, selectedId, panel, onSelect, onCreate, showArchives, onToggleArchives,
+  defaultGoalId, onSetDefault,
+}) {
   return (
     <div className="rounded-xl border border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/40 p-3 sm:p-4 space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -108,6 +110,22 @@ function GoalPicker({ goals, archives, selectedId, panel, onSelect, onCreate, sh
           <span className="text-sm text-gray-400 py-2">No active goals</span>
         )}
       </div>
+      {selectedId != null && onSetDefault && panel === 'track' && (
+        <button
+          type="button"
+          onClick={() => onSetDefault(selectedId)}
+          className={clsx(
+            'text-xs font-medium rounded-lg px-2.5 py-1.5 border transition-colors',
+            defaultGoalId === selectedId
+              ? 'border-brand-400 bg-brand-50 dark:bg-brand-950/30 text-brand-700 dark:text-brand-300'
+              : 'border-gray-200 dark:border-gray-700 text-gray-500 hover:border-brand-400 hover:text-gray-700',
+          )}
+        >
+          {defaultGoalId === selectedId
+            ? 'Default when opening this page'
+            : 'Set as default when opening this page'}
+        </button>
+      )}
       {archives.length > 0 && (
         <div>
           <button
@@ -151,6 +169,7 @@ export default function WealthGoalTracking() {
   const [selectedId, setSelectedId] = useState(null);
   const [form, setForm] = useState(defaultForm);
   const [showArchives, setShowArchives] = useState(false);
+  const [defaultGoalId, setDefaultGoalId] = useGoalsPageDefaultGoalId();
 
   const activeGoalsQ = useQuery({
     queryKey: ['wealth-goals', 'active'],
@@ -169,9 +188,9 @@ export default function WealthGoalTracking() {
 
   useEffect(() => {
     if (panel !== 'track' || selectedId != null) return;
-    const first = activeGoals[0] ?? archives[0];
-    if (first?.id != null) setSelectedId(normalizeGoalId(first.id));
-  }, [activeGoals, archives, selectedId, panel]);
+    const resolved = resolveGoalFromActiveAndArchives(activeGoals, archives, defaultGoalId);
+    if (resolved?.id != null) setSelectedId(normalizeGoalId(resolved.id));
+  }, [activeGoals, archives, selectedId, panel, defaultGoalId]);
 
   useEffect(() => {
     if (panel !== 'track' || selectedId == null) return;
@@ -322,6 +341,8 @@ export default function WealthGoalTracking() {
           onCreate={startCreate}
           showArchives={showArchives}
           onToggleArchives={() => setShowArchives((s) => !s)}
+          defaultGoalId={defaultGoalId}
+          onSetDefault={setDefaultGoalId}
         />
       )}
 

@@ -13,7 +13,6 @@ export default function DashboardSpending({
   categories,
   categoriesLoading,
   recurring,
-  topMerchants,
 }) {
   const topCats = (categories ?? []).slice(0, 8);
   const maxCat = Math.max(...topCats.map((c) => c.total), 1);
@@ -87,38 +86,19 @@ export default function DashboardSpending({
         </div>
       </div>
 
-      {(recurring?.length > 0 || topMerchants?.length > 0) && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {recurring?.length > 0 && (
-            <div className="card p-4">
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2">
-                Recurring merchants
-              </h3>
-              <ul className="space-y-1.5">
-                {recurring.slice(0, 5).map((r) => (
-                  <li key={r.merchant} className="flex justify-between text-xs">
-                    <span className="truncate text-gray-700 dark:text-gray-300">{r.merchant}</span>
-                    <span className="tabular-nums text-gray-500 shrink-0 ml-2">~{fmtEur(r.avgAmount)}/mo</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-          {topMerchants?.length > 0 && (
-            <div className="card p-4">
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2">
-                Largest merchants
-              </h3>
-              <ul className="space-y-1.5">
-                {topMerchants.slice(0, 5).map((r) => (
-                  <li key={r.merchant} className="flex justify-between text-xs">
-                    <span className="truncate text-gray-700 dark:text-gray-300">{r.merchant}</span>
-                    <span className="tabular-nums font-medium shrink-0 ml-2">{fmtEur(r.total)}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
+      {recurring?.length > 0 && (
+        <div className="card p-4 max-w-md">
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2">
+            Recurring merchants
+          </h3>
+          <ul className="space-y-1.5">
+            {recurring.slice(0, 5).map((r) => (
+              <li key={r.merchant} className="flex justify-between text-xs">
+                <span className="truncate text-gray-700 dark:text-gray-300">{r.merchant}</span>
+                <span className="tabular-nums text-gray-500 shrink-0 ml-2">~{fmtEur(r.avgAmount)}/mo</span>
+              </li>
+            ))}
+          </ul>
         </div>
       )}
     </section>

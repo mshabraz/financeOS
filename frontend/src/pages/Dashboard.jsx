@@ -6,7 +6,7 @@ import {
   getDashboardSummary, getByCategory, getMonthlyTrend,
   getAssets, getManualBalances, updateManualBalance, addManualBalance, deleteManualBalance,
   getBudgets, getWealthGoals, getWealthGoalProgress, getInvestmentAnalytics,
-  getSharedEvents, getRecurring, getTopMerchants, getTagSummary,
+  getSharedEvents, getRecurring, getTagSummary,
 } from '../api/client';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 import QueryErrorPanel from '../components/ui/QueryErrorPanel';
@@ -23,6 +23,10 @@ import DashboardGoals from '../components/dashboard/DashboardGoals';
 import DashboardAttention from '../components/dashboard/DashboardAttention';
 import { DashboardRevolut, DashboardShared } from '../components/dashboard/DashboardSharedRevolut';
 import DashboardAssets from '../components/dashboard/DashboardAssets';
+import {
+  useDashboardFeaturedGoalId,
+  resolveGoalFromList,
+} from '../hooks/useGoalPreferences';
 
 const now = new Date();
 const currentMonth = format(now, 'yyyy-MM');
@@ -80,11 +84,8 @@ export default function Dashboard() {
     }),
     enabled: !!summary.data?.dateFrom,
   });
-  const topMerchants = useQuery({
-    queryKey: ['topMerchants', periodType, periodValue],
-    queryFn: () => getTopMerchants({ periodType, periodValue, limit: 8 }),
-  });
   const tagSummary = useQuery({ queryKey: ['tagSummary'], queryFn: getTagSummary });
+  const [featuredGoalId, setFeaturedGoalId] = useDashboardFeaturedGoalId();
 
   const activeGoals = useMemo(
     () => (goals.data ?? []).filter((g) => g.status !== 'archived').slice(0, 4),
@@ -151,12 +152,12 @@ export default function Dashboard() {
   const savingsRate =
     s?.totalIncome > 0 ? ((s.totalIncome - s.totalExpenses) / s.totalIncome) * 100 : null;
 
-  const primaryGoal = activeGoals[0];
-  const primaryProgress = primaryGoal ? progressById[primaryGoal.id] : null;
-  const goalSnapshot = primaryGoal
+  const featuredGoal = resolveGoalFromList(activeGoals, featuredGoalId);
+  const featuredProgress = featuredGoal ? progressById[featuredGoal.id] : null;
+  const goalSnapshot = featuredGoal
     ? {
-        name: primaryGoal.name,
-        pct: primaryProgress?.progressPct,
+        name: featuredGoal.name,
+        pct: featuredProgress?.progressPct,
       }
     : null;
 
@@ -169,16 +170,16 @@ export default function Dashboard() {
         budgets: budgets.data,
         portfolio,
         analytics: invAnalytics.data,
-        goalsProgress: primaryProgress
+        goalsProgress: featuredProgress
           ? {
-              goalName: primaryGoal?.name,
-              completed: primaryProgress.completed,
-              onTrack: primaryProgress.onTrack,
-              projectedHint: primaryProgress.projectedCompletionHint,
+              goalName: featuredGoal?.name,
+              completed: featuredProgress.completed,
+              onTrack: featuredProgress.onTrack,
+              projectedHint: featuredProgress.projectedCompletionHint,
             }
           : null,
       }),
-    [s, prevSummary.data, monthlyTrend.data, budgets.data, portfolio, invAnalytics.data, primaryProgress, primaryGoal],
+    [s, prevSummary.data, monthlyTrend.data, budgets.data, portfolio, invAnalytics.data, featuredProgress, featuredGoal],
   );
 
   const attention = useMemo(
@@ -291,13 +292,17 @@ export default function Dashboard() {
         categories={byCategory.data}
         categoriesLoading={byCategory.isLoading}
         recurring={recurring.data}
-        topMerchants={topMerchants.data}
       />
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
         <div className="xl:col-span-2 space-y-4">
           <DashboardInvestments portfolio={portfolio} analytics={invAnalytics.data} />
-          <DashboardGoals goals={goals.data} progressById={progressById} />
+          <DashboardGoals
+            goals={goals.data}
+            progressById={progressById}
+            featuredGoalId={featuredGoalId}
+            onFeaturedGoalChange={setFeaturedGoalId}
+          />
         </div>
         <div className="space-y-4">
           <DashboardRevolut
