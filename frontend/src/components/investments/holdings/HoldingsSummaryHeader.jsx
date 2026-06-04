@@ -4,6 +4,7 @@ import {
 } from 'lucide-react';
 import clsx from 'clsx';
 import { fmtEur, fmtPct } from '../../../utils/investmentFormat';
+import { resolveDisplayName } from '../../../utils/securityDisplay';
 import { BROKER_LABELS } from '../constants';
 import { formatSyncTime } from './index';
 
@@ -70,25 +71,25 @@ export default function HoldingsSummaryHeader({ summary, alerts = [] }) {
         />
         <KpiCard
           label="Best performer"
-          value={summary.best ? summary.best.ticker : '—'}
-          sub={summary.best?.unrealizedPnLPct != null ? fmtPct(summary.best.unrealizedPnLPct, { sign: true }) : null}
+          value={summary.best ? resolveDisplayName(summary.best) : '—'}
+          sub={summary.best?.unrealizedPnLPct != null ? fmtPct(summary.best.unrealizedPnLPct, { sign: true }) : summary.best?.ticker}
           icon={TrendingUp}
           tone="up"
         />
         <KpiCard
           label="Worst performer"
-          value={summary.worst ? summary.worst.ticker : '—'}
-          sub={summary.worst?.unrealizedPnLPct != null ? fmtPct(summary.worst.unrealizedPnLPct, { sign: true }) : null}
+          value={summary.worst ? resolveDisplayName(summary.worst) : '—'}
+          sub={summary.worst?.unrealizedPnLPct != null ? fmtPct(summary.worst.unrealizedPnLPct, { sign: true }) : summary.worst?.ticker}
           icon={TrendingDown}
           tone="down"
         />
         <KpiCard
           label="Largest holding"
-          value={summary.largest?.ticker ?? '—'}
+          value={summary.largest ? resolveDisplayName(summary.largest) : '—'}
           sub={
             summary.largest?.portfolioPct != null
-              ? `${fmtPct(summary.largest.portfolioPct)} weight`
-              : summary.largest?.securityName
+              ? `${fmtPct(summary.largest.portfolioPct)} weight · ${summary.largest.ticker}`
+              : summary.largest?.ticker
           }
           icon={Wallet}
         />

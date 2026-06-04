@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { X, Link2, Unlink, TrendingUp, TrendingDown, History } from 'lucide-react';
+import { X, Link2, Unlink, TrendingUp, TrendingDown, History, Tag } from 'lucide-react';
+import SecurityDisplay from '../SecurityDisplay';
+import SecurityRenameModal from '../SecurityRenameModal';
 import clsx from 'clsx';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
@@ -23,6 +25,7 @@ export default function HoldingDetailDrawer({
   onOpenLedger,
 }) {
   const [bindOpen, setBindOpen] = useState(false);
+  const [renameOpen, setRenameOpen] = useState(false);
   const insights = useMemo(() => (row ? holdingInsight(row) : []), [row]);
 
   const txQ = useQuery({
@@ -66,17 +69,27 @@ export default function HoldingDetailDrawer({
         aria-label="Position details"
       >
         <div className="flex items-start justify-between gap-3 px-4 py-4 border-b border-gray-100 dark:border-gray-800 shrink-0">
-          <div className="min-w-0">
-            <p className="text-xs font-mono text-brand-600 dark:text-brand-400">{row.ticker}</p>
-            <h2 className="text-base font-semibold text-gray-900 dark:text-white leading-snug mt-0.5">
-              {row.securityName || row.fundName}
-            </h2>
-            <span
-              className="inline-block mt-2 text-[10px] px-1.5 py-0.5 rounded font-medium text-white"
-              style={{ background: BROKER_COLORS[row.broker] || '#94a3b8' }}
-            >
-              {BROKER_LABELS[row.broker] || row.broker}
-            </span>
+          <div className="min-w-0 flex-1">
+            <SecurityDisplay
+              row={row}
+              primaryClassName="text-base font-semibold text-gray-900 dark:text-white"
+              secondaryClassName="text-xs text-gray-500 dark:text-gray-400 mt-0.5 font-mono"
+            />
+            <div className="flex flex-wrap items-center gap-2 mt-2">
+              <span
+                className="inline-block text-[10px] px-1.5 py-0.5 rounded font-medium text-white"
+                style={{ background: BROKER_COLORS[row.broker] || '#94a3b8' }}
+              >
+                {BROKER_LABELS[row.broker] || row.broker}
+              </span>
+              <button
+                type="button"
+                onClick={() => setRenameOpen(true)}
+                className="text-[10px] inline-flex items-center gap-1 text-brand-600 hover:underline"
+              >
+                <Tag size={12} /> Rename
+              </button>
+            </div>
           </div>
           <button type="button" onClick={onClose} className="p-2 rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800">
             <X size={18} />
@@ -204,6 +217,14 @@ export default function HoldingDetailDrawer({
           )}
         </div>
       </aside>
+
+      {renameOpen && (
+        <SecurityRenameModal
+          holding={row}
+          onClose={() => setRenameOpen(false)}
+          onSaved={onBind}
+        />
+      )}
 
       {bindOpen && (
         <SecurityBindModal

@@ -4,6 +4,7 @@
 
 const { buildPortfolioValuation } = require('./investmentValuation');
 const { getBinding } = require('./investmentSecurities');
+const { attachSecurityDisplay, resolveDisplayName } = require('./securityDisplayNames');
 const { convertToEur } = require('./fxRates');
 const { enrichPortfolioMetadata } = require('./investmentMetadataEnrichment');
 const lookthrough = require('./investmentLookthrough');
@@ -137,7 +138,7 @@ function buildCompositionRows(db, openHoldings, totalPortfolioEur, perEur) {
       dailyChangeEur = convertToEur(native, h.priceCurrency || h.currency, perEur);
     }
 
-    return {
+    const row = attachSecurityDisplay({
       broker: h.broker,
       ticker: h.ticker,
       isin: h.isin,
@@ -145,6 +146,9 @@ function buildCompositionRows(db, openHoldings, totalPortfolioEur, perEur) {
       currency: h.currency,
       securityName:
         h.binding?.securityName || security?.name || h.fundName || h.ticker,
+      customDisplayName: binding?.custom_display_name,
+      nickname: binding?.nickname,
+      displayNotes: binding?.display_notes,
       quantity: h.effectiveQuantity,
       avgCostPerShare: h.avgCostPerShare,
       latestPrice: h.latestPriceNative ?? h.latestPrice,
@@ -173,7 +177,9 @@ function buildCompositionRows(db, openHoldings, totalPortfolioEur, perEur) {
       priceStatus: h.priceStatus,
       binding: h.binding,
       costBasisIsManual: h.costBasisIsManual,
-    };
+    }, binding);
+
+    return row;
   });
 }
 
@@ -460,19 +466,21 @@ function buildInsights(valuation, composition, summary) {
   const losers = [...priced].sort((a, b) => (a.unrealizedPnLPct || 0) - (b.unrealizedPnLPct || 0));
 
   if (gainers[0]?.unrealizedPnLPct > 0) {
+    const label = resolveDisplayName(gainers[0]);
     insights.push({
       type: 'performance',
       severity: 'positive',
-      title: `Top gainer: ${gainers[0].ticker}`,
-      detail: `${gainers[0].unrealizedPnLPct?.toFixed(1)}% unrealized`,
+      title: `Top gainer: ${label}`,
+      detail: `${gainers[0].unrealizedPnLPct?.toFixed(1)}% unrealized · ${gainers[0].ticker}`,
     });
   }
   if (losers[0]?.unrealizedPnLPct < 0) {
+    const label = resolveDisplayName(losers[0]);
     insights.push({
       type: 'performance',
       severity: 'negative',
-      title: `Top loser: ${losers[0].ticker}`,
-      detail: `${losers[0].unrealizedPnLPct?.toFixed(1)}% unrealized`,
+      title: `Top loser: ${label}`,
+      detail: `${losers[0].unrealizedPnLPct?.toFixed(1)}% unrealized · ${losers[0].ticker}`,
     });
   }
 
@@ -502,13 +510,19 @@ function buildInsights(valuation, composition, summary) {
     items: insights.slice(0, 8),
     bestPerformers: gainers.slice(0, 5).map((c) => ({
       ticker: c.ticker,
-      name: c.securityName,
+      name: c.displayName || resolveDisplayName(c),
+      displayName: c.displayName || resolveDisplayName(c),
+      displaySecondary: c.displaySecondary,
+      officialName: c.officialSecurityName || c.securityName,
       pct: c.unrealizedPnLPct,
       eur: c.unrealizedPnLEur,
     })),
     worstPerformers: losers.slice(0, 5).map((c) => ({
       ticker: c.ticker,
-      name: c.securityName,
+      name: c.displayName || resolveDisplayName(c),
+      displayName: c.displayName || resolveDisplayName(c),
+      displaySecondary: c.displaySecondary,
+      officialName: c.officialSecurityName || c.securityName,
       pct: c.unrealizedPnLPct,
       eur: c.unrealizedPnLEur,
     })),

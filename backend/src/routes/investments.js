@@ -17,7 +17,9 @@ const {
   tryAutoMatch,
   setManualQuantity,
   setManualAvgCostPerShare,
+  setSecurityDisplayNames,
 } = require('../services/investmentSecurities');
+const { attachSecurityDisplay } = require('../services/securityDisplayNames');
 const { runPriceSync, isSyncRunning } = require('../services/investmentPriceSync');
 const { commitInvestmentImport } = require('../services/investmentImporter');
 const {
@@ -324,9 +326,16 @@ router.get('/transactions', (req, res) => {
   if (search) {
     const s = `%${search}%`;
     conds.push(
-      `(ticker LIKE ? OR IFNULL(isin,'') LIKE ? OR IFNULL(fund_name,'') LIKE ? OR IFNULL(raw_details,'') LIKE ? OR IFNULL(reference,'') LIKE ? OR IFNULL(notes,'') LIKE ?)`
+      `(ticker LIKE ? OR IFNULL(isin,'') LIKE ? OR IFNULL(fund_name,'') LIKE ? OR IFNULL(raw_details,'') LIKE ? OR IFNULL(reference,'') LIKE ? OR IFNULL(notes,'') LIKE ?
+        OR EXISTS (
+          SELECT 1 FROM holding_security_bindings b
+          WHERE b.broker = investment_transactions.broker
+            AND b.ticker = investment_transactions.ticker
+            AND b.currency = COALESCE(investment_transactions.currency, 'EUR')
+            AND (IFNULL(b.custom_display_name,'') LIKE ? OR IFNULL(b.nickname,'') LIKE ?)
+        ))`
     );
-    params.push(s, s, s, s, s, s);
+    params.push(s, s, s, s, s, s, s, s);
   }
   if (hasNotes === '1' || hasNotes === 'true') {
     conds.push("(notes IS NOT NULL AND TRIM(notes) != '')");
@@ -342,7 +351,20 @@ router.get('/transactions', (req, res) => {
     `SELECT * FROM investment_transactions ${where} ORDER BY ${col} ${dir} LIMIT ? OFFSET ?`
   ).all(...params, parseInt(limit), offset);
 
-  res.json({ data: rows, total, page: parseInt(page), totalPages: Math.ceil(total / parseInt(limit)) });
+  const data = rows.map((row) => {
+    if (!row.ticker) return row;
+    const binding = getBinding(db, row.broker, row.ticker, row.currency || 'EUR');
+    return attachSecurityDisplay(
+      {
+        ...row,
+        fundName: row.fund_name,
+        currency: row.currency || 'EUR',
+      },
+      binding,
+    );
+  });
+
+  res.json({ data, total, page: parseInt(page), totalPages: Math.ceil(total / parseInt(limit)) });
 });
 
 // POST /api/investments/transactions/manual — create one manual investment transaction
@@ -631,6 +653,32 @@ router.put('/holdings/avg-cost', async (req, res) => {
   }
 });
 
+// PUT /api/investments/holdings/display-name — user-friendly labels
+router.put('/holdings/display-name', async (req, res) => {
+  try {
+    const {
+      broker, ticker, currency = 'EUR',
+      customDisplayName, nickname, displayNotes,
+    } = req.body;
+    if (!broker || !ticker) {
+      return res.status(400).json({ error: 'broker and ticker required' });
+    }
+    const db = getDb();
+    setSecurityDisplayNames(db, {
+      broker,
+      ticker,
+      currency,
+      customDisplayName,
+      nickname,
+      displayNotes,
+    });
+    res.json(await buildPortfolioValuation(db, req.query.broker || ''));
+  } catch (err) {
+    logger.error('[investments/holdings/display-name]', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // PUT /api/investments/holdings/quantity — manual units for fund holdings (e.g. Swedbank)
 router.put('/holdings/quantity', async (req, res) => {
   try {
@@ -883,7 +931,12 @@ router.get('/dividends', (req, res) => {
     GROUP BY broker, year ORDER BY year DESC
   `).all(...params);
 
-  res.json({ dividends, byTicker, byYear });
+  const byTickerEnriched = byTicker.map((row) => {
+    const binding = getBinding(db, row.broker, row.ticker, row.currency || 'EUR');
+    return attachSecurityDisplay({ ...row, currency: row.currency || 'EUR' }, binding);
+  });
+
+  res.json({ dividends, byTicker: byTickerEnriched, byYear });
 });
 
 // GET /api/investments/analytics — portfolio overview, allocations, performance, insights

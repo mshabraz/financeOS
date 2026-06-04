@@ -152,6 +152,43 @@ function setManualQuantity(db, { broker, ticker, currency, quantity }) {
   return r.lastInsertRowid;
 }
 
+function setSecurityDisplayNames(db, { broker, ticker, currency, customDisplayName, nickname, displayNotes }) {
+  const t = String(ticker).toUpperCase();
+  const ccy = (currency || 'EUR').toUpperCase();
+  const key = holdingKey(broker, t, ccy);
+
+  const norm = (v) => {
+    if (v == null || v === '') return null;
+    const s = String(v).trim();
+    return s.length ? s : null;
+  };
+
+  const custom = norm(customDisplayName);
+  const nick = norm(nickname);
+  const notes = norm(displayNotes);
+
+  const existing = db.prepare(
+    'SELECT id FROM holding_security_bindings WHERE broker = ? AND ticker = ? AND currency = ?'
+  ).get(broker, t, ccy);
+
+  if (existing) {
+    db.prepare(
+      `UPDATE holding_security_bindings SET
+         custom_display_name = ?, nickname = ?, display_notes = ?,
+         updated_at = datetime('now')
+       WHERE id = ?`
+    ).run(custom, nick, notes, existing.id);
+    return existing.id;
+  }
+
+  const r = db.prepare(
+    `INSERT INTO holding_security_bindings
+       (holding_key, broker, ticker, currency, custom_display_name, nickname, display_notes, binding_source)
+     VALUES (?, ?, ?, ?, ?, ?, ?, 'manual')`
+  ).run(key, broker, t, ccy, custom, nick, notes);
+  return r.lastInsertRowid;
+}
+
 /**
  * Auto-match: search Yahoo for exact ticker or ISIN hit.
  */
@@ -274,6 +311,7 @@ module.exports = {
   clearBinding,
   setManualQuantity,
   setManualAvgCostPerShare,
+  setSecurityDisplayNames,
   tryAutoMatch,
   bindFromSearchResult,
   listUnboundOpenHoldings,

@@ -166,15 +166,17 @@ function TopWeightsCard({ allocations }) {
   );
 }
 
-function PerformerRow({ rank, ticker, name, pct, eur, positive }) {
+function PerformerRow({ rank, ticker, name, displayName, displaySecondary, pct, eur, positive }) {
+  const primary = displayName || name || ticker;
+  const secondary = displaySecondary || (name && name !== primary ? name : ticker);
   return (
     <li className="grid grid-cols-[1.25rem_minmax(0,1fr)_auto] items-center gap-x-2 gap-y-0.5 py-1.5 border-b border-gray-100 dark:border-gray-800/80 last:border-0">
       <span className="text-[10px] font-medium text-gray-400 tabular-nums">{rank}</span>
       <div className="min-w-0">
-        <p className="text-xs font-semibold text-gray-900 dark:text-white truncate">{ticker}</p>
-        {name && name !== ticker && (
-          <p className="text-[10px] text-gray-500 dark:text-gray-400 truncate" title={name}>
-            {shortLabel(name, 24)}
+        <p className="text-xs font-semibold text-gray-900 dark:text-white break-words leading-snug">{primary}</p>
+        {secondary && secondary !== primary && (
+          <p className="text-[10px] text-gray-500 dark:text-gray-400 break-words leading-snug" title={secondary}>
+            {shortLabel(secondary, 32)}
           </p>
         )}
       </div>
@@ -212,6 +214,8 @@ function PerformersCard({ best, worst }) {
                 rank={i + 1}
                 ticker={p.ticker}
                 name={p.name}
+                displayName={p.displayName}
+                displaySecondary={p.displaySecondary}
                 pct={p.pct}
                 eur={p.eur}
                 positive
@@ -230,6 +234,8 @@ function PerformersCard({ best, worst }) {
                 rank={i + 1}
                 ticker={p.ticker}
                 name={p.name}
+                displayName={p.displayName}
+                displaySecondary={p.displaySecondary}
                 pct={p.pct}
                 eur={p.eur}
                 positive={false}

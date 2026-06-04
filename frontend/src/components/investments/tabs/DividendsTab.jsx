@@ -5,6 +5,7 @@ import StatCard from '../../ui/StatCard';
 import InvestmentTabFilters from '../filters/InvestmentTabFilters';
 import { DividendTickerCards } from '../holdings/HoldingsCardGrid';
 import { BROKER_COLORS, BROKER_LABELS } from '../constants';
+import { resolveDisplayName } from '../../../utils/securityDisplay';
 import { fmt } from '../investmentPageFmt';
 
 export default function DividendsTab({ dividends, brokerFilter: chromeBroker }) {
@@ -16,7 +17,15 @@ export default function DividendsTab({ dividends, brokerFilter: chromeBroker }) 
     let rows = dividends?.byTicker ?? [];
     if (effectiveBroker) rows = rows.filter((r) => r.broker === effectiveBroker);
     const q = search.trim().toLowerCase();
-    if (q) rows = rows.filter((r) => r.ticker?.toLowerCase().includes(q));
+    if (q) {
+      const lq = q.toLowerCase();
+      rows = rows.filter(
+        (r) =>
+          r.ticker?.toLowerCase().includes(lq)
+          || r.displayName?.toLowerCase().includes(lq)
+          || r.displaySecondary?.toLowerCase().includes(lq),
+      );
+    }
     return rows;
   }, [dividends?.byTicker, effectiveBroker, search]);
 
@@ -24,7 +33,15 @@ export default function DividendsTab({ dividends, brokerFilter: chromeBroker }) 
     let rows = dividends?.dividends ?? [];
     if (effectiveBroker) rows = rows.filter((r) => r.broker === effectiveBroker);
     const q = search.trim().toLowerCase();
-    if (q) rows = rows.filter((r) => r.ticker?.toLowerCase().includes(q));
+    if (q) {
+      const lq = q.toLowerCase();
+      rows = rows.filter(
+        (r) =>
+          r.ticker?.toLowerCase().includes(lq)
+          || r.displayName?.toLowerCase().includes(lq)
+          || r.displaySecondary?.toLowerCase().includes(lq),
+      );
+    }
     return rows;
   }, [dividends?.dividends, effectiveBroker, search]);
 
@@ -96,7 +113,10 @@ export default function DividendsTab({ dividends, brokerFilter: chromeBroker }) 
                       {BROKER_LABELS[r.broker] || r.broker}
                     </span>
                   </td>
-                  <td className="px-4 py-2.5 font-mono font-bold text-brand-600 dark:text-brand-400">{r.ticker}</td>
+                  <td className="px-4 py-2.5">
+                    <p className="font-medium text-gray-900 dark:text-white">{resolveDisplayName(r)}</p>
+                    <p className="text-[10px] font-mono text-gray-500">{r.ticker}</p>
+                  </td>
                   <td className="px-4 py-2.5 text-gray-400">{r.currency}</td>
                   <td className="px-4 py-2.5">{r.payments}</td>
                   <td className="px-4 py-2.5 text-green-600 font-medium">{fmt(r.totalNet, r.currency)}</td>

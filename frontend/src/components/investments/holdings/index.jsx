@@ -14,30 +14,17 @@ import StatCard from '../../ui/StatCard';
 import { BROKER_COLORS, BROKER_LABELS } from '../constants';
 import { fmt, fmtQty } from '../investmentPageFmt';
 import { MarketHoldingCards, CostBasisHoldingCards } from './HoldingsCardGrid';
+import SecurityDisplay from '../SecurityDisplay';
 
-export function FundNameCell({ ticker, fundName, isin }) {
-  const [expanded, setExpanded] = useState(false);
-  const needsTruncate = fundName && fundName.length > 22;
+export function FundNameCell({ ticker, fundName, isin, row }) {
+  const displayRow = row ?? { ticker, fundName, isin };
   return (
     <td className="px-4 py-2.5">
-      <p className="font-mono font-bold text-brand-600 dark:text-brand-400">{ticker}</p>
-      {fundName && (
-        <button
-          onClick={() => needsTruncate && setExpanded((e) => !e)}
-          title={needsTruncate ? (expanded ? 'Click to collapse' : fundName) : undefined}
-          className={clsx(
-            'text-xs text-gray-400 text-left mt-0.5 leading-snug',
-            needsTruncate && !expanded && 'truncate max-w-[180px] hover:text-brand-500',
-            needsTruncate && 'cursor-pointer',
-          )}
-          style={!expanded ? {} : { maxWidth: '260px', whiteSpace: 'normal', wordBreak: 'break-word' }}
-        >
-          {fundName}
-          {needsTruncate && !expanded && <span className="ml-1 text-gray-300 dark:text-gray-600">▸</span>}
-          {needsTruncate && expanded  && <span className="ml-1 text-gray-300 dark:text-gray-600">▾</span>}
-        </button>
-      )}
-      {isin && <p className="text-xs text-gray-300 dark:text-gray-600 font-mono">{isin}</p>}
+      <SecurityDisplay
+        row={displayRow}
+        primaryClassName="font-medium text-gray-900 dark:text-white text-sm"
+        secondaryClassName="text-[10px] text-gray-500 dark:text-gray-400 mt-0.5 font-mono"
+      />
     </td>
   );
 }
@@ -711,7 +698,7 @@ export function HoldingsTable({ data, title, open }) {
                     {BROKER_LABELS[h.broker] || h.broker}
                   </span>
                 </td>
-                <FundNameCell ticker={h.ticker} fundName={h.fundName} isin={h.isin} />
+                <FundNameCell row={h} ticker={h.ticker} fundName={h.fundName} isin={h.isin} />
                 <td className="px-4 py-2.5 text-gray-400">{h.currency}</td>
 
                 {/* Qty Held (open qty-based) OR Total Invested (closed / amount-based) */}

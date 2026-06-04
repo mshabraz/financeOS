@@ -4,6 +4,7 @@
 
 const { computeHoldings } = require('./investmentHoldings');
 const { getBinding } = require('./investmentSecurities');
+const { attachSecurityDisplay } = require('./securityDisplayNames');
 const { getPerEurRates, convertToEur, TARGET } = require('./fxRates');
 const { resolveBrokerCash, getAllBrokerCash, getBrokerCash } = require('./investmentBrokerCash');
 
@@ -48,6 +49,9 @@ function enrichHolding(db, holding) {
           securityId: binding.security_id,
           yahooSymbol: binding.yahoo_symbol,
           securityName: binding.security_name || binding.yahoo_symbol,
+          customDisplayName: binding.custom_display_name ?? null,
+          nickname: binding.nickname ?? null,
+          displayNotes: binding.display_notes ?? null,
           manualQuantity: binding.manual_quantity ?? null,
           manualAvgCostPerShare: binding.manual_avg_cost_per_share ?? null,
         }
@@ -180,6 +184,7 @@ async function buildPortfolioValuation(db, broker = '') {
   for (let i = 0; i < enriched.length; i += 1) {
     const binding = getBinding(db, openHoldings[i].broker, openHoldings[i].ticker, openHoldings[i].currency);
     applyEurConversion(enriched[i], openHoldings[i], binding, perEur);
+    enriched[i] = attachSecurityDisplay(enriched[i], binding);
   }
 
   const holdingsByCurrency = {};

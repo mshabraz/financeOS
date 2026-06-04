@@ -2,6 +2,7 @@ import { memo } from 'react';
 import clsx from 'clsx';
 import { ChevronRight } from 'lucide-react';
 import { fmtEur, fmtPct, fmtQty, fmtNative } from '../../../utils/investmentFormat';
+import SecurityDisplay from '../SecurityDisplay';
 import { BROKER_LABELS, BROKER_COLORS } from '../constants';
 import { HOLDINGS_COLUMNS } from './holdingsUtils';
 import { priceStatusLabel } from './index';
@@ -27,10 +28,12 @@ function CellContent({ colId, row, showEur, compact }) {
   switch (colId) {
     case 'securityName':
       return (
-        <div className="min-w-0 max-w-[200px]">
-          <p className={clsx('font-medium text-gray-900 dark:text-white truncate', compact ? 'text-xs' : 'text-sm')}>
-            {row.securityName || row.fundName || row.ticker}
-          </p>
+        <div className="min-w-0 max-w-[220px]">
+          <SecurityDisplay
+            row={row}
+            primaryClassName={clsx('font-medium text-gray-900 dark:text-white', compact ? 'text-xs' : 'text-sm')}
+            secondaryClassName="text-[10px] text-gray-500 dark:text-gray-400 mt-0.5 font-mono"
+          />
           {row.priceStatus !== 'ok' && (() => {
             const b = priceStatusLabel(row);
             return b ? (

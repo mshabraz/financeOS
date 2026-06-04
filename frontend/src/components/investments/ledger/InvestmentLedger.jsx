@@ -11,6 +11,7 @@ import UserNoteField from '../../transactions/UserNoteField';
 import ManualInvestmentTransactionModal from '../ManualInvestmentTransactionModal';
 import InvestmentTabFilters from '../filters/InvestmentTabFilters';
 import { BROKER_COLORS, BROKER_LABELS } from '../constants';
+import { resolveDisplayName, resolveDisplaySecondary } from '../../../utils/securityDisplay';
 import { fmt } from '../investmentPageFmt';
 
 export default function InvestmentLedger({ brokerFilter }) {
@@ -212,7 +213,12 @@ export default function InvestmentLedger({ brokerFilter }) {
             {rows.map((r) => (
               <li key={r.id} className="px-4 py-3 space-y-1">
                 <div className="flex justify-between gap-2">
-                  <span className="font-mono text-sm font-semibold text-brand-600">{r.ticker || '—'}</span>
+                  <div className="min-w-0">
+                    <span className="text-sm font-semibold text-gray-900 dark:text-white">{resolveDisplayName(r)}</span>
+                    {r.ticker && (
+                      <p className="text-[10px] font-mono text-gray-500">{resolveDisplaySecondary(r) || r.ticker}</p>
+                    )}
+                  </div>
                   <span className="text-sm font-medium tabular-nums">{fmt(r.net_amount, r.currency)}</span>
                 </div>
                 <p className="text-xs text-gray-500">{r.date} · {BROKER_LABELS[r.broker] || r.broker} · {r.type}</p>
@@ -252,7 +258,12 @@ export default function InvestmentLedger({ brokerFilter }) {
                       </span>
                     </td>
                     <td className="px-4 py-2.5">{r.type}</td>
-                    <td className="px-4 py-2.5 font-mono text-xs font-semibold text-brand-600">{r.ticker || '—'}</td>
+                    <td className="px-4 py-2.5 min-w-[120px]">
+                      <p className="text-xs font-semibold text-gray-900 dark:text-white">{resolveDisplayName(r)}</p>
+                      {r.ticker && (
+                        <p className="text-[10px] font-mono text-gray-500 mt-0.5">{resolveDisplaySecondary(r) || r.ticker}</p>
+                      )}
+                    </td>
                     <td className="px-4 py-2.5 font-medium whitespace-nowrap">{fmt(r.net_amount, r.currency)}</td>
                     <td className="px-4 py-2.5 text-xs text-gray-400">{fmt(r.fee, r.currency)}</td>
                     <td className="px-4 py-2.5 max-w-[240px] align-top">

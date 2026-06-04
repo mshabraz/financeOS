@@ -204,6 +204,8 @@ export const setInvestmentHoldingQuantity = (body) =>
   api.put('/investments/holdings/quantity', body);
 export const setInvestmentHoldingAvgCost = (body) =>
   api.put('/investments/holdings/avg-cost', body);
+export const setInvestmentSecurityDisplay = (body) =>
+  api.put('/investments/holdings/display-name', body);
 export const getInvestmentPriceSyncStatus = () => api.get('/investments/prices/sync-status');
 export const triggerInvestmentPriceSync = () => api.post('/investments/prices/sync');
 export const getInvestmentMarketHealth = () => api.get('/investments/market-data/health');

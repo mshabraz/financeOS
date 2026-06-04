@@ -2,6 +2,7 @@ import { useState, memo } from 'react';
 import clsx from 'clsx';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { fmtEur, fmtPct, fmtQty } from '../../../utils/investmentFormat';
+import SecurityDisplay from '../SecurityDisplay';
 import { BROKER_LABELS, BROKER_COLORS } from '../constants';
 import { priceStatusLabel } from './index';
 import { holdingInsight } from './holdingsUtils';
@@ -20,10 +21,11 @@ function MobileCard({ row, showEur, expanded, onToggle, onOpen }) {
       >
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0 flex-1">
-            <p className="font-semibold text-gray-900 dark:text-white text-sm leading-snug line-clamp-2">
-              {row.securityName || row.fundName || row.ticker}
-            </p>
-            <p className="font-mono text-xs text-brand-600 dark:text-brand-400 mt-0.5">{row.ticker}</p>
+            <SecurityDisplay
+              row={row}
+              primaryClassName="font-semibold text-gray-900 dark:text-white text-sm"
+              secondaryClassName="text-[10px] text-gray-500 dark:text-gray-400 mt-0.5 font-mono"
+            />
           </div>
           <span
             className="text-[10px] px-1.5 py-0.5 rounded font-medium text-white shrink-0"

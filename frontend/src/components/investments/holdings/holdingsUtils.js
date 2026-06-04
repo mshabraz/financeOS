@@ -1,3 +1,5 @@
+import { attachSecurityDisplay, matchesSecuritySearch } from '../../../utils/securityDisplay';
+
 export function positionKey(h) {
   return `${h.broker}|${h.ticker}|${h.currency}`;
 }
@@ -16,7 +18,7 @@ export function mergePortfolioRows(marketOpen = [], composition = [], totalPortf
         ? Math.round((h.marketValueEur / totalPortfolioEur) * 10000) / 100
         : null);
 
-    return {
+    return attachSecurityDisplay({
       ...h,
       ...c,
       securityName,
@@ -33,7 +35,7 @@ export function mergePortfolioRows(marketOpen = [], composition = [], totalPortf
       region: c.region ?? null,
       assetClass: c.assetClass ?? null,
       dividendYield: c.dividendYield ?? null,
-    };
+    });
   });
 }
 
@@ -110,19 +112,16 @@ export function filterAndSortRows(rows, { search, sortKey, sortDir, brokerFilter
   } else if (statusFilter === 'priced') {
     list = list.filter((r) => r.priceStatus === 'ok');
   }
-  const q = search.trim().toLowerCase();
+  const q = search.trim();
   if (q) {
     list = list.filter(
-      (r) =>
-        r.ticker?.toLowerCase().includes(q) ||
-        r.securityName?.toLowerCase().includes(q) ||
-        r.fundName?.toLowerCase().includes(q) ||
-        r.sector?.toLowerCase().includes(q),
+      (r) => matchesSecuritySearch(r, q) || r.sector?.toLowerCase().includes(q.toLowerCase()),
     );
   }
   list.sort((a, b) => {
-    const av = a[sortKey];
-    const bv = b[sortKey];
+    const key = sortKey === 'displayName' ? 'displayName' : sortKey;
+    const av = a[key] ?? a[sortKey];
+    const bv = b[key] ?? b[sortKey];
     const aNum = av == null ? -Infinity : Number(av);
     const bNum = bv == null ? -Infinity : Number(bv);
     if (typeof av === 'string' || typeof bv === 'string') {
@@ -135,7 +134,7 @@ export function filterAndSortRows(rows, { search, sortKey, sortDir, brokerFilter
 }
 
 export const HOLDINGS_COLUMNS = [
-  { id: 'securityName', label: 'Security', primary: true, sortKey: 'securityName' },
+  { id: 'securityName', label: 'Security', primary: true, sortKey: 'displayName' },
   { id: 'ticker', label: 'Ticker', primary: true, sortKey: 'ticker' },
   { id: 'quantity', label: 'Qty', primary: true, sortKey: 'quantity' },
   { id: 'marketValueEur', label: 'Value', primary: true, sortKey: 'marketValueEur' },

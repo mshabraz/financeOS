@@ -5,6 +5,7 @@ import {
 import { Layers, TrendingUp, TrendingDown, ChevronRight, Shield } from 'lucide-react';
 import clsx from 'clsx';
 import { fmtEur, fmtPct } from '../../utils/displayFormat';
+import { resolveDisplayName } from '../../utils/securityDisplay';
 import { CHART_COLORS } from '../investments/constants';
 
 export default function DashboardInvestments({ portfolio, analytics }) {
@@ -95,7 +96,7 @@ export default function DashboardInvestments({ portfolio, analytics }) {
             <div className="rounded-xl border border-emerald-500/20 p-3 flex justify-between items-center">
               <div className="flex items-center gap-2 text-emerald-600">
                 <TrendingUp size={14} />
-                <span className="text-xs font-semibold">Best · {best.ticker}</span>
+                <span className="text-xs font-semibold">Best · {resolveDisplayName(best)}</span>
               </div>
               <span className="text-sm font-bold tabular-nums">{fmtPct(best.pct, { sign: true })}</span>
             </div>
@@ -104,7 +105,7 @@ export default function DashboardInvestments({ portfolio, analytics }) {
             <div className="rounded-xl border border-red-500/20 p-3 flex justify-between items-center">
               <div className="flex items-center gap-2 text-red-600">
                 <TrendingDown size={14} />
-                <span className="text-xs font-semibold">Worst · {worst.ticker}</span>
+                <span className="text-xs font-semibold">Worst · {resolveDisplayName(worst)}</span>
               </div>
               <span className="text-sm font-bold tabular-nums">{fmtPct(worst.pct, { sign: true })}</span>
             </div>

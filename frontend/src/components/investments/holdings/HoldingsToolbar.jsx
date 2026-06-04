@@ -43,7 +43,7 @@ export default function HoldingsToolbar({
             type="search"
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
-            placeholder="Search ticker, name, sector…"
+            placeholder="Search name, ticker, ISIN…"
             className="input pl-9 w-full text-sm"
           />
         </div>

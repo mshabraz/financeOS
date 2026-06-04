@@ -965,7 +965,23 @@ const MIGRATION_V26 = {
   },
 };
 
-const ALL_MIGRATIONS = [...migrations.filter(m => m.version === 1), MIGRATION_V2, MIGRATION_V3, MIGRATION_V4, MIGRATION_V5, MIGRATION_V6, MIGRATION_V7, MIGRATION_V8, MIGRATION_V9, MIGRATION_V10, MIGRATION_V11, MIGRATION_V12, MIGRATION_V13, MIGRATION_V14, MIGRATION_V15, MIGRATION_V16, MIGRATION_V17, MIGRATION_V18, MIGRATION_V19, MIGRATION_V20, MIGRATION_V21, MIGRATION_V22, MIGRATION_V23, MIGRATION_V24, MIGRATION_V25, MIGRATION_V26];
+// ── Migration v27: User-friendly security display names on bindings ───────────
+const MIGRATION_V27 = {
+  version: 27,
+  up: (db) => {
+    const cols = db.prepare('PRAGMA table_info(holding_security_bindings)').all();
+    const add = (name, type) => {
+      if (!cols.some((c) => c.name === name)) {
+        db.exec(`ALTER TABLE holding_security_bindings ADD COLUMN ${name} ${type}`);
+      }
+    };
+    add('custom_display_name', 'TEXT');
+    add('nickname', 'TEXT');
+    add('display_notes', 'TEXT');
+  },
+};
+
+const ALL_MIGRATIONS = [...migrations.filter(m => m.version === 1), MIGRATION_V2, MIGRATION_V3, MIGRATION_V4, MIGRATION_V5, MIGRATION_V6, MIGRATION_V7, MIGRATION_V8, MIGRATION_V9, MIGRATION_V10, MIGRATION_V11, MIGRATION_V12, MIGRATION_V13, MIGRATION_V14, MIGRATION_V15, MIGRATION_V16, MIGRATION_V17, MIGRATION_V18, MIGRATION_V19, MIGRATION_V20, MIGRATION_V21, MIGRATION_V22, MIGRATION_V23, MIGRATION_V24, MIGRATION_V25, MIGRATION_V26, MIGRATION_V27];
 
 function runMigrations(db) {
   db.exec(`CREATE TABLE IF NOT EXISTS schema_migrations (
