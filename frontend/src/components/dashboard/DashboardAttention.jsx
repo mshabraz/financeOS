@@ -30,7 +30,7 @@ export default function DashboardAttention({ items }) {
               <div className="min-w-0">
                 <p className="font-medium text-gray-800 dark:text-gray-200">{item.title}</p>
                 {item.detail && (
-                  <p className="text-xs text-gray-500 truncate mt-0.5">{item.detail}</p>
+                  <p className="text-xs text-gray-500 mt-0.5 break-words leading-snug">{item.detail}</p>
                 )}
               </div>
               <ChevronRight size={16} className="text-gray-400 shrink-0" />

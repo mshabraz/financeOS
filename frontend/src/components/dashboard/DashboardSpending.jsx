@@ -12,7 +12,6 @@ export default function DashboardSpending({
   trendLoading,
   categories,
   categoriesLoading,
-  recurring,
 }) {
   const topCats = (categories ?? []).slice(0, 8);
   const maxCat = Math.max(...topCats.map((c) => c.total), 1);
@@ -37,12 +36,16 @@ export default function DashboardSpending({
           {trendLoading ? (
             <LoadingSpinner />
           ) : (
-            <div className="h-52 sm:h-56">
+            <div className="h-48 sm:h-56 min-h-[12rem] w-full min-w-0">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={trendData} barGap={2} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
+                <BarChart
+                  data={trendData}
+                  barGap={2}
+                  margin={{ top: 4, right: 8, left: 0, bottom: 0 }}
+                >
                   <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-700" />
-                  <XAxis dataKey="label" tick={{ fontSize: 10 }} />
-                  <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `€${v}`} width={48} />
+                  <XAxis dataKey="label" tick={{ fontSize: 9 }} interval="preserveStartEnd" />
+                  <YAxis tick={{ fontSize: 9 }} tickFormatter={(v) => `€${v}`} width={44} />
                   <Tooltip formatter={(v) => fmtEur(v)} />
                   <Bar dataKey="income" name="Income" fill="#10b981" radius={[3, 3, 0, 0]} />
                   <Bar dataKey="expenses" name="Expenses" fill="#f43f5e" radius={[3, 3, 0, 0]} />
@@ -85,22 +88,6 @@ export default function DashboardSpending({
           )}
         </div>
       </div>
-
-      {recurring?.length > 0 && (
-        <div className="card p-4 max-w-md">
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2">
-            Recurring merchants
-          </h3>
-          <ul className="space-y-1.5">
-            {recurring.slice(0, 5).map((r) => (
-              <li key={r.merchant} className="flex justify-between text-xs">
-                <span className="truncate text-gray-700 dark:text-gray-300">{r.merchant}</span>
-                <span className="tabular-nums text-gray-500 shrink-0 ml-2">~{fmtEur(r.avgAmount)}/mo</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
     </section>
   );
 }

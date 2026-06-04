@@ -6,7 +6,7 @@ import {
   getDashboardSummary, getByCategory, getMonthlyTrend,
   getAssets, getManualBalances, updateManualBalance, addManualBalance, deleteManualBalance,
   getBudgets, getWealthGoals, getWealthGoalProgress, getInvestmentAnalytics,
-  getSharedEvents, getRecurring, getTagSummary,
+  getSharedEvents, getTagSummary,
 } from '../api/client';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 import QueryErrorPanel from '../components/ui/QueryErrorPanel';
@@ -22,6 +22,7 @@ import DashboardInvestments from '../components/dashboard/DashboardInvestments';
 import DashboardGoals from '../components/dashboard/DashboardGoals';
 import DashboardAttention from '../components/dashboard/DashboardAttention';
 import { DashboardRevolut, DashboardShared } from '../components/dashboard/DashboardSharedRevolut';
+import DashboardAssetOverview from '../components/dashboard/DashboardAssetOverview';
 import DashboardAssets from '../components/dashboard/DashboardAssets';
 import {
   useDashboardFeaturedGoalId,
@@ -76,14 +77,6 @@ export default function Dashboard() {
   });
   const goals = useQuery({ queryKey: ['wealthGoals'], queryFn: () => getWealthGoals({ status: 'active' }) });
   const sharedEvents = useQuery({ queryKey: ['sharedEvents'], queryFn: getSharedEvents });
-  const recurring = useQuery({
-    queryKey: ['recurring', periodType, periodValue],
-    queryFn: () => getRecurring({
-      dateFrom: summary.data?.dateFrom,
-      dateTo: summary.data?.dateTo,
-    }),
-    enabled: !!summary.data?.dateFrom,
-  });
   const tagSummary = useQuery({ queryKey: ['tagSummary'], queryFn: getTagSummary });
   const [featuredGoalId, setFeaturedGoalId] = useDashboardFeaturedGoalId();
 
@@ -281,6 +274,8 @@ export default function Dashboard() {
         />
       )}
 
+      <DashboardAssetOverview assets={assets.data} isLoading={assets.isLoading} />
+
       <DashboardInsights insights={insights} />
 
       <DashboardAttention items={attention} />
@@ -291,7 +286,6 @@ export default function Dashboard() {
         trendLoading={monthlyTrend.isLoading}
         categories={byCategory.data}
         categoriesLoading={byCategory.isLoading}
-        recurring={recurring.data}
       />
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">

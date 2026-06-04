@@ -1,12 +1,12 @@
-import { useState, useMemo, useRef, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid,
-  Tooltip, ResponsiveContainer, Cell, Legend,
+  AreaChart, Area, BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid,
+  Tooltip, ResponsiveContainer, Cell, Legend, ReferenceLine,
 } from 'recharts';
 import { format, subMonths, startOfYear } from 'date-fns';
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw, PiggyBank } from 'lucide-react';
 import clsx from 'clsx';
 import {
   getMonthlyTrend, getByCategory, getBudgets, upsertBudget, getCategories,
@@ -18,9 +18,7 @@ import MonthFilterSelect from '../components/ui/MonthFilterSelect';
 import DatePicker from '../components/ui/DatePicker';
 import { getMonthRange } from '../utils/dateFilters';
 import { fmtEur, privText } from '../utils/displayFormat';
-import { buildSavingsRateSeries } from '../utils/savingsRate';
 import { usePrivacy } from '../context/PrivacyContext';
-import SavingsRateChart from '../components/analytics/SavingsRateChart';
 
 const fmt = fmtEur;
 
@@ -60,8 +58,8 @@ export default function Analytics() {
   usePrivacy();
   const qc = useQueryClient();
   const [searchParams] = useSearchParams();
-  const focusSavingsChart = searchParams.get('chart') === 'savings-rate';
-  const savingsChartRef = useRef(null);
+  const savingsSectionRef = useRef(null);
+  const focusSavings = searchParams.get('focus') === 'savings-rate';
 
   // Period selection
   const [presetId,    setPresetId]    = useState('month');
@@ -114,10 +112,34 @@ export default function Analytics() {
     queryFn:  () => getMonthlyTrend(rangeParams),
   });
   const savingsTrend = useQuery({
-    queryKey: ['monthlyTrend', 'savingsRate12'],
+    queryKey: ['savingsRateTrend', 12],
     queryFn: () => getMonthlyTrend({ months: 12 }),
-    staleTime: 60_000,
+    staleTime: 120_000,
   });
+  const savingsRateSeries = useMemo(() => {
+    return (savingsTrend.data ?? []).map((r) => {
+      const income = r.income ?? 0;
+      const expenses = r.expenses ?? 0;
+      const rate = income > 0 ? ((income - expenses) / income) * 100 : null;
+      const label = typeof r.month === 'string' && r.month.length >= 7 ? r.month.slice(5) : r.month;
+      return {
+        month: r.month,
+        label,
+        savingsRate: rate,
+        income,
+        expenses,
+        netSavings: income - expenses,
+      };
+    });
+  }, [savingsTrend.data]);
+
+  useEffect(() => {
+    if (!focusSavings || savingsTrend.isLoading) return;
+    const t = window.setTimeout(() => {
+      savingsSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 150);
+    return () => window.clearTimeout(t);
+  }, [focusSavings, savingsTrend.isLoading]);
   const byCat    = useQuery({
     queryKey: ['bycat', rangeParams],
     queryFn:  () => getByCategory({ ...rangeParams, type: 'expense' }),
@@ -150,21 +172,7 @@ export default function Analytics() {
   const totalIncome   = trend.data?.reduce((s, r) => s + (r.income   || 0), 0) ?? 0;
   const totalExpenses = trend.data?.reduce((s, r) => s + (r.expenses || 0), 0) ?? 0;
   const totalCatSpend = byCat.data?.reduce((s, r) => s + (r.total   || 0), 0) ?? 0;
-  const savingsRateSeries = useMemo(
-    () => buildSavingsRateSeries(savingsTrend.data),
-    [savingsTrend.data],
-  );
   const loadError = trend.error || byCat.error || byIncome.error;
-
-  useEffect(() => {
-    if (!focusSavingsChart || savingsTrend.isLoading) return;
-    const el = savingsChartRef.current;
-    if (!el) return;
-    const t = window.setTimeout(() => {
-      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 80);
-    return () => window.clearTimeout(t);
-  }, [focusSavingsChart, savingsTrend.isLoading, savingsTrend.data]);
 
   if (loadError) {
     return (
@@ -190,7 +198,7 @@ export default function Analytics() {
       <div className="page-header">
         <div>
           <h1 className="page-title">Analytics</h1>
-          <p className="page-subtitle">Savings rate, spending trends, and category breakdowns</p>
+          <p className="page-subtitle">Spending trends and category breakdowns</p>
         </div>
 
         {/* Period presets */}
@@ -245,12 +253,67 @@ export default function Analytics() {
         ))}
       </div>
 
-      <SavingsRateChart
-        ref={savingsChartRef}
-        data={savingsRateSeries}
-        isLoading={savingsTrend.isLoading}
-        highlighted={focusSavingsChart}
-      />
+      {/* ── Savings rate (12 months) ── */}
+      <div
+        id="savings-rate"
+        ref={savingsSectionRef}
+        className={clsx(
+          'card p-4 sm:p-5 scroll-mt-20',
+          focusSavings && 'ring-2 ring-brand-500/40',
+        )}
+      >
+        <div className="flex items-start gap-2.5 mb-4">
+          <div className="p-2 rounded-xl bg-brand-500/10 text-brand-600 shrink-0">
+            <PiggyBank size={18} />
+          </div>
+          <div className="min-w-0">
+            <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+              Savings rate — last 12 months
+            </h2>
+            <p className="text-xs text-gray-500 mt-0.5">
+              (Net income − net expenses) ÷ net income per month — same formula as the dashboard KPI
+            </p>
+          </div>
+        </div>
+        {savingsTrend.isLoading ? (
+          <LoadingSpinner />
+        ) : !savingsRateSeries.length ? (
+          <p className="text-sm text-gray-400 py-8 text-center">No monthly data yet</p>
+        ) : (
+          <div className="h-52 sm:h-60 min-h-[13rem] w-full min-w-0">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={savingsRateSeries} margin={{ top: 8, right: 8, left: 0, bottom: 4 }}>
+                <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-700" />
+                <XAxis dataKey="label" tick={{ fontSize: 10 }} interval="preserveStartEnd" />
+                <YAxis
+                  tick={{ fontSize: 10 }}
+                  tickFormatter={(v) => `${v}%`}
+                  domain={['auto', 'auto']}
+                  width={40}
+                />
+                <Tooltip
+                  formatter={(v, name) => {
+                    if (name === 'savingsRate' && v != null) return [`${Number(v).toFixed(1)}%`, 'Savings rate'];
+                    return [v, name];
+                  }}
+                  labelFormatter={(_, payload) => payload?.[0]?.payload?.month ?? ''}
+                />
+                <ReferenceLine y={0} stroke="#94a3b8" strokeDasharray="4 4" />
+                <ReferenceLine y={15} stroke="#10b981" strokeDasharray="2 4" strokeOpacity={0.5} label={{ value: '15%', position: 'right', fontSize: 10, fill: '#10b981' }} />
+                <Line
+                  type="monotone"
+                  dataKey="savingsRate"
+                  name="Savings rate"
+                  stroke="#6366f1"
+                  strokeWidth={2}
+                  dot={{ r: 3 }}
+                  connectNulls={false}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+      </div>
 
       {/* ── Trend chart ── */}
       <div className="card p-5">

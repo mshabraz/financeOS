@@ -118,11 +118,11 @@ export default function DashboardAssets({
         className="w-full flex items-center justify-between gap-3 px-4 py-3 bg-gray-50/80 dark:bg-gray-800/40 text-left"
         onClick={() => setOpen((o) => !o)}
       >
-        <div className="flex items-center gap-2">
-          <Wallet size={16} className="text-gray-400" />
-          <div>
-            <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">Asset breakdown</p>
-            <p className="text-xs text-gray-500">Edit manual balances · investments are live</p>
+        <div className="flex items-center gap-2 min-w-0">
+          <Wallet size={16} className="text-gray-400 shrink-0" />
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">Edit manual balances</p>
+            <p className="text-xs text-gray-500">Pension, property, and custom assets · investments are live</p>
           </div>
         </div>
         {open ? <ChevronUp size={18} className="text-gray-400" /> : <ChevronDown size={18} className="text-gray-400" />}

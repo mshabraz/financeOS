@@ -10,33 +10,41 @@ function HeroKpi({
   label, value, sub, delta, spark, positive, icon: Icon, href,
 }) {
   const inner = (
-    <div className="rounded-2xl border border-gray-200/80 dark:border-gray-700/80 bg-white/50 dark:bg-gray-900/40 p-3.5 h-full flex flex-col justify-between min-w-0">
-      <div className="flex items-start justify-between gap-2">
+    <div className="rounded-2xl border border-gray-200/80 dark:border-gray-700/80 bg-white/50 dark:bg-gray-900/40 p-3.5 sm:p-4 h-full flex flex-col gap-2 min-w-0 overflow-hidden">
+      <div className="flex items-start justify-between gap-2 min-w-0">
         <div className="min-w-0 flex-1">
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">{label}</p>
-          <p className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white tabular-nums mt-1 truncate">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 leading-tight">
+            {label}
+          </p>
+          <p className="text-[1.0625rem] leading-snug sm:text-xl font-bold text-gray-900 dark:text-white tabular-nums mt-1 break-words [overflow-wrap:anywhere]">
             {value}
           </p>
-          {sub && <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5 truncate">{sub}</p>}
+          {sub && (
+            <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5 break-words leading-snug">
+              {sub}
+            </p>
+          )}
           {delta != null && (
-            <p className={clsx(
-              'text-[11px] font-medium mt-1 inline-flex items-center gap-0.5',
-              delta >= 0 ? 'text-emerald-600' : 'text-red-600',
-            )}>
-              {delta >= 0 ? <ArrowUpRight size={11} /> : <ArrowDownRight size={11} />}
-              {fmtPct(Math.abs(delta), { sign: false })} vs prior period
+            <p
+              className={clsx(
+                'text-[11px] font-medium mt-1 inline-flex flex-wrap items-center gap-0.5 leading-snug',
+                delta >= 0 ? 'text-emerald-600' : 'text-red-600',
+              )}
+            >
+              {delta >= 0 ? <ArrowUpRight size={11} className="shrink-0" /> : <ArrowDownRight size={11} className="shrink-0" />}
+              <span className="break-words">{fmtPct(Math.abs(delta), { sign: false })} vs prior</span>
             </p>
           )}
         </div>
         {Icon && (
-          <div className="p-2 rounded-xl bg-brand-500/10 text-brand-600 dark:text-brand-400 shrink-0">
-            <Icon size={16} />
+          <div className="p-1.5 sm:p-2 rounded-xl bg-brand-500/10 text-brand-600 dark:text-brand-400 shrink-0 hidden sm:flex">
+            <Icon size={15} className="sm:w-4 sm:h-4" />
           </div>
         )}
       </div>
       {spark?.length > 1 && (
-        <div className="mt-2 flex justify-end">
-          <MiniSparkline data={spark} positive={positive} />
+        <div className="flex justify-end pt-0.5">
+          <MiniSparkline data={spark} positive={positive} height={32} />
         </div>
       )}
     </div>
@@ -44,12 +52,15 @@ function HeroKpi({
 
   if (href) {
     return (
-      <Link to={href} className="block hover:ring-1 hover:ring-brand-500/30 rounded-2xl transition-shadow">
+      <Link
+        to={href}
+        className="block min-w-0 hover:ring-1 hover:ring-brand-500/30 rounded-2xl transition-shadow active:opacity-90"
+      >
         {inner}
       </Link>
     );
   }
-  return inner;
+  return <div className="min-w-0">{inner}</div>;
 }
 
 export default function DashboardHero({
@@ -79,32 +90,32 @@ export default function DashboardHero({
   return (
     <section className="card overflow-hidden">
       <div className="px-4 sm:px-6 py-4 border-b border-gray-100 dark:border-gray-800 bg-gradient-to-r from-brand-500/8 via-transparent to-emerald-500/5">
-        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
-          <div>
+        <div className="flex flex-col gap-3">
+          <div className="min-w-0">
             <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">Net worth</p>
-            <p className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white tabular-nums mt-0.5">
+            <p className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 dark:text-white tabular-nums mt-0.5 break-words [overflow-wrap:anywhere] leading-tight">
               {fmtEur(totalAssets)}
             </p>
             {totalAssetsPkr > 0 && (
-              <p className="text-sm text-gray-500 mt-1 tabular-nums">
+              <p className="text-xs sm:text-sm text-gray-500 mt-1 tabular-nums break-words">
                 ≈ {fmtPkr(totalAssetsPkr)}{fxNote ? ` · ${fxNote}` : ''}
               </p>
             )}
           </div>
           <div className="flex flex-wrap gap-2 text-xs">
-            <span className="rounded-full border border-gray-200 dark:border-gray-700 px-3 py-1 text-gray-600 dark:text-gray-300">
+            <span className="rounded-full border border-gray-200 dark:border-gray-700 px-3 py-1 text-gray-600 dark:text-gray-300 tabular-nums">
               Bank {fmtEur(bankBalance)}
             </span>
             {cashTotal > 0 && (
-              <span className="rounded-full border border-gray-200 dark:border-gray-700 px-3 py-1 text-gray-600 dark:text-gray-300">
-                Cash {fmtEur(cashTotal)}
+              <span className="rounded-full border border-gray-200 dark:border-gray-700 px-3 py-1 text-gray-600 dark:text-gray-300 tabular-nums">
+                Inv. cash {fmtEur(cashTotal)}
               </span>
             )}
           </div>
         </div>
       </div>
 
-      <div className="p-4 sm:p-5 grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-4 gap-3">
+      <div className="p-3 sm:p-5 grid grid-cols-1 min-[420px]:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
         <HeroKpi
           label="Investments"
           value={fmtEur(investmentsTotal)}
@@ -150,7 +161,7 @@ export default function DashboardHero({
           sub={summary?.totalSavings > 0 ? `Transfers ${fmtEur(summary.totalSavings)}` : null}
           positive={savingsRate >= 15}
           icon={PiggyBank}
-          href="/analytics?chart=savings-rate"
+          href="/analytics?focus=savings-rate"
         />
         {goalSnapshot && (
           <HeroKpi

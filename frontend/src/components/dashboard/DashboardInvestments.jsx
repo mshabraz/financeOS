@@ -39,27 +39,29 @@ export default function DashboardInvestments({ portfolio, analytics }) {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div className="rounded-xl bg-gray-50 dark:bg-gray-800/50 p-3">
+      <div className="grid grid-cols-1 min-[360px]:grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3">
+        <div className="rounded-xl bg-gray-50 dark:bg-gray-800/50 p-3 min-w-0">
           <p className="text-[10px] uppercase text-gray-400">Portfolio</p>
-          <p className="text-lg font-bold tabular-nums">{fmtEur(portfolio.totalPortfolio)}</p>
+          <p className="text-base sm:text-lg font-bold tabular-nums break-words [overflow-wrap:anywhere]">
+            {fmtEur(portfolio.totalPortfolio)}
+          </p>
         </div>
-        <div className="rounded-xl bg-gray-50 dark:bg-gray-800/50 p-3">
+        <div className="rounded-xl bg-gray-50 dark:bg-gray-800/50 p-3 min-w-0">
           <p className="text-[10px] uppercase text-gray-400">Unrealized</p>
           <p className={clsx(
-            'text-lg font-bold tabular-nums',
+            'text-base sm:text-lg font-bold tabular-nums break-words [overflow-wrap:anywhere]',
             (portfolio.unrealizedPnLEur ?? 0) >= 0 ? 'text-emerald-600' : 'text-red-600',
           )}>
             {portfolio.unrealizedPnLEur != null ? fmtEur(portfolio.unrealizedPnLEur, { sign: true }) : '—'}
           </p>
         </div>
-        <div className="rounded-xl bg-gray-50 dark:bg-gray-800/50 p-3">
+        <div className="rounded-xl bg-gray-50 dark:bg-gray-800/50 p-3 min-w-0">
           <p className="text-[10px] uppercase text-gray-400 flex items-center gap-1">
             <Shield size={10} /> Diversification
           </p>
-          <p className="text-lg font-bold tabular-nums">{divScore ?? '—'}</p>
+          <p className="text-base sm:text-lg font-bold tabular-nums">{divScore ?? '—'}</p>
         </div>
-        <div className="rounded-xl bg-gray-50 dark:bg-gray-800/50 p-3">
+        <div className="rounded-xl bg-gray-50 dark:bg-gray-800/50 p-3 min-w-0">
           <p className="text-[10px] uppercase text-gray-400">Health</p>
           <p className="text-xs font-medium mt-1 text-gray-600 dark:text-gray-300">
             {portfolio.unboundCount > 0 && `${portfolio.unboundCount} need link · `}
@@ -72,11 +74,11 @@ export default function DashboardInvestments({ portfolio, analytics }) {
         {alloc.length > 0 && (
           <div>
             <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 mb-2">Allocation</p>
-            <div className="h-40">
+            <div className="h-36 sm:h-40 min-h-[9rem] w-full min-w-0">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={alloc} layout="vertical" margin={{ left: 4, right: 8 }}>
+                <BarChart data={alloc} layout="vertical" margin={{ left: 4, right: 12, top: 4, bottom: 4 }}>
                   <XAxis type="number" hide />
-                  <YAxis type="category" dataKey="label" width={72} tick={{ fontSize: 10 }} />
+                  <YAxis type="category" dataKey="label" width={64} tick={{ fontSize: 9 }} />
                   <Tooltip formatter={(v, _n, p) => [fmtPct(p.payload.pct ?? p.payload.portfolioPct), p.payload.label]} />
                   <Bar dataKey="pct" radius={[0, 4, 4, 0]}>
                     {alloc.map((_, i) => (
