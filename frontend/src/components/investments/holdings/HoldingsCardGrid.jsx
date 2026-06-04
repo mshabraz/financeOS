@@ -2,6 +2,7 @@ import clsx from 'clsx';
 import { BROKER_COLORS, BROKER_LABELS } from '../constants';
 import { fmt } from '../investmentPageFmt';
 import { fmtQty } from '../../../utils/investmentFormat';
+import SecurityDisplay from '../SecurityDisplay';
 
 function BrokerBadge({ broker }) {
   return (
@@ -31,10 +32,11 @@ export function MarketHoldingCards({ data, showEur = true, onBind, onUnbind }) {
           >
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
-                <p className="font-mono font-bold text-brand-600 truncate">{h.ticker}</p>
-                <p className="text-xs text-gray-500 truncate mt-0.5">
-                  {h.binding?.securityName || h.fundName || '—'}
-                </p>
+                <SecurityDisplay
+                  row={h}
+                  primaryClassName="font-semibold text-gray-900 dark:text-white text-sm"
+                  secondaryClassName="text-[10px] text-gray-500 mt-0.5 font-mono"
+                />
               </div>
               <BrokerBadge broker={h.broker} />
             </div>

@@ -18,6 +18,8 @@ import {
 } from './constants';
 import FundBenchmarkSection from './FundBenchmarkSection';
 import InvestmentInsightsPanel from './insights/InvestmentInsightsPanel';
+import SecurityDisplay from './SecurityDisplay';
+import { resolveDisplayName } from '../../utils/securityDisplay';
 
 function TrendBadge({ value, pct, label }) {
   if (value == null && pct == null) return null;
@@ -385,8 +387,7 @@ function CompositionTable({ rows, brokerFilter }) {
   };
 
   const cols = [
-    { key: 'ticker', label: 'Ticker', always: true },
-    { key: 'securityName', label: 'Name', always: true },
+    { key: 'securityName', label: 'Security', always: true },
     { key: 'portfolioPct', label: 'Weight %' },
     { key: 'marketValueEur', label: 'Value €' },
     { key: 'quantity', label: 'Qty' },
@@ -446,8 +447,13 @@ function CompositionTable({ rows, brokerFilter }) {
               const up = (r.unrealizedPnLEur ?? 0) >= 0;
               return (
                 <tr key={`${r.broker}-${r.ticker}-${r.currency}`} className="border-b border-gray-50 dark:border-gray-800/50 hover:bg-gray-50/50 dark:hover:bg-gray-800/30">
-                  <td className="px-3 py-2.5 font-semibold text-gray-900 dark:text-white">{privText(r.ticker)}</td>
-                  <td className="px-3 py-2.5 max-w-[140px] truncate text-gray-600 dark:text-gray-400">{privText(r.securityName)}</td>
+                  <td className="px-3 py-2.5 min-w-[120px]">
+                    <SecurityDisplay
+                      row={r}
+                      primaryClassName="font-semibold text-gray-900 dark:text-white text-sm"
+                      secondaryClassName="text-[10px] text-gray-500 mt-0.5 font-mono"
+                    />
+                  </td>
                   <td className="px-3 py-2.5 tabular-nums">{r.portfolioPct != null ? fmtPct(r.portfolioPct) : '—'}</td>
                   <td className="px-3 py-2.5 tabular-nums">{r.marketValueEur != null ? fmtEur(r.marketValueEur) : '—'}</td>
                   <td className="px-3 py-2.5 tabular-nums">{fmtQty(r.quantity)}</td>
@@ -510,7 +516,7 @@ function DividendsSection({ dividends }) {
           <div className="space-y-1">
             {dividends.topContributors.slice(0, 5).map((t) => (
               <div key={`${t.broker}-${t.ticker}`} className="flex justify-between text-xs">
-                <span>{t.ticker}</span>
+                <span>{resolveDisplayName(t)}</span>
                 <span className="font-medium tabular-nums">{fmtEur(t.totalNet)}</span>
               </div>
             ))}
