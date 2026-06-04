@@ -150,6 +150,7 @@ export default function DashboardHero({
           sub={summary?.totalSavings > 0 ? `Transfers ${fmtEur(summary.totalSavings)}` : null}
           positive={savingsRate >= 15}
           icon={PiggyBank}
+          href="/analytics?chart=savings-rate"
         />
         {goalSnapshot && (
           <HeroKpi

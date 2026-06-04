@@ -1,4 +1,5 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid,
@@ -17,7 +18,9 @@ import MonthFilterSelect from '../components/ui/MonthFilterSelect';
 import DatePicker from '../components/ui/DatePicker';
 import { getMonthRange } from '../utils/dateFilters';
 import { fmtEur, privText } from '../utils/displayFormat';
+import { buildSavingsRateSeries } from '../utils/savingsRate';
 import { usePrivacy } from '../context/PrivacyContext';
+import SavingsRateChart from '../components/analytics/SavingsRateChart';
 
 const fmt = fmtEur;
 
@@ -56,6 +59,9 @@ const monthOptions = Array.from({ length: 24 }, (_, i) =>
 export default function Analytics() {
   usePrivacy();
   const qc = useQueryClient();
+  const [searchParams] = useSearchParams();
+  const focusSavingsChart = searchParams.get('chart') === 'savings-rate';
+  const savingsChartRef = useRef(null);
 
   // Period selection
   const [presetId,    setPresetId]    = useState('month');
@@ -107,6 +113,11 @@ export default function Analytics() {
     queryKey: ['trend', rangeParams],
     queryFn:  () => getMonthlyTrend(rangeParams),
   });
+  const savingsTrend = useQuery({
+    queryKey: ['monthlyTrend', 'savingsRate12'],
+    queryFn: () => getMonthlyTrend({ months: 12 }),
+    staleTime: 60_000,
+  });
   const byCat    = useQuery({
     queryKey: ['bycat', rangeParams],
     queryFn:  () => getByCategory({ ...rangeParams, type: 'expense' }),
@@ -139,7 +150,21 @@ export default function Analytics() {
   const totalIncome   = trend.data?.reduce((s, r) => s + (r.income   || 0), 0) ?? 0;
   const totalExpenses = trend.data?.reduce((s, r) => s + (r.expenses || 0), 0) ?? 0;
   const totalCatSpend = byCat.data?.reduce((s, r) => s + (r.total   || 0), 0) ?? 0;
+  const savingsRateSeries = useMemo(
+    () => buildSavingsRateSeries(savingsTrend.data),
+    [savingsTrend.data],
+  );
   const loadError = trend.error || byCat.error || byIncome.error;
+
+  useEffect(() => {
+    if (!focusSavingsChart || savingsTrend.isLoading) return;
+    const el = savingsChartRef.current;
+    if (!el) return;
+    const t = window.setTimeout(() => {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 80);
+    return () => window.clearTimeout(t);
+  }, [focusSavingsChart, savingsTrend.isLoading, savingsTrend.data]);
 
   if (loadError) {
     return (
@@ -165,7 +190,7 @@ export default function Analytics() {
       <div className="page-header">
         <div>
           <h1 className="page-title">Analytics</h1>
-          <p className="page-subtitle">Spending trends and category breakdowns</p>
+          <p className="page-subtitle">Savings rate, spending trends, and category breakdowns</p>
         </div>
 
         {/* Period presets */}
@@ -219,6 +244,13 @@ export default function Analytics() {
           </div>
         ))}
       </div>
+
+      <SavingsRateChart
+        ref={savingsChartRef}
+        data={savingsRateSeries}
+        isLoading={savingsTrend.isLoading}
+        highlighted={focusSavingsChart}
+      />
 
       {/* ── Trend chart ── */}
       <div className="card p-5">
