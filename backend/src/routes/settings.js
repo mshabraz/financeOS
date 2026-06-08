@@ -4,6 +4,10 @@ const {
   getRevolutExpenseSplitRatio,
   backfillRevolutAmounts,
 } = require('../services/revolutCalculations');
+const {
+  getNetWorthDisplayCurrency,
+  updateNetWorthDisplayCurrency,
+} = require('../services/displayCurrencySettings');
 const logger = require('../services/logger');
 
 const router = express.Router();
@@ -35,6 +39,26 @@ router.put('/revolut-split', (req, res) => {
   } catch (err) {
     logger.error('[PUT /settings/revolut-split]', err);
     res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/settings/net-worth-currency
+router.get('/net-worth-currency', (req, res) => {
+  const db = getDb();
+  res.json(getNetWorthDisplayCurrency(db));
+});
+
+// PUT /api/settings/net-worth-currency  body: { enabled?, currency? }
+router.put('/net-worth-currency', (req, res) => {
+  try {
+    const db = getDb();
+    const updated = updateNetWorthDisplayCurrency(db, {
+      enabled: req.body?.enabled,
+      currency: req.body?.currency,
+    });
+    res.json({ ok: true, ...updated });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
   }
 });
 

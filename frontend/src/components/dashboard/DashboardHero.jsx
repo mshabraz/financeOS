@@ -4,7 +4,7 @@ import {
   ArrowUpRight, ArrowDownRight, Landmark,
 } from 'lucide-react';
 import clsx from 'clsx';
-import { fmtEur, fmtPct, fmtPkr } from '../../utils/displayFormat';
+import { fmtEur, fmtPct, fmtCurrency } from '../../utils/displayFormat';
 import MiniSparkline from './MiniSparkline';
 
 function HeroKpi({
@@ -67,8 +67,7 @@ function HeroKpi({
 /** Sole location for top-level financial KPIs (single source of truth). */
 export default function DashboardHero({
   snapshot,
-  totalAssetsPkr,
-  fxNote,
+  netWorthConversion,
   portfolio,
   summary,
   goalSnapshot,
@@ -87,9 +86,18 @@ export default function DashboardHero({
           <p className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 dark:text-white tabular-nums break-words [overflow-wrap:anywhere] leading-tight">
             {fmtEur(snapshot.netWorth)}
           </p>
-          {totalAssetsPkr > 0 && (
+          {netWorthConversion?.enabled && netWorthConversion?.amount != null && (
             <p className="text-xs sm:text-sm text-gray-500 mt-1 tabular-nums break-words">
-              ≈ {fmtPkr(totalAssetsPkr)}{fxNote ? ` · ${fxNote}` : ''}
+              ≈ {fmtCurrency(
+                netWorthConversion.amount,
+                netWorthConversion.currency,
+                { decimals: netWorthConversion.currency === 'JPY' ? 0 : 2 },
+              )}
+              {netWorthConversion.stale
+                ? ` · ${netWorthConversion.currency} est.`
+                : netWorthConversion.fxDate
+                  ? ` · ${netWorthConversion.currency} ${netWorthConversion.fxDate}`
+                  : ''}
             </p>
           )}
         </div>

@@ -456,21 +456,37 @@ router.get('/assets', async (req, res) => {
   });
 
   const { getPerEurRates, convertFromEur, FALLBACK_PER_EUR } = require('../services/fxRates');
-  let perEur = { EUR: 1, PKR: FALLBACK_PER_EUR.PKR };
-  let fxPkrDate = null;
-  let fxPkrStale = true;
-  try {
-    const fx = await getPerEurRates(['PKR']);
-    perEur = { ...perEur, ...fx.perEur, EUR: 1 };
-    fxPkrDate = fx.date;
-    fxPkrStale = fx.stale || !fx.perEur?.PKR;
-  } catch (e) {
-    require('../services/logger').warn(`[dashboard/assets] PKR rate fallback: ${e.message}`);
+  const { getNetWorthDisplayCurrency } = require('../services/displayCurrencySettings');
+  const displayFx = getNetWorthDisplayCurrency(db);
+
+  let netWorthConversion = {
+    enabled: displayFx.enabled,
+    currency: displayFx.currency,
+    amount: null,
+    rate: null,
+    fxDate: null,
+    stale: true,
+  };
+
+  if (displayFx.enabled) {
+    const target = displayFx.currency;
+    let perEur = { EUR: 1 };
+    try {
+      const fx = await getPerEurRates([target]);
+      perEur = { ...perEur, ...fx.perEur, EUR: 1 };
+      netWorthConversion.fxDate = fx.date;
+      netWorthConversion.stale = fx.stale || !fx.perEur?.[target];
+    } catch (e) {
+      require('../services/logger').warn(`[dashboard/assets] FX fallback (${target}): ${e.message}`);
+      perEur[target] = FALLBACK_PER_EUR[target];
+      netWorthConversion.stale = true;
+    }
+    const rate = perEur[target] ?? FALLBACK_PER_EUR[target];
+    netWorthConversion.rate = rate ?? null;
+    netWorthConversion.amount =
+      convertFromEur(totalAssets, target, perEur) ??
+      (rate ? Math.round(totalAssets * rate * 100) / 100 : null);
   }
-  const eurToPkrRate = perEur.PKR ?? FALLBACK_PER_EUR.PKR;
-  const totalAssetsPkr =
-    convertFromEur(totalAssets, 'PKR', perEur) ??
-    Math.round(totalAssets * eurToPkrRate * 100) / 100;
 
   const revolutLatest = db.prepare(
     `SELECT balance_after, date, product, currency
@@ -491,10 +507,7 @@ router.get('/assets', async (req, res) => {
     revolutBalanceDate: revolutLatest?.date ?? null,
     revolutProduct: revolutLatest?.product ?? null,
     totalAssets,
-    totalAssetsPkr,
-    eurToPkrRate,
-    fxPkrDate,
-    fxPkrStale,
+    netWorthConversion,
   });
 });
 

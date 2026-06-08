@@ -227,12 +227,6 @@ export default function Dashboard() {
     );
   }
 
-  const fxNote = assets.data?.fxPkrStale
-    ? 'PKR est.'
-    : assets.data?.fxPkrDate
-      ? `PKR ${assets.data.fxPkrDate}`
-      : null;
-
   return (
     <div className="space-y-5 max-w-[1400px] mx-auto pb-8">
       <header className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
@@ -279,8 +273,7 @@ export default function Dashboard() {
       ) : (
         <DashboardHero
           snapshot={snapshot}
-          totalAssetsPkr={assets.data?.totalAssetsPkr}
-          fxNote={fxNote}
+          netWorthConversion={assets.data?.netWorthConversion}
           portfolio={portfolio}
           summary={s}
           goalSnapshot={goalSnapshot}

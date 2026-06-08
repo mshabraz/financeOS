@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Info, Lock, Percent, Users } from 'lucide-react';
+import { Globe, Info, Lock, Percent, Users } from 'lucide-react';
 import clsx from 'clsx';
 import PageHeader from '../components/ui/PageHeader';
 import { useAuth } from '../context/AuthContext';
 import {
   getRevolutSplitSetting,
   updateRevolutSplitSetting,
+  getNetWorthCurrencySetting,
+  updateNetWorthCurrencySetting,
   changePassword,
   getAdminUsers,
   adminResetUserPassword,
@@ -102,6 +104,8 @@ export default function Settings() {
   const qc = useQueryClient();
   const [toast, setToast] = useState(null);
   const [splitPct, setSplitPct] = useState(50);
+  const [fxEnabled, setFxEnabled] = useState(true);
+  const [fxCurrency, setFxCurrency] = useState('PKR');
   const [currentPw, setCurrentPw] = useState('');
   const [newPw, setNewPw] = useState('');
   const [confirmPw, setConfirmPw] = useState('');
@@ -117,10 +121,32 @@ export default function Settings() {
     }
   }, [revolutSplitQ.data?.ratio]);
 
+  const netWorthFxQ = useQuery({
+    queryKey: ['netWorthCurrency'],
+    queryFn: getNetWorthCurrencySetting,
+  });
+
+  useEffect(() => {
+    if (netWorthFxQ.data) {
+      setFxEnabled(netWorthFxQ.data.enabled !== false);
+      if (netWorthFxQ.data.currency) setFxCurrency(netWorthFxQ.data.currency);
+    }
+  }, [netWorthFxQ.data]);
+
   const showToast = (msg, kind = 'info') => {
     setToast({ msg, kind });
     setTimeout(() => setToast(null), 5000);
   };
+
+  const saveNetWorthFx = useMutation({
+    mutationFn: () => updateNetWorthCurrencySetting({ enabled: fxEnabled, currency: fxCurrency }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['netWorthCurrency'] });
+      qc.invalidateQueries({ queryKey: ['assets'] });
+      showToast('Net worth currency settings saved', 'success');
+    },
+    onError: (e) => showToast(e.message, 'error'),
+  });
 
   const saveRevolutSplit = useMutation({
     mutationFn: () => updateRevolutSplitSetting(splitPct / 100),
@@ -203,6 +229,54 @@ export default function Settings() {
                 onClick={() => saveRevolutSplit.mutate()}
               >
                 {saveRevolutSplit.isPending ? 'Saving…' : 'Save & recalculate'}
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="card p-5 space-y-4">
+        <div className="flex items-start gap-3">
+          <Globe size={20} className="text-blue-600 shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Net worth currency conversion</h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+              Show an estimated conversion under net worth on the dashboard (EUR remains the primary total).
+            </p>
+            <div className="mt-4 space-y-4">
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="rounded border-gray-300"
+                  checked={fxEnabled}
+                  onChange={(e) => setFxEnabled(e.target.checked)}
+                />
+                <span>Show converted amount on dashboard</span>
+              </label>
+              <label className="text-sm block">
+                <span className="text-xs text-gray-500">Target currency</span>
+                <select
+                  className="input mt-1 block w-full max-w-xs"
+                  value={fxCurrency}
+                  disabled={!fxEnabled}
+                  onChange={(e) => setFxCurrency(e.target.value)}
+                >
+                  {(netWorthFxQ.data?.supportedCurrencies ?? [{ code: 'PKR', label: 'Pakistani Rupee (PKR)' }]).map(
+                    (c) => (
+                      <option key={c.code} value={c.code}>
+                        {c.label}
+                      </option>
+                    ),
+                  )}
+                </select>
+              </label>
+              <button
+                type="button"
+                className="btn-primary text-sm"
+                disabled={saveNetWorthFx.isPending}
+                onClick={() => saveNetWorthFx.mutate()}
+              >
+                {saveNetWorthFx.isPending ? 'Saving…' : 'Save'}
               </button>
             </div>
           </div>

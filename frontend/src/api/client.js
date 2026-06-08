@@ -57,6 +57,9 @@ export const getNetworkInfo  = () => api.get('/network/info');
 export const getRevolutSplitSetting = () => api.get('/settings/revolut-split');
 export const updateRevolutSplitSetting = (ratio) =>
   api.put('/settings/revolut-split', { ratio });
+export const getNetWorthCurrencySetting = () => api.get('/settings/net-worth-currency');
+export const updateNetWorthCurrencySetting = (body) =>
+  api.put('/settings/net-worth-currency', body);
 
 // --- Transactions ---
 export const getTransactions = (params) =>
