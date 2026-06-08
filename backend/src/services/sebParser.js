@@ -1,30 +1,33 @@
 /**
  * SEB Bank (Estonia) semicolon CSV export parser.
  *
- * Header: Account;Document No.;Date;Beneficiary's account;Beneficiary's name;...
- * Direction column: (D/C) — D = debit, C = credit (not LHV's K).
+ * Amounts are always positive; (D/C) column is C = credit, D = debit.
+ * Stored using app-wide convention: direction K/D, signed amount.
  */
 
 const crypto = require('crypto');
 const iconv = require('iconv-lite');
 const { parseDate, parseAmount, normalizeMerchantName } = require('./csvParser');
+const { normalizeBankDirection, signedAmountFromIndicator } = require('./bankDirection');
 
-const COL = {
-  account: 0,
-  documentNo: 1,
-  date: 2,
-  beneficiaryAccount: 3,
-  beneficiaryName: 4,
-  bic: 5,
-  type: 6,
-  direction: 7,
-  amount: 8,
-  referenceNo: 9,
-  archiveId: 10,
-  description: 11,
-  commissionFee: 12,
-  currency: 13,
+const HEADER_ALIASES = {
+  account: ['account'],
+  documentNo: ['document no.', 'document no'],
+  date: ['date'],
+  beneficiaryAccount: ["beneficiary's account", 'beneficiary account'],
+  beneficiaryName: ["beneficiary's name", 'beneficiary name'],
+  bic: ['bic/swift', 'bic'],
+  type: ['type'],
+  direction: ['(d/c)', 'd/c', 'debit/credit'],
+  amount: ['amount'],
+  referenceNo: ['reference no.', 'reference no', 'reference number'],
+  archiveId: ['archive id'],
+  description: ['description'],
+  commissionFee: ['commission fee', 'fee'],
+  currency: ['currency'],
 };
+
+const REQUIRED_KEYS = ['account', 'date', 'direction', 'amount'];
 
 function decodeContent(buffer) {
   try {
@@ -34,6 +37,16 @@ function decodeContent(buffer) {
   } catch {
     return iconv.decode(buffer, 'latin1');
   }
+}
+
+function normalizeToken(raw) {
+  return String(raw || '')
+    .trim()
+    .replace(/^"|"$/g, '')
+    .replace(/\uFEFF/g, '')
+    .normalize('NFD')
+    .replace(/\p{M}/gu, '')
+    .toLowerCase();
 }
 
 function parseSemicolonLine(line) {
@@ -61,11 +74,48 @@ function parseSemicolonLine(line) {
   return fields;
 }
 
+function buildHeaderMap(headerFields) {
+  const normalized = headerFields.map((h) => normalizeToken(h));
+  const map = {};
+
+  for (const [key, aliases] of Object.entries(HEADER_ALIASES)) {
+    for (const alias of aliases) {
+      const idx = normalized.indexOf(normalizeToken(alias));
+      if (idx >= 0) {
+        map[key] = idx;
+        break;
+      }
+    }
+  }
+
+  return map;
+}
+
+function headerMapIsSeb(headerMap) {
+  return REQUIRED_KEYS.every((k) => headerMap[k] !== undefined);
+}
+
 function isSebCSV(buffer) {
   const content = decodeContent(buffer);
-  const first = content.replace(/^\uFEFF/, '').split(/\r?\n/).find((l) => l.trim()) || '';
-  const lower = first.toLowerCase();
-  return lower.includes('archive id') && lower.includes('(d/c)') && lower.startsWith('account;');
+  const lines = content.replace(/^\uFEFF/, '').split(/\r?\n/).filter((l) => l.trim());
+  if (!lines.length || !lines[0].includes(';')) return false;
+
+  const headerMap = buildHeaderMap(parseSemicolonLine(lines[0]));
+  if (headerMapIsSeb(headerMap) && headerMap.direction !== undefined) {
+    const headerNorm = normalizeToken(lines[0]);
+    if (headerNorm.includes('(d/c)') || headerNorm.includes('archive id')) return true;
+    if (headerNorm.includes('beneficiary')) return true;
+  }
+
+  const dataLine = lines.slice(1).find((l) => l.trim());
+  if (!dataLine) return false;
+
+  const fields = parseSemicolonLine(dataLine);
+  const dir = (fields[headerMap.direction ?? 7] || '').toUpperCase();
+  const col1 = fields[1] || '';
+  if ((dir === 'C' || dir === 'D') && !/^(10|20|82|86)$/.test(col1)) return true;
+
+  return false;
 }
 
 function extractSebMerchant(beneficiary, description) {
@@ -88,15 +138,18 @@ function generateFingerprint({ archiveId, documentNo, date, amount, direction, b
   return crypto.createHash('sha256').update(key).digest('hex').slice(0, 32);
 }
 
-function parseRow(fields, idx) {
+function parseRow(fields, idx, col) {
   try {
-    while (fields.length < 14) fields.push('');
+    const get = (key) => {
+      const i = col[key];
+      return i !== undefined ? (fields[i] ?? '').trim().replace(/^"|"$/g, '') : '';
+    };
 
-    const rawDate = fields[COL.date];
-    const rawAmount = fields[COL.amount];
-    const direction = fields[COL.direction];
+    const rawDate = get('date');
+    const rawAmount = get('amount');
+    const rawDirection = get('direction');
 
-    if (!rawDate || !rawAmount || !direction) {
+    if (!rawDate || !rawAmount || !rawDirection) {
       return { valid: false, row: idx, reason: 'Missing required fields', raw: fields };
     }
 
@@ -110,41 +163,41 @@ function parseRow(fields, idx) {
       return { valid: false, row: idx, reason: `Invalid amount: ${rawAmount}`, raw: fields };
     }
 
-    const dir = direction.toUpperCase();
-    if (dir !== 'D' && dir !== 'C') {
-      return { valid: false, row: idx, reason: `Invalid direction: ${direction}`, raw: fields };
+    const bankDirection = normalizeBankDirection(rawDirection);
+    if (!bankDirection) {
+      return { valid: false, row: idx, reason: `Invalid direction: ${rawDirection}`, raw: fields };
     }
 
-    const amount = dir === 'C' ? absAmount : -absAmount;
-    const beneficiary = fields[COL.beneficiaryName] || '';
-    const details = fields[COL.description] || '';
+    const amount = signedAmountFromIndicator(absAmount, rawDirection);
+    const beneficiary = get('beneficiaryName') || '';
+    const details = get('description') || '';
     const merchant = extractSebMerchant(beneficiary, details);
-    const archiveId = fields[COL.archiveId] || '';
-    const documentNo = fields[COL.documentNo] || '';
+    const archiveId = get('archiveId') || '';
+    const documentNo = get('documentNo') || '';
 
     const fingerprint = generateFingerprint({
       archiveId,
       documentNo,
       date,
       amount: absAmount,
-      direction: dir,
+      direction: bankDirection,
       beneficiary,
     });
 
     return {
       valid: true,
       fingerprint,
-      account: fields[COL.account],
+      account: get('account'),
       date,
       beneficiary,
       merchant,
       details,
       amount,
-      currency: fields[COL.currency] || 'EUR',
-      direction: dir,
-      transferRef: fields[COL.referenceNo] || archiveId || null,
-      transactionType: fields[COL.type] || null,
-      referenceNumber: fields[COL.referenceNo] || null,
+      currency: get('currency') || 'EUR',
+      direction: bankDirection,
+      transferRef: get('referenceNo') || archiveId || null,
+      transactionType: get('type') || null,
+      referenceNumber: get('referenceNo') || null,
       documentNumber: documentNo || null,
       bankSource: 'seb',
     };
@@ -157,22 +210,25 @@ function parseSebCSV(buffer) {
   const content = decodeContent(buffer);
   const lines = content.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
 
+  let headerMap = null;
   const rows = [];
-  let headerSeen = false;
 
   for (const line of lines) {
     const trimmed = line.trim();
     if (!trimmed) continue;
 
     const fields = parseSemicolonLine(trimmed);
-    if (!headerSeen) {
-      headerSeen = true;
+    if (!headerMap) {
+      headerMap = buildHeaderMap(fields);
+      if (!headerMapIsSeb(headerMap)) {
+        throw new Error('Not a SEB bank CSV — missing required columns');
+      }
       continue;
     }
     rows.push(fields);
   }
 
-  const parsed = rows.map((row, idx) => parseRow(row, idx));
+  const parsed = rows.map((row, idx) => parseRow(row, idx, headerMap));
   const valid = parsed.filter((r) => r.valid);
   const invalid = parsed.filter((r) => !r.valid);
   const account = valid[0]?.account ?? null;
