@@ -7,6 +7,7 @@ const multer = require('multer');
 const { getDb } = require('../db/database');
 const logger = require('../services/logger');
 const { previewRevolutImport, commitRevolutImport } = require('../services/revolutImporter');
+const { reenterUserContext } = require('../middleware/userContext');
 
 const router = express.Router();
 
@@ -171,7 +172,7 @@ router.get('/types', (_req, res) => {
 });
 
 // POST /api/revolut/import/preview
-router.post('/import/preview', upload.single('file'), (req, res) => {
+router.post('/import/preview', upload.single('file'), reenterUserContext, (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
     const result = previewRevolutImport(req.file.buffer, req.file.originalname);
@@ -183,7 +184,7 @@ router.post('/import/preview', upload.single('file'), (req, res) => {
 });
 
 // POST /api/revolut/import/commit
-router.post('/import/commit', upload.single('file'), (req, res) => {
+router.post('/import/commit', upload.single('file'), reenterUserContext, (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
     const result = commitRevolutImport(req.file.buffer, req.file.originalname);

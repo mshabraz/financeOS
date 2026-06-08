@@ -5,6 +5,7 @@
 const express = require('express');
 const multer  = require('multer');
 const { getDb }   = require('../db/database');
+const { reenterUserContext } = require('../middleware/userContext');
 const { detect: detectBroker, parse: parseBrokerCSV, supportedBrokers } = require('../services/parsers');
 const { computeHoldings } = require('../services/investmentHoldings');
 const { buildPortfolioValuation } = require('../services/investmentValuation');
@@ -195,7 +196,7 @@ router.get('/brokers', (req, res) => {
 });
 
 // GET /api/investments/detect — detect broker from uploaded file without parsing
-router.post('/detect', upload.single('file'), (req, res) => {
+router.post('/detect', upload.single('file'), reenterUserContext, (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
   try {
     const detection = detectBroker(req.file.buffer);
@@ -208,7 +209,7 @@ router.post('/detect', upload.single('file'), (req, res) => {
 // ── Import ────────────────────────────────────────────────────────────────────
 
 // POST /api/investments/preview
-router.post('/preview', upload.single('file'), (req, res) => {
+router.post('/preview', upload.single('file'), reenterUserContext, (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
     const db = getDb();
@@ -259,7 +260,7 @@ router.post('/preview', upload.single('file'), (req, res) => {
 });
 
 // POST /api/investments/commit
-router.post('/commit', upload.single('file'), (req, res) => {
+router.post('/commit', upload.single('file'), reenterUserContext, (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
     const db = getDb();

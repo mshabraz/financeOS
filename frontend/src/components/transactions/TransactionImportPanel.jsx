@@ -165,15 +165,21 @@ export default function TransactionImportPanel() {
           Import
         </h2>
         <p className="text-xs text-gray-500 dark:text-gray-400">
-          Drop any supported CSV — we detect LHV bank exports (semicolon) and Revolut exports (comma, Type / Product / Completed Date headers). Duplicates are skipped automatically.
+          Drop any supported CSV — we detect LHV and SEB bank exports (semicolon) and Revolut exports (comma). Duplicates are skipped automatically.
         </p>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
           <div className="rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2">
             <p className="font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
               <Building2 size={14} /> Bank (LHV)
             </p>
-            <p className="text-gray-500 mt-0.5">Semicolon-separated account export</p>
+            <p className="text-gray-500 mt-0.5">Semicolon account export</p>
+          </div>
+          <div className="rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2">
+            <p className="font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
+              <Building2 size={14} /> Bank (SEB)
+            </p>
+            <p className="text-gray-500 mt-0.5">Internet bank kontoväljavõte (semicolon)</p>
           </div>
           <div className="rounded-lg border border-purple-200/60 dark:border-purple-900/40 px-3 py-2 bg-purple-50/30 dark:bg-purple-950/10">
             <p className="font-medium text-purple-900 dark:text-purple-200 flex items-center gap-1.5">

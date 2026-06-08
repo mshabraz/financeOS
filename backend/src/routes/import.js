@@ -1,6 +1,7 @@
 const express = require('express');
 const multer  = require('multer');
 const { previewImport, commitImport } = require('../services/importer');
+const { reenterUserContext } = require('../middleware/userContext');
 const logger = require('../services/logger');
 
 const router = express.Router();
@@ -19,7 +20,7 @@ const upload = multer({
 });
 
 // POST /api/import/preview  — parse & check duplicates, no DB write
-router.post('/preview', upload.single('file'), (req, res) => {
+router.post('/preview', upload.single('file'), reenterUserContext, (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
 
@@ -35,7 +36,7 @@ router.post('/preview', upload.single('file'), (req, res) => {
 });
 
 // POST /api/import/commit  — actually write new transactions to DB
-router.post('/commit', upload.single('file'), (req, res) => {
+router.post('/commit', upload.single('file'), reenterUserContext, (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
 

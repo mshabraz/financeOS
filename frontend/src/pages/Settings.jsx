@@ -170,7 +170,7 @@ export default function Settings() {
           <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Supported import formats</h2>
         </div>
         <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1.5 list-disc list-inside">
-          <li>Bank transaction CSV (LHV) — Transactions → Import / Export</li>
+          <li>Bank transaction CSV (LHV, SEB) — Transactions → Import / Export</li>
           <li>Revolut account CSV — Transactions → Import / Export</li>
           <li>Investment exports (Lightyear, Swedbank funds) — Investments → Import CSV</li>
         </ul>

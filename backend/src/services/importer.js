@@ -3,7 +3,7 @@
  */
 
 const { getDb } = require('../db/database');
-const { parseCSV } = require('./csvParser');
+const { parseBankCSV } = require('./bankCsvParser');
 const { isRevolutCSV } = require('./revolutParser');
 const { categorizeTransaction } = require('./categorizer');
 const { loadFingerprintSet } = require('./importDedup');
@@ -24,7 +24,7 @@ function previewImport(buffer, filename) {
     throw err;
   }
 
-  const { transactions, errors, summary, openingBalance, closingBalance } = parseCSV(buffer);
+  const { transactions, errors, summary, openingBalance, closingBalance } = parseBankCSV(buffer);
   const db = getDb();
   const existing = loadFingerprintSet(db, 'transactions');
 
@@ -77,7 +77,7 @@ function commitImport(buffer, filename) {
     throw err;
   }
 
-  const { transactions, errors, summary, openingBalance, closingBalance } = parseCSV(buffer);
+  const { transactions, errors, summary, openingBalance, closingBalance } = parseBankCSV(buffer);
   const db = getDb();
 
   let importedCount  = 0;

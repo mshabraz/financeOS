@@ -23,6 +23,8 @@ function attachUserContext(req, res, next) {
     return res.status(401).json({ error: 'Authentication required', code: 'AUTH_REQUIRED' });
   }
 
+  req.financeosUserId = userId;
+
   try {
     openUserDatabase(userId);
   } catch (err) {
@@ -32,4 +34,30 @@ function attachUserContext(req, res, next) {
   return runWithUserId(userId, () => next());
 }
 
-module.exports = { attachUserContext };
+/**
+ * Re-enter user DB context after async middleware (e.g. multer file upload).
+ */
+function reenterUserContext(req, res, next) {
+  let userId = req.financeosUserId || req.session?.userId;
+
+  if (!userId && !config.AUTH_ENABLED) {
+    const dev = userRegistry.getOrCreateDevUser();
+    userId = dev.id;
+    req.session.userId = dev.id;
+    req.financeosUserId = dev.id;
+  }
+
+  if (!userId) {
+    return res.status(401).json({ error: 'Authentication required', code: 'AUTH_REQUIRED' });
+  }
+
+  try {
+    openUserDatabase(userId);
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+
+  return runWithUserId(userId, () => next());
+}
+
+module.exports = { attachUserContext, reenterUserContext };
