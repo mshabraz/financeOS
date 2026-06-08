@@ -24,6 +24,8 @@ function isRevolutFundingType(revolutType) {
   const t = normalizeType(revolutType);
   if (FUNDING_TYPES.has(t)) return true;
   if (t.includes('topup') || t.includes('top-up') || t.includes('top up')) return true;
+  // Portuguese Revolut export: "Carregamento"
+  if (t === 'carregamento' || t.includes('carregamento')) return true;
   return false;
 }
 
@@ -31,6 +33,7 @@ function isRevolutFundingDescription(description) {
   const d = (description || '').trim().toLowerCase();
   if (!d) return false;
   if (d.includes('top-up') || d.includes('topup')) return true;
+  if (d.startsWith('carregamento de ') || d.startsWith('carregamento ')) return true;
   // Inbound transfers that load the Revolut balance (not card spend)
   if (/^payment from /.test(d) && !d.includes('refund')) return true;
   return false;

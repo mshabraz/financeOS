@@ -1,8 +1,8 @@
 /**
- * Revolut account statement CSV (comma-separated, English locale).
+ * Revolut account statement CSV (comma-separated).
  *
- * Typical header:
- *   Type,Product,Started Date,Completed Date,Description,Amount,Fee,Currency,State,Balance
+ * English: Type,Product,Started Date,Completed Date,Description,Amount,Fee,Currency,State,Balance
+ * Portuguese (pt-PT): Tipo,Produto,Data de início,Data de Conclusão,Descrição,Montante,Comissão,Moeda,Estado,Saldo
  *
  * Completed Date is authoritative for booking date & dedup fingerprint.
  */
@@ -11,18 +11,24 @@ const crypto = require('crypto');
 const iconv = require('iconv-lite');
 const { computeRevolutAmountFields } = require('./revolutCalculations');
 
-const REQUIRED_HEADERS_NORMALIZED = [
-  'type',
-  'product',
-  'started date',
-  'completed date',
-  'description',
-  'amount',
-  'fee',
-  'currency',
-  'state',
-  'balance',
-];
+/** Canonical column keys → accepted header labels (any locale). */
+const HEADER_ALIASES = {
+  type: ['type', 'tipo'],
+  product: ['product', 'produto'],
+  'started date': ['started date', 'data de inicio', 'data de início'],
+  'completed date': ['completed date', 'data de conclusao', 'data de conclusão'],
+  description: ['description', 'descricao', 'descrição'],
+  amount: ['amount', 'montante'],
+  fee: ['fee', 'comissao', 'comissão'],
+  currency: ['currency', 'moeda'],
+  state: ['state', 'estado'],
+  balance: ['balance', 'saldo'],
+};
+
+const CANONICAL_HEADERS = Object.keys(HEADER_ALIASES);
+
+/** Row states treated as settled (import); accents ignored. */
+const COMPLETED_STATE_ALIASES = new Set(['COMPLETED', 'CONCLUIDA']);
 
 function decodeBuffer(buffer) {
   try {
@@ -66,31 +72,49 @@ function peekFirstCsvLine(buffer) {
   return lines.map((l) => l.trim()).find((l) => l.length) || '';
 }
 
+function normalizeHeaderToken(raw) {
+  return String(raw || '')
+    .trim()
+    .replace(/^"|"$/g, '')
+    .replace(/\uFEFF/g, '')
+    .normalize('NFD')
+    .replace(/\p{M}/gu, '')
+    .toLowerCase();
+}
+
+function buildHeaderMap(headers) {
+  const normalized = headers.map((h) => normalizeHeaderToken(h));
+  const map = {};
+
+  for (const canonical of CANONICAL_HEADERS) {
+    const aliases = HEADER_ALIASES[canonical].map((a) => normalizeHeaderToken(a));
+    const idx = normalized.findIndex((h) => aliases.includes(h));
+    if (idx >= 0) map[canonical] = idx;
+  }
+
+  return map;
+}
+
+function headerMapIsComplete(headerMap) {
+  return CANONICAL_HEADERS.every((h) => headerMap[h] !== undefined);
+}
+
 /**
- * True if CSV header matches Revolut English statement export.
+ * True if CSV header matches a Revolut statement export (English or Portuguese).
  */
 function isRevolutCSV(buffer) {
   const line = peekFirstCsvLine(buffer);
   if (!line || line.includes(';')) return false;
 
-  const fields = parseCsvLineComma(line).map((h) => h.trim().replace(/^"|"$/g, '').toLowerCase());
-  if (fields.length < REQUIRED_HEADERS_NORMALIZED.length) return false;
+  const fields = parseCsvLineComma(line).map((h) => h.trim().replace(/^"|"$/g, ''));
+  if (fields.length < CANONICAL_HEADERS.length) return false;
 
-  const set = new Set(fields.map((p) => p.replace(/\uFEFF/g, '')));
-  return REQUIRED_HEADERS_NORMALIZED.every((h) => set.has(h));
+  return headerMapIsComplete(buildHeaderMap(fields));
 }
 
-function normalizeHeader(headers) {
-  const map = {};
-  headers.forEach((raw, idx) => {
-    const key = raw
-      .trim()
-      .replace(/^"|"$/g, '')
-      .replace(/\uFEFF/g, '')
-      .toLowerCase();
-    map[key] = idx;
-  });
-  return map;
+function isCompletedRevolutState(rawState) {
+  const key = normalizeHeaderToken(rawState).toUpperCase();
+  return COMPLETED_STATE_ALIASES.has(key);
 }
 
 function parseRevolutDatetime(raw) {
@@ -161,8 +185,8 @@ function parseRevolutCSV(buffer) {
     const cells = parseCsvLineComma(rawLine.replace(/\t/g, ','));
 
     if (headerMap === null) {
-      headerMap = normalizeHeader(cells.map((c) => c.replace(/^"|"$/g, '')));
-      const missing = REQUIRED_HEADERS_NORMALIZED.filter((h) => headerMap[h] === undefined);
+      headerMap = buildHeaderMap(cells.map((c) => c.replace(/^"|"$/g, '')));
+      const missing = CANONICAL_HEADERS.filter((h) => headerMap[h] === undefined);
       if (missing.length) {
         throw new Error(`Not a Revolut statement CSV — missing columns: ${missing.join(', ')}`);
       }
@@ -177,11 +201,16 @@ function parseRevolutCSV(buffer) {
       return ix !== undefined ? (cells[ix] ?? '').trim().replace(/^"|"$/g, '') : '';
     };
 
-    const state = get('state').toUpperCase();
-    if (state !== 'COMPLETED') {
-      skipped.push({ row: idx, reason: state ? `skipped state: ${state}` : 'missing state', raw: cells });
+    const stateRaw = get('state');
+    if (!isCompletedRevolutState(stateRaw)) {
+      skipped.push({
+        row: idx,
+        reason: stateRaw ? `skipped state: ${stateRaw}` : 'missing state',
+        raw: cells,
+      });
       continue;
     }
+    const state = normalizeHeaderToken(stateRaw).toUpperCase();
 
     const revolutType = get('type');
     const product = get('product');

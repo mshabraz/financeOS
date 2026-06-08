@@ -13,15 +13,26 @@ import { usePrivacy } from '../../context/PrivacyContext';
 
 const fmt = fmtEur;
 
-/** Heuristic: Revolut English export uses comma-separated headers without semicolons. */
+function normalizeHeaderToken(raw) {
+  return raw
+    .trim()
+    .replace(/^"|"$/g, '')
+    .normalize('NFD')
+    .replace(/\p{M}/gu, '')
+    .toLowerCase();
+}
+
+/** Heuristic: Revolut export uses comma-separated headers (English or Portuguese). */
 async function detectImportKind(file) {
   const head = await file.slice(0, 4096).text();
-  const line = head.split(/\r?\n/)[0]?.toLowerCase() ?? '';
+  const line = head.split(/\r?\n/)[0] ?? '';
   if (line.includes(';')) return 'bank';
-  const fields = line.split(',').map((h) => h.trim().replace(/^"|"$/g, ''));
-  const set = new Set(fields);
-  const revolutHeaders = ['type', 'product', 'started date', 'completed date', 'description', 'amount'];
-  if (revolutHeaders.every((h) => set.has(h))) return 'revolut';
+  const set = new Set(line.split(',').map((h) => normalizeHeaderToken(h)));
+  const revolutEnglish = ['type', 'product', 'started date', 'completed date', 'description', 'amount'];
+  const revolutPortuguese = ['tipo', 'produto', 'data de inicio', 'data de conclusao', 'descricao', 'montante'];
+  if (revolutEnglish.every((h) => set.has(h)) || revolutPortuguese.every((h) => set.has(h))) {
+    return 'revolut';
+  }
   return 'bank';
 }
 
@@ -185,7 +196,7 @@ export default function TransactionImportPanel() {
             <p className="font-medium text-purple-900 dark:text-purple-200 flex items-center gap-1.5">
               <Wallet size={14} /> Revolut
             </p>
-            <p className="text-purple-800/80 dark:text-purple-300/70 mt-0.5">English statement CSV · expenses count at 50% in analytics</p>
+            <p className="text-purple-800/80 dark:text-purple-300/70 mt-0.5">English or Portuguese statement CSV · expenses count at 50% in analytics</p>
           </div>
         </div>
 
