@@ -1096,7 +1096,36 @@ const MIGRATION_V31 = {
   },
 };
 
-const ALL_MIGRATIONS = [...migrations.filter(m => m.version === 1), MIGRATION_V2, MIGRATION_V3, MIGRATION_V4, MIGRATION_V5, MIGRATION_V6, MIGRATION_V7, MIGRATION_V8, MIGRATION_V9, MIGRATION_V10, MIGRATION_V11, MIGRATION_V12, MIGRATION_V13, MIGRATION_V14, MIGRATION_V15, MIGRATION_V16, MIGRATION_V17, MIGRATION_V18, MIGRATION_V19, MIGRATION_V20, MIGRATION_V21, MIGRATION_V22, MIGRATION_V23, MIGRATION_V24, MIGRATION_V25, MIGRATION_V26, MIGRATION_V27, MIGRATION_V28, MIGRATION_V29, MIGRATION_V30, MIGRATION_V31];
+// ── Migration v32: Permanent manual category locks + Revolut transfer_ref ───────
+const MIGRATION_V32 = {
+  version: 32,
+  up: (db) => {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS manual_category_locks (
+        key          TEXT PRIMARY KEY,
+        category_id  INTEGER NOT NULL REFERENCES categories(id),
+        created_at   TEXT DEFAULT (datetime('now')),
+        updated_at   TEXT DEFAULT (datetime('now'))
+      );
+      CREATE INDEX IF NOT EXISTS idx_manual_cat_locks_cat ON manual_category_locks(category_id);
+    `);
+
+    const revCols = db.prepare('PRAGMA table_info(revolut_transactions)').all().map((r) => r.name);
+    if (!revCols.includes('transfer_ref')) {
+      db.exec('ALTER TABLE revolut_transactions ADD COLUMN transfer_ref TEXT');
+      db.exec('CREATE INDEX IF NOT EXISTS idx_revolut_transfer_ref ON revolut_transactions(transfer_ref)');
+    }
+
+    const {
+      backfillManualLocksFromRows,
+      reapplyManualCategoryLocks,
+    } = require('../services/manualCategoryLocks');
+    backfillManualLocksFromRows(db);
+    reapplyManualCategoryLocks(db);
+  },
+};
+
+const ALL_MIGRATIONS = [...migrations.filter(m => m.version === 1), MIGRATION_V2, MIGRATION_V3, MIGRATION_V4, MIGRATION_V5, MIGRATION_V6, MIGRATION_V7, MIGRATION_V8, MIGRATION_V9, MIGRATION_V10, MIGRATION_V11, MIGRATION_V12, MIGRATION_V13, MIGRATION_V14, MIGRATION_V15, MIGRATION_V16, MIGRATION_V17, MIGRATION_V18, MIGRATION_V19, MIGRATION_V20, MIGRATION_V21, MIGRATION_V22, MIGRATION_V23, MIGRATION_V24, MIGRATION_V25, MIGRATION_V26, MIGRATION_V27, MIGRATION_V28, MIGRATION_V29, MIGRATION_V30, MIGRATION_V31, MIGRATION_V32];
 
 function runMigrations(db) {
   db.exec(`CREATE TABLE IF NOT EXISTS schema_migrations (

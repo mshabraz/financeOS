@@ -75,5 +75,19 @@ assert(obCard.import_source === 'open_banking', 'OB Revolut import source tag');
 const { applyRuleToExisting } = require(path.join(ROOT, 'backend/src/services/categorizer.js'));
 assert(typeof applyRuleToExisting === 'function', 'applyRuleToExisting exported');
 
+const {
+  recordManualCategoryLocks,
+  resolveImportCategory,
+  keysForImport,
+} = require(path.join(ROOT, 'backend/src/services/manualCategoryLocks.js'));
+assert(typeof recordManualCategoryLocks === 'function', 'manual category locks exported');
+
+// In-memory lock resolution (no DB): keysForImport shape
+const lockKeys = keysForImport('revolut', {
+  fingerprint: 'abc',
+  transferRef: 'uuid-1',
+});
+assert(lockKeys.length === 2, 'import keys include fingerprint and transfer ref');
+
 console.log(`\nAudit tests: ${failed} failed`);
 process.exit(failed ? 1 : 0);

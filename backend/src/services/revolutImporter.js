@@ -5,6 +5,7 @@
 const { getDb } = require('../db/database');
 const { parseRevolutCSV } = require('./revolutParser');
 const { categorizeTransaction } = require('./categorizer');
+const { resolveImportCategory } = require('./manualCategoryLocks');
 const { loadFingerprintSet } = require('./importDedup');
 const logger = require('./logger');
 
@@ -84,14 +85,14 @@ function importRevolutRows(db, transactions, sessionMeta) {
       started_datetime, completed_datetime, date, description,
       amount, effective_amount, split_ratio, exclude_from_analytics, applies_shared_split,
       fee, currency, state, balance_after, raw_balance,
-      category_id, category_source,
+      category_id, category_source, transfer_ref,
       import_source, import_session_id
     ) VALUES (
       @fingerprint, @revolut_type, @product,
       @started_datetime, @completed_datetime, @date, @description,
       @amount, @effective_amount, @split_ratio, @exclude_from_analytics, @applies_shared_split,
       @fee, @currency, @state, @balance_after, @raw_balance,
-      @category_id, @category_source,
+      @category_id, @category_source, @transfer_ref,
       @import_source, @import_session_id
     )
   `);
@@ -112,22 +113,7 @@ function importRevolutRows(db, transactions, sessionMeta) {
         duplicateCount++;
         continue;
       }
-      const desc = tx.description || '';
-      const preserved = tx._preservedCategory;
-      let categoryId;
-      let categorySource;
-      if (preserved?.categoryId) {
-        categoryId = preserved.categoryId;
-        categorySource = preserved.categorySource || 'rule';
-      } else {
-        const catResult = categorizeTransaction({
-          merchant: desc,
-          beneficiary: desc,
-          details: desc,
-        });
-        categoryId = catResult.categoryId;
-        categorySource = catResult.source;
-      }
+      const catResult = resolveImportCategory(db, 'revolut', tx);
       const r = insertTx.run({
         fingerprint: tx.fingerprint,
         revolut_type: tx.revolut_type,
@@ -146,8 +132,9 @@ function importRevolutRows(db, transactions, sessionMeta) {
         state: tx.state,
         balance_after: tx.balance_after,
         raw_balance: tx.raw_balance,
-        category_id: categoryId,
-        category_source: categorySource,
+        category_id: catResult.categoryId,
+        category_source: catResult.source,
+        transfer_ref: tx.transfer_ref || null,
         import_source: tx.import_source,
         import_session_id: sessionId,
       });

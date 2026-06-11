@@ -5,7 +5,7 @@
 const { getDb } = require('../db/database');
 const { parseBankCSV } = require('./bankCsvParser');
 const { isRevolutCSV } = require('./revolutParser');
-const { categorizeTransaction } = require('./categorizer');
+const { resolveImportCategory } = require('./manualCategoryLocks');
 const { loadFingerprintSet } = require('./importDedup');
 const logger = require('./logger');
 
@@ -98,7 +98,7 @@ function commitImport(buffer, filename) {
   const doImport = db.transaction(() => {
     for (const tx of transactions) {
       try {
-        const catResult = categorizeTransaction(tx);
+        const catResult = resolveImportCategory(db, 'bank', tx);
 
         const result = insertTx.run({
           ...tx,

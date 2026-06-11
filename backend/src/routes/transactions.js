@@ -2,6 +2,10 @@ const express = require('express');
 const { getDb } = require('../db/database');
 const logger = require('../services/logger');
 const { listUnifiedTransactions, UNIFIED_LEDGER_SQL } = require('../services/unifiedLedger');
+const {
+  recordManualCategoryForBankRow,
+  recordManualCategoryForRevolutRow,
+} = require('../services/manualCategoryLocks');
 
 const router = express.Router();
 
@@ -106,8 +110,16 @@ router.patch('/bulk', (req, res) => {
       `UPDATE revolut_transactions SET category_id = ?, category_source = 'manual' WHERE id = ?`
     );
     const doUpdate = db.transaction(() => {
-      for (const id of bankIds) updateBank.run(cat, id);
-      for (const id of revolutIds) updateRev.run(cat, id);
+      for (const id of bankIds) {
+        updateBank.run(cat, id);
+        const row = db.prepare('SELECT fingerprint, transfer_ref FROM transactions WHERE id = ?').get(id);
+        if (row) recordManualCategoryForBankRow(db, row, cat);
+      }
+      for (const id of revolutIds) {
+        updateRev.run(cat, id);
+        const row = db.prepare('SELECT fingerprint, transfer_ref FROM revolut_transactions WHERE id = ?').get(id);
+        if (row) recordManualCategoryForRevolutRow(db, row, cat);
+      }
     });
     doUpdate();
     res.json({ ok: true, updated: bankIds.length + revolutIds.length });
@@ -263,6 +275,13 @@ router.patch('/:id', (req, res) => {
       vals.push(parsed.revolutId);
       db.prepare(`UPDATE revolut_transactions SET ${updates.join(', ')} WHERE id = ?`).run(...vals);
 
+      if (categoryId !== undefined) {
+        const row = db.prepare(
+          'SELECT fingerprint, transfer_ref FROM revolut_transactions WHERE id = ?',
+        ).get(parsed.revolutId);
+        if (row) recordManualCategoryForRevolutRow(db, row, parseInt(categoryId, 10));
+      }
+
       if (recompute) {
         const { fieldsFromRow, getRevolutExpenseSplitRatio } = require('../services/revolutCalculations');
         const row = db.prepare('SELECT * FROM revolut_transactions WHERE id = ?').get(parsed.revolutId);
@@ -309,6 +328,13 @@ router.patch('/:id', (req, res) => {
     updates.push("updated_at = datetime('now')");
     vals.push(parsed.bankId);
     db.prepare(`UPDATE transactions SET ${updates.join(', ')} WHERE id = ?`).run(...vals);
+
+    if (categoryId !== undefined) {
+      const row = db.prepare(
+        'SELECT fingerprint, transfer_ref FROM transactions WHERE id = ?',
+      ).get(parsed.bankId);
+      if (row) recordManualCategoryForBankRow(db, row, parseInt(categoryId, 10));
+    }
 
     const updated = db.prepare(
       `SELECT t.*, c.name as category_name, c.icon as category_icon, c.color as category_color
@@ -393,8 +419,16 @@ router.post('/bulk-categorize/apply', (req, res) => {
       `UPDATE revolut_transactions SET category_id = ?, category_source = 'manual' WHERE id = ?`
     );
     const doUpdate = db.transaction(() => {
-      for (const id of bankIds) updateBank.run(cat, id);
-      for (const id of revolutIds) updateRev.run(cat, id);
+      for (const id of bankIds) {
+        updateBank.run(cat, id);
+        const row = db.prepare('SELECT fingerprint, transfer_ref FROM transactions WHERE id = ?').get(id);
+        if (row) recordManualCategoryForBankRow(db, row, cat);
+      }
+      for (const id of revolutIds) {
+        updateRev.run(cat, id);
+        const row = db.prepare('SELECT fingerprint, transfer_ref FROM revolut_transactions WHERE id = ?').get(id);
+        if (row) recordManualCategoryForRevolutRow(db, row, cat);
+      }
     });
     doUpdate();
 

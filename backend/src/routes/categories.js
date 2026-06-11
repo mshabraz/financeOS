@@ -115,9 +115,12 @@ router.post('/rules', (req, res) => {
 // POST /api/categories/rules/apply-all
 router.post('/rules/apply-all', (req, res) => {
   try {
+    const db = getDb();
     const { overrideManual = false } = req.body || {};
+    const { reapplyManualCategoryLocks } = require('../services/manualCategoryLocks');
     const result = applyAllRulesToExisting({ overrideManual });
-    res.json(result);
+    const manualRestored = reapplyManualCategoryLocks(db);
+    res.json({ ...result, manualRestored });
   } catch (err) {
     logger.error('[POST /categories/rules/apply-all]', err);
     res.status(500).json({ error: err.message });

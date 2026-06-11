@@ -3,7 +3,7 @@
  */
 
 const { getDb } = require('../../db/database');
-const { categorizeTransaction } = require('../categorizer');
+const { resolveImportCategory } = require('../manualCategoryLocks');
 const { loadFingerprintSet } = require('../importDedup');
 const logger = require('../logger');
 const { encrypt, decrypt } = require('./sessionCrypto');
@@ -17,7 +17,8 @@ const {
 const { normalizeTransactions } = require('./transactionNormalizer');
 const { normalizeObToRevolutBatch } = require('./revolutObNormalizer');
 const { importRevolutRows } = require('../revolutImporter');
-const { applyAllRulesToExisting, getDefaultCategory } = require('../categorizer');
+const { applyAllRulesToExisting } = require('../categorizer');
+const { reapplyManualCategoryLocks } = require('../manualCategoryLocks');
 const { REDIRECT_URL } = require('./openBankingConfig');
 
 function isRevolutConnection(connection) {
@@ -122,7 +123,7 @@ function importTransactions(db, transactions, label) {
           duplicateCount++;
           continue;
         }
-        const catResult = categorizeTransaction(tx);
+        const catResult = resolveImportCategory(db, 'bank', tx);
         const result = insertTx.run({
           ...tx,
           categoryId: catResult.categoryId,
@@ -162,44 +163,21 @@ function importTransactions(db, transactions, label) {
   return { sessionId, importedCount, duplicateCount, errorCount };
 }
 
-function captureAndRemoveLegacyBankRows(db, transferRefs) {
+function removeLegacyBankRowsByTransferRef(db, transferRefs) {
   const refs = [...new Set((transferRefs || []).filter(Boolean))];
-  if (!refs.length) return { removed: 0, categoriesByRef: {} };
+  if (!refs.length) return 0;
   const placeholders = refs.map(() => '?').join(',');
-  const rows = db.prepare(
-    `SELECT transfer_ref, category_id, category_source
-     FROM transactions WHERE transfer_ref IN (${placeholders})`,
-  ).all(...refs);
-  const def = getDefaultCategory();
-  const categoriesByRef = {};
-  for (const row of rows) {
-    if (!row.transfer_ref || !row.category_id) continue;
-    if (def?.id && row.category_id === def.id) continue;
-    categoriesByRef[row.transfer_ref] = {
-      categoryId: row.category_id,
-      categorySource: row.category_source || 'rule',
-    };
-  }
-  const result = db.prepare(
+  return db.prepare(
     `DELETE FROM transactions WHERE transfer_ref IN (${placeholders})`,
-  ).run(...refs);
-  return { removed: result.changes, categoriesByRef };
+  ).run(...refs).changes;
 }
 
 function importRevolutObTransactions(db, transactions, label, product) {
   const transferRefs = transactions.map((t) => t.transfer_ref).filter(Boolean);
-  const { removed: removedBankRows, categoriesByRef } = captureAndRemoveLegacyBankRows(db, transferRefs);
-
-  const withPreserved = transactions.map((tx) => {
-    if (!tx.transfer_ref || !categoriesByRef[tx.transfer_ref]) return tx;
-    return {
-      ...tx,
-      _preservedCategory: categoriesByRef[tx.transfer_ref],
-    };
-  });
+  const removedBankRows = removeLegacyBankRowsByTransferRef(db, transferRefs);
 
   const dates = transactions.map((t) => t.date).filter(Boolean).sort();
-  const { sessionId, importedCount, duplicateCount } = importRevolutRows(db, withPreserved, {
+  const { sessionId, importedCount, duplicateCount } = importRevolutRows(db, transactions, {
     filename: label,
     importSource: 'open_banking',
     product,
@@ -209,6 +187,7 @@ function importRevolutObTransactions(db, transactions, label, product) {
   });
 
   const rulesApplied = applyAllRulesToExisting();
+  const manualRestored = reapplyManualCategoryLocks(db);
 
   return {
     sessionId,
@@ -217,6 +196,7 @@ function importRevolutObTransactions(db, transactions, label, product) {
     errorCount: 0,
     removedBankRows,
     rulesRecategorized: rulesApplied.updated,
+    manualCategoriesRestored: manualRestored.bankUpdated + manualRestored.revolutUpdated,
     ledger: 'revolut',
   };
 }

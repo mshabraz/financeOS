@@ -6,6 +6,11 @@
  */
 
 const { getDb } = require('../db/database');
+const {
+  keysFromBankRow,
+  keysFromRevolutRow,
+  hasManualCategoryLock,
+} = require('./manualCategoryLocks');
 
 let _rulesCache = null;
 let _cacheTs = 0;
@@ -148,7 +153,7 @@ function applyRuleToExisting(ruleId, { overrideManual = false } = {}) {
   }
 
   const bankCandidates = db.prepare(
-    `SELECT id, merchant, beneficiary, details, category_id, category_source
+    `SELECT id, fingerprint, transfer_ref, merchant, beneficiary, details, category_id, category_source
        FROM transactions
       WHERE ${rule.match_field} IS NOT NULL AND ${rule.match_field} != ''`
   ).all();
@@ -175,13 +180,14 @@ function applyRuleToExisting(ruleId, { overrideManual = false } = {}) {
       if (!ruleMatchesField(raw, rule)) continue;
       matched += 1;
       if (tx.category_id === rule.category_id) continue;
+      if (hasManualCategoryLock(db, keysFromBankRow(tx))) continue;
       if (tx.category_source === 'manual' && !overrideManual) continue;
       updateBank.run(rule.category_id, tx.id);
       bankUpdated += 1;
     }
 
     const revCandidates = db.prepare(
-      `SELECT id, description, category_id, category_source
+      `SELECT id, fingerprint, transfer_ref, description, category_id, category_source
          FROM revolut_transactions
         WHERE description IS NOT NULL AND TRIM(description) != ''`
     ).all();
@@ -191,6 +197,7 @@ function applyRuleToExisting(ruleId, { overrideManual = false } = {}) {
       if (!raw || !ruleMatchesField(raw, rule)) continue;
       matched += 1;
       if (tx.category_id === rule.category_id) continue;
+      if (hasManualCategoryLock(db, keysFromRevolutRow(tx))) continue;
       if (tx.category_source === 'manual' && !overrideManual) continue;
       updateRevolut.run(rule.category_id, tx.id);
       revolutUpdated += 1;
