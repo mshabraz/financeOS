@@ -1,6 +1,6 @@
 const express = require('express');
 const { getDb } = require('../db/database');
-const { invalidateCache, applyRuleToExisting } = require('../services/categorizer');
+const { invalidateCache, applyRuleToExisting, applyAllRulesToExisting } = require('../services/categorizer');
 const logger = require('../services/logger');
 
 const router = express.Router();
@@ -108,6 +108,18 @@ router.post('/rules', (req, res) => {
     res.json({ rule, applied });
   } catch (err) {
     logger.error('[POST /categories/rules]', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/categories/rules/apply-all
+router.post('/rules/apply-all', (req, res) => {
+  try {
+    const { overrideManual = false } = req.body || {};
+    const result = applyAllRulesToExisting({ overrideManual });
+    res.json(result);
+  } catch (err) {
+    logger.error('[POST /categories/rules/apply-all]', err);
     res.status(500).json({ error: err.message });
   }
 });

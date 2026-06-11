@@ -112,11 +112,22 @@ function importRevolutRows(db, transactions, sessionMeta) {
         duplicateCount++;
         continue;
       }
-      const catResult = categorizeTransaction({
-        merchant: tx.description,
-        beneficiary: '',
-        details: tx.description,
-      });
+      const desc = tx.description || '';
+      const preserved = tx._preservedCategory;
+      let categoryId;
+      let categorySource;
+      if (preserved?.categoryId) {
+        categoryId = preserved.categoryId;
+        categorySource = preserved.categorySource || 'rule';
+      } else {
+        const catResult = categorizeTransaction({
+          merchant: desc,
+          beneficiary: desc,
+          details: desc,
+        });
+        categoryId = catResult.categoryId;
+        categorySource = catResult.source;
+      }
       const r = insertTx.run({
         fingerprint: tx.fingerprint,
         revolut_type: tx.revolut_type,
@@ -135,8 +146,8 @@ function importRevolutRows(db, transactions, sessionMeta) {
         state: tx.state,
         balance_after: tx.balance_after,
         raw_balance: tx.raw_balance,
-        category_id: catResult.categoryId,
-        category_source: catResult.source,
+        category_id: categoryId,
+        category_source: categorySource,
         import_source: tx.import_source,
         import_session_id: sessionId,
       });

@@ -122,8 +122,10 @@ function ruleMatchesField(rawValue, rule) {
 }
 
 function revolutRuleFieldValue(row, matchField) {
-  if (matchField === 'merchant' || matchField === 'details') return row.description || '';
-  if (matchField === 'beneficiary') return '';
+  // Revolut rows only store description — use it for all bank-style match fields.
+  if (matchField === 'merchant' || matchField === 'details' || matchField === 'beneficiary') {
+    return row.description || '';
+  }
   return '';
 }
 
@@ -178,22 +180,20 @@ function applyRuleToExisting(ruleId, { overrideManual = false } = {}) {
       bankUpdated += 1;
     }
 
-    if (rule.match_field !== 'beneficiary') {
-      const revCandidates = db.prepare(
-        `SELECT id, description, category_id, category_source
-           FROM revolut_transactions
-          WHERE description IS NOT NULL AND TRIM(description) != ''`
-      ).all();
+    const revCandidates = db.prepare(
+      `SELECT id, description, category_id, category_source
+         FROM revolut_transactions
+        WHERE description IS NOT NULL AND TRIM(description) != ''`
+    ).all();
 
-      for (const tx of revCandidates) {
-        const raw = revolutRuleFieldValue(tx, rule.match_field);
-        if (!raw || !ruleMatchesField(raw, rule)) continue;
-        matched += 1;
-        if (tx.category_id === rule.category_id) continue;
-        if (tx.category_source === 'manual' && !overrideManual) continue;
-        updateRevolut.run(rule.category_id, tx.id);
-        revolutUpdated += 1;
-      }
+    for (const tx of revCandidates) {
+      const raw = revolutRuleFieldValue(tx, rule.match_field);
+      if (!raw || !ruleMatchesField(raw, rule)) continue;
+      matched += 1;
+      if (tx.category_id === rule.category_id) continue;
+      if (tx.category_source === 'manual' && !overrideManual) continue;
+      updateRevolut.run(rule.category_id, tx.id);
+      revolutUpdated += 1;
     }
 
     if (matched > 0) {
@@ -212,4 +212,29 @@ function applyRuleToExisting(ruleId, { overrideManual = false } = {}) {
   return { matched, updated, bankUpdated, revolutUpdated };
 }
 
-module.exports = { categorizeTransaction, applyRuleToExisting, recordRuleHit, invalidateCache };
+/** Re-run every category rule against bank + Revolut transactions. */
+function applyAllRulesToExisting({ overrideManual = false } = {}) {
+  const db = getDb();
+  const ruleIds = db.prepare('SELECT id FROM category_rules ORDER BY priority DESC, hit_count DESC').all();
+  let matched = 0;
+  let updated = 0;
+  let bankUpdated = 0;
+  let revolutUpdated = 0;
+  for (const { id } of ruleIds) {
+    const r = applyRuleToExisting(id, { overrideManual });
+    matched += r.matched || 0;
+    updated += r.updated || 0;
+    bankUpdated += r.bankUpdated || 0;
+    revolutUpdated += r.revolutUpdated || 0;
+  }
+  return { rules: ruleIds.length, matched, updated, bankUpdated, revolutUpdated };
+}
+
+module.exports = {
+  categorizeTransaction,
+  applyRuleToExisting,
+  applyAllRulesToExisting,
+  recordRuleHit,
+  invalidateCache,
+  getDefaultCategory,
+};
