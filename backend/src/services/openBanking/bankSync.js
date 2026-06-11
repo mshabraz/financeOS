@@ -15,7 +15,13 @@ const {
   reqMetaFromExpress,
 } = require('./enableBankingClient');
 const { normalizeTransactions } = require('./transactionNormalizer');
+const { normalizeObToRevolutBatch } = require('./revolutObNormalizer');
+const { importRevolutRows } = require('../revolutImporter');
 const { REDIRECT_URL } = require('./openBankingConfig');
+
+function isRevolutConnection(connection) {
+  return /revolut/i.test(connection?.aspsp_name || '');
+}
 
 function listConnections(db) {
   return db
@@ -155,6 +161,40 @@ function importTransactions(db, transactions, label) {
   return { sessionId, importedCount, duplicateCount, errorCount };
 }
 
+function removeLegacyBankRowsByTransferRef(db, transferRefs) {
+  const refs = [...new Set((transferRefs || []).filter(Boolean))];
+  if (!refs.length) return 0;
+  const placeholders = refs.map(() => '?').join(',');
+  const result = db.prepare(
+    `DELETE FROM transactions WHERE transfer_ref IN (${placeholders})`,
+  ).run(...refs);
+  return result.changes;
+}
+
+function importRevolutObTransactions(db, transactions, label, product) {
+  const transferRefs = transactions.map((t) => t.transfer_ref).filter(Boolean);
+  const removedBankRows = removeLegacyBankRowsByTransferRef(db, transferRefs);
+
+  const dates = transactions.map((t) => t.date).filter(Boolean).sort();
+  const { sessionId, importedCount, duplicateCount } = importRevolutRows(db, transactions, {
+    filename: label,
+    importSource: 'open_banking',
+    product,
+    dateFrom: dates[0] || null,
+    dateTo: dates[dates.length - 1] || null,
+    skippedCount: 0,
+  });
+
+  return {
+    sessionId,
+    importedCount,
+    duplicateCount,
+    errorCount: 0,
+    removedBankRows,
+    ledger: 'revolut',
+  };
+}
+
 async function syncConnection(db, connection, reqMeta) {
   const sessionId = decrypt(connection.session_id);
   if (!sessionId) {
@@ -178,9 +218,28 @@ async function syncConnection(db, connection, reqMeta) {
     reqMeta,
   );
 
-  const { transactions, errors } = normalizeTransactions(rawTxs, connection.account_iban);
   const label = `open-banking:${connection.aspsp_name}:${connection.account_iban || connection.account_uid}`;
-  const result = importTransactions(db, transactions, label);
+  let result;
+
+  if (isRevolutConnection(connection)) {
+    const { transactions, errors } = normalizeObToRevolutBatch(
+      rawTxs,
+      connection.account_iban,
+      db,
+    );
+    result = importRevolutObTransactions(
+      db,
+      transactions,
+      label,
+      connection.account_iban || connection.account_uid,
+    );
+    result.parseErrors = errors.length;
+  } else {
+    const { transactions, errors } = normalizeTransactions(rawTxs, connection.account_iban);
+    result = importTransactions(db, transactions, label);
+    result.parseErrors = errors.length;
+    result.ledger = 'bank';
+  }
 
   db.prepare(
     `UPDATE bank_connections SET last_sync_at = datetime('now') WHERE id = ?`,
@@ -190,7 +249,6 @@ async function syncConnection(db, connection, reqMeta) {
     connectionId: connection.id,
     accountIban: connection.account_iban,
     fetched: rawTxs.length,
-    parseErrors: errors.length,
     ...result,
   };
 }

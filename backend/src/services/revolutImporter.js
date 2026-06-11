@@ -55,17 +55,27 @@ function previewRevolutImport(buffer, filename) {
   };
 }
 
-function commitRevolutImport(buffer, filename) {
-  const { transactions, skipped, summary } = parseRevolutCSV(buffer);
-  const db = getDb();
+/**
+ * Import parsed Revolut rows (CSV or open banking) into revolut_transactions.
+ */
+function importRevolutRows(db, transactions, sessionMeta) {
+  const {
+    filename,
+    importSource = 'revolut_csv',
+    product = null,
+    dateFrom = null,
+    dateTo = null,
+    skippedCount = 0,
+  } = sessionMeta;
 
   let importedCount = 0;
   let duplicateCount = 0;
+  const existing = loadFingerprintSet(db, 'revolut_transactions');
 
   const insertSession = db.prepare(`
     INSERT INTO revolut_import_sessions
       (filename, import_source, imported_count, duplicate_count, skipped_count, product, date_from, date_to)
-    VALUES (@filename, 'revolut_csv', @imported_count, @duplicate_count, @skipped_count, @product, @date_from, @date_to)
+    VALUES (@filename, @import_source, 0, 0, @skipped_count, @product, @date_from, @date_to)
   `);
 
   const insertTx = db.prepare(`
@@ -90,15 +100,18 @@ function commitRevolutImport(buffer, filename) {
   db.transaction(() => {
     sessionId = insertSession.run({
       filename,
-      imported_count: 0,
-      duplicate_count: 0,
-      skipped_count: skipped.length,
-      product: summary.account ?? null,
-      date_from: summary.dateFrom ?? null,
-      date_to: summary.dateTo ?? null,
+      import_source: importSource,
+      skipped_count: skippedCount,
+      product,
+      date_from: dateFrom,
+      date_to: dateTo,
     }).lastInsertRowid;
 
     for (const tx of transactions) {
+      if (existing.has(tx.fingerprint)) {
+        duplicateCount++;
+        continue;
+      }
       const catResult = categorizeTransaction({
         merchant: tx.description,
         beneficiary: '',
@@ -127,8 +140,12 @@ function commitRevolutImport(buffer, filename) {
         import_source: tx.import_source,
         import_session_id: sessionId,
       });
-      if (r.changes > 0) importedCount++;
-      else duplicateCount++;
+      if (r.changes > 0) {
+        importedCount++;
+        existing.add(tx.fingerprint);
+      } else {
+        duplicateCount++;
+      }
     }
 
     db.prepare(
@@ -137,6 +154,22 @@ function commitRevolutImport(buffer, filename) {
        WHERE id = ?`
     ).run(importedCount, duplicateCount, sessionId);
   })();
+
+  return { sessionId, importedCount, duplicateCount };
+}
+
+function commitRevolutImport(buffer, filename) {
+  const { transactions, skipped, summary } = parseRevolutCSV(buffer);
+  const db = getDb();
+
+  const { sessionId, importedCount, duplicateCount } = importRevolutRows(db, transactions, {
+    filename,
+    importSource: 'revolut_csv',
+    product: summary.account ?? null,
+    dateFrom: summary.dateFrom ?? null,
+    dateTo: summary.dateTo ?? null,
+    skippedCount: skipped.length,
+  });
 
   logger.info(`[RevolutImport] ${filename}: +${importedCount} new, ${duplicateCount} dupes, skipped ${skipped.length}`);
 
@@ -155,4 +188,4 @@ function commitRevolutImport(buffer, filename) {
   };
 }
 
-module.exports = { previewRevolutImport, commitRevolutImport };
+module.exports = { previewRevolutImport, commitRevolutImport, importRevolutRows };

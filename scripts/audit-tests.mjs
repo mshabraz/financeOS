@@ -52,6 +52,26 @@ const funding = computeRevolutAmountFields({ amount: 200, revolut_type: 'Topup',
 assert(funding.exclude_from_analytics === 1, 'topup excluded from analytics');
 assert(isRevolutFundingDescription('Payment from John'), 'funding description detected');
 
+const { normalizeObToRevolut } = require(path.join(
+  ROOT,
+  'backend/src/services/openBanking/revolutObNormalizer.js',
+));
+const obCard = normalizeObToRevolut(
+  {
+    booking_date: '2026-06-11',
+    credit_debit_indicator: 'DBIT',
+    transaction_amount: { amount: '65.20', currency: 'EUR' },
+    bank_transaction_code: { code: 'CARD_PAYMENT', description: 'Card payment' },
+    creditor: { name: 'Circle K' },
+    entry_reference: '6a2ad5c6-0e08-a3db-ab3d-15a585ca8b3d',
+  },
+  'LT703250048821607547',
+  0.5,
+);
+assert(obCard.valid, 'OB Revolut card payment normalizes');
+assert(obCard.effective_amount === -32.6, 'OB Revolut expense uses 50% split');
+assert(obCard.import_source === 'open_banking', 'OB Revolut import source tag');
+
 const { applyRuleToExisting } = require(path.join(ROOT, 'backend/src/services/categorizer.js'));
 assert(typeof applyRuleToExisting === 'function', 'applyRuleToExisting exported');
 
