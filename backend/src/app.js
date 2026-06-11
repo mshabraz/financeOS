@@ -8,7 +8,7 @@ const morgan = require('morgan');
 const session = require('express-session');
 
 const config = require('./config');
-const { createCorsMiddleware } = require('./middleware/cors');
+const { createCorsMiddleware, CORS_TUNNEL_VERSION } = require('./middleware/cors');
 const { requireAuth } = require('./middleware/auth');
 const { attachUserContext } = require('./middleware/userContext');
 const { requireAdmin } = require('./middleware/requireAdmin');
@@ -68,6 +68,7 @@ function createApp() {
         status: 'ok',
         timestamp: new Date().toISOString(),
         lanMode: config.LAN_MODE,
+        corsTunnelVersion: CORS_TUNNEL_VERSION,
         authRequired: config.AUTH_ENABLED && !req.session?.authenticated,
         userCount: userRegistry.hasUsers() ? userRegistry.listUsers().length : 0,
         sharedExpensesApi: true,

@@ -2,6 +2,9 @@ const cors = require('cors');
 const config = require('../config');
 const { isPrivateIPv4 } = require('../services/networkInfo');
 
+/** Bump when CORS/tunnel behaviour changes — visible in GET /api/health. */
+const CORS_TUNNEL_VERSION = 2;
+
 const TUNNEL_HOST_SUFFIXES = ['.trycloudflare.com', '.cfargotunnel.com'];
 
 function parseHostname(hostHeader) {
@@ -15,8 +18,33 @@ function parseHostname(hostHeader) {
   return first.split(':')[0];
 }
 
+function originHostname(origin) {
+  try {
+    return new URL(origin).hostname;
+  } catch {
+    return '';
+  }
+}
+
 function isTunnelHostname(hostname) {
   return TUNNEL_HOST_SUFFIXES.some((suffix) => hostname.endsWith(suffix));
+}
+
+function isTunnelOrigin(origin) {
+  return isTunnelHostname(originHostname(origin));
+}
+
+/** Built frontend assets — skip strict CORS (Vite may emit crossorigin on script tags). */
+function isPublicStaticAssetPath(pathname) {
+  if (!pathname) return false;
+  return (
+    pathname.startsWith('/assets/') ||
+    pathname === '/logo-icon.svg' ||
+    pathname === '/logo.svg' ||
+    pathname.endsWith('.css') ||
+    pathname.endsWith('.js') ||
+    pathname.endsWith('.map')
+  );
 }
 
 function isAllowedLanOrigin(origin) {
@@ -36,48 +64,35 @@ function isAllowedLanOrigin(origin) {
   }
 }
 
-/** Browser Origin host matches request Host / X-Forwarded-Host (hostname only). */
 function isSameHostOrigin(origin, req) {
   if (!origin || !req) return false;
-  try {
-    const originHostname = new URL(origin).hostname;
-    const forwarded = req.headers['x-forwarded-host'] || req.headers.host || '';
-    const requestHostname = parseHostname(forwarded);
-    return Boolean(requestHostname && originHostname === requestHostname);
-  } catch {
-    return false;
-  }
+  const oh = originHostname(origin);
+  const forwarded = req.headers['x-forwarded-host'] || req.headers.host || '';
+  const requestHostname = parseHostname(forwarded);
+  return Boolean(requestHostname && oh === requestHostname);
 }
 
-/**
- * cloudflared forwards to localhost:3001 — Express Host is localhost but Origin is the public tunnel URL.
- */
 function isProxiedTunnelOrigin(origin, req) {
-  if (!origin || !req) return false;
-  try {
-    const originHostname = new URL(origin).hostname;
-    if (!isTunnelHostname(originHostname)) return false;
+  if (!origin || !req || !isTunnelOrigin(origin)) return false;
 
-    const requestHostname = parseHostname(req.headers.host || '');
-    const behindProxy = Boolean(
-      req.headers['cf-ray'] ||
-      req.headers['cf-connecting-ip'] ||
-      req.headers['x-forwarded-for'] ||
-      req.headers['x-forwarded-host']
-    );
+  const requestHostname = parseHostname(req.headers.host || '');
+  const behindProxy = Boolean(
+    req.headers['cf-ray'] ||
+    req.headers['cf-connecting-ip'] ||
+    req.headers['x-forwarded-for'] ||
+    req.headers['x-forwarded-host']
+  );
 
-    if (!behindProxy && !config.LAN_MODE) return false;
-
-    if (requestHostname === 'localhost' || requestHostname === '127.0.0.1') return true;
-    if (originHostname === requestHostname) return true;
-    return config.LAN_MODE;
-  } catch {
-    return false;
-  }
+  if (!behindProxy && !config.LAN_MODE) return false;
+  if (requestHostname === 'localhost' || requestHostname === '127.0.0.1') return true;
+  if (originHostname(origin) === requestHostname) return true;
+  return config.LAN_MODE;
 }
 
 function isOriginAllowed(origin, req) {
   if (!origin) return true;
+  // LAN + Cloudflare quick tunnel: always allow (personal server use case)
+  if (config.LAN_MODE && isTunnelOrigin(origin)) return true;
   if (isSameHostOrigin(origin, req)) return true;
   if (isProxiedTunnelOrigin(origin, req)) return true;
   if (config.CORS_ORIGINS.includes(origin)) return true;
@@ -86,12 +101,40 @@ function isOriginAllowed(origin, req) {
   return false;
 }
 
+function applyCorsHeaders(origin, req, res) {
+  if (!origin || !isOriginAllowed(origin, req)) return false;
+  res.setHeader('Access-Control-Allow-Origin', origin);
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Vary', 'Origin');
+  return true;
+}
+
 function createCorsMiddleware() {
   return (req, res, next) => {
-    cors({
-      origin(origin, callback) {
-        if (isOriginAllowed(origin, req)) return callback(null, true);
-        callback(new Error(`CORS blocked: ${origin}`));
+    const origin = req.headers.origin;
+
+    // Static assets: never block; reflect Origin when present (module scripts with crossorigin)
+    if (req.method === 'GET' && isPublicStaticAssetPath(req.path)) {
+      if (origin) applyCorsHeaders(origin, req, res);
+      return next();
+    }
+
+    if (req.method === 'OPTIONS') {
+      return cors({
+        origin(originHeader, callback) {
+          if (isOriginAllowed(originHeader, req)) return callback(null, true);
+          callback(new Error(`CORS blocked: ${originHeader}`));
+        },
+        credentials: true,
+        methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+        allowedHeaders: ['Content-Type', 'Authorization'],
+      })(req, res, next);
+    }
+
+    return cors({
+      origin(originHeader, callback) {
+        if (isOriginAllowed(originHeader, req)) return callback(null, true);
+        callback(new Error(`CORS blocked: ${originHeader}`));
       },
       credentials: true,
       methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
@@ -101,9 +144,12 @@ function createCorsMiddleware() {
 }
 
 module.exports = {
+  CORS_TUNNEL_VERSION,
   createCorsMiddleware,
   isAllowedLanOrigin,
   isSameHostOrigin,
   isProxiedTunnelOrigin,
   isOriginAllowed,
+  isPublicStaticAssetPath,
+  isTunnelOrigin,
 };
