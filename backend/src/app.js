@@ -33,8 +33,8 @@ const settingsRoutes       = require('./routes/settings');
 function createApp() {
   const app = express();
 
-  // Trust X-Forwarded-* when behind reverse proxy (Docker nginx)
-  if (process.env.TRUST_PROXY === 'true') {
+  // Trust X-Forwarded-* when behind reverse proxy (Docker, Cloudflare tunnel)
+  if (process.env.TRUST_PROXY === 'true' || config.LAN_MODE) {
     app.set('trust proxy', 1);
   }
 
