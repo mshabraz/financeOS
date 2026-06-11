@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Globe, Info, Lock, Percent, Users } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
+import { Globe, Info, Landmark, Lock, Percent, Users } from 'lucide-react';
 import clsx from 'clsx';
 import PageHeader from '../components/ui/PageHeader';
 import { useAuth } from '../context/AuthContext';
@@ -12,6 +13,12 @@ import {
   changePassword,
   getAdminUsers,
   adminResetUserPassword,
+  getOpenBankingStatus,
+  getOpenBankingBanks,
+  connectOpenBankingBank,
+  getOpenBankingConnections,
+  disconnectOpenBankingConnection,
+  syncOpenBanking,
 } from '../api/client';
 
 function AdminUsersPanel({ showToast }) {
@@ -99,9 +106,196 @@ function AdminUsersPanel({ showToast }) {
   );
 }
 
+function BankConnectionsPanel({ showToast }) {
+  const qc = useQueryClient();
+  const [selectedBank, setSelectedBank] = useState('');
+
+  const statusQ = useQuery({
+    queryKey: ['openBankingStatus'],
+    queryFn: getOpenBankingStatus,
+    retry: false,
+  });
+
+  const enabled = statusQ.data?.enabled === true;
+
+  const banksQ = useQuery({
+    queryKey: ['openBankingBanks'],
+    queryFn: getOpenBankingBanks,
+    enabled,
+    retry: false,
+  });
+
+  const connectionsQ = useQuery({
+    queryKey: ['openBankingConnections'],
+    queryFn: getOpenBankingConnections,
+    enabled,
+    retry: false,
+  });
+
+  const connectMut = useMutation({
+    mutationFn: () => {
+      const bank = (banksQ.data?.banks || []).find((b) => `${b.name}|${b.country}` === selectedBank);
+      if (!bank) throw new Error('Select a bank');
+      return connectOpenBankingBank(bank.name, bank.country);
+    },
+    onSuccess: (data) => {
+      if (data?.redirectUrl) {
+        window.location.href = data.redirectUrl;
+      }
+    },
+    onError: (e) => showToast(e.message, 'error'),
+  });
+
+  const syncMut = useMutation({
+    mutationFn: (connectionId) => syncOpenBanking(connectionId),
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ['openBankingConnections'] });
+      ['transactions', 'summary', 'trend', 'bycat', 'importSessions'].forEach((k) =>
+        qc.invalidateQueries({ queryKey: [k] }),
+      );
+      const totals = (data?.results || []).reduce(
+        (acc, r) => {
+          acc.imported += r.importedCount || 0;
+          acc.duplicates += r.duplicateCount || 0;
+          return acc;
+        },
+        { imported: 0, duplicates: 0 },
+      );
+      showToast(
+        `Sync complete — ${totals.imported} new, ${totals.duplicates} duplicates`,
+        'success',
+      );
+    },
+    onError: (e) => showToast(e.message, 'error'),
+  });
+
+  const disconnectMut = useMutation({
+    mutationFn: (id) => disconnectOpenBankingConnection(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['openBankingConnections'] });
+      showToast('Bank disconnected', 'success');
+    },
+    onError: (e) => showToast(e.message, 'error'),
+  });
+
+  const banks = banksQ.data?.banks ?? [];
+  const connections = connectionsQ.data?.connections ?? [];
+
+  return (
+    <section className="card p-5 space-y-4">
+      <div className="flex items-start gap-3">
+        <Landmark size={20} className="text-emerald-600 shrink-0 mt-0.5" />
+        <div className="flex-1 min-w-0">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Bank connections</h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            Connect Revolut, Swedbank, or SEB via Enable Banking to import transactions automatically.
+          </p>
+
+          {statusQ.isLoading && (
+            <p className="text-sm text-gray-500 mt-3">Checking open banking configuration…</p>
+          )}
+
+          {!statusQ.isLoading && !enabled && (
+            <p className="text-sm text-amber-700 dark:text-amber-300 mt-3">
+              {statusQ.data?.message ||
+                'Open banking is not configured on this server. Add Enable Banking env vars to .env and restart.'}
+            </p>
+          )}
+
+          {enabled && (
+            <>
+              {connections.length > 0 && (
+                <ul className="mt-4 space-y-2">
+                  {connections.map((c) => (
+                    <li
+                      key={c.id}
+                      className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-gray-100 dark:border-gray-800 px-3 py-2 text-sm"
+                    >
+                      <div className="min-w-0">
+                        <p className="font-medium text-gray-800 dark:text-gray-200 truncate">
+                          {c.account_name || c.account_iban || c.account_uid}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {c.aspsp_name} ({c.aspsp_country})
+                          {c.account_iban ? ` · ${c.account_iban}` : ''}
+                          {c.last_sync_at ? ` · last sync ${c.last_sync_at}` : ''}
+                        </p>
+                      </div>
+                      <div className="flex gap-2 shrink-0">
+                        <button
+                          type="button"
+                          className="btn-primary text-xs"
+                          disabled={syncMut.isPending}
+                          onClick={() => syncMut.mutate(c.id)}
+                        >
+                          Sync now
+                        </button>
+                        <button
+                          type="button"
+                          className="btn-secondary text-xs"
+                          disabled={disconnectMut.isPending}
+                          onClick={() => disconnectMut.mutate(c.id)}
+                        >
+                          Disconnect
+                        </button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+              <div className="mt-4 flex flex-wrap items-end gap-3">
+                <label className="text-sm flex-1 min-w-[200px]">
+                  <span className="text-xs text-gray-500">Connect bank</span>
+                  <select
+                    className="input mt-1 block w-full max-w-sm"
+                    value={selectedBank}
+                    onChange={(e) => setSelectedBank(e.target.value)}
+                    disabled={banksQ.isLoading}
+                  >
+                    <option value="">Select bank…</option>
+                    {banks.map((b) => (
+                      <option key={`${b.name}-${b.country}`} value={`${b.name}|${b.country}`}>
+                        {b.name} ({b.country})
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <button
+                  type="button"
+                  className="btn-primary text-sm"
+                  disabled={!selectedBank || connectMut.isPending}
+                  onClick={() => connectMut.mutate()}
+                >
+                  {connectMut.isPending ? 'Starting…' : 'Connect bank'}
+                </button>
+                {connections.length > 0 && (
+                  <button
+                    type="button"
+                    className="btn-secondary text-sm"
+                    disabled={syncMut.isPending}
+                    onClick={() => syncMut.mutate(undefined)}
+                  >
+                    Sync all
+                  </button>
+                )}
+              </div>
+
+              {banksQ.isError && (
+                <p className="text-sm text-red-600 mt-2">{banksQ.error?.message}</p>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export default function Settings() {
   const { isAdmin } = useAuth();
   const qc = useQueryClient();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [toast, setToast] = useState(null);
   const [splitPct, setSplitPct] = useState(50);
   const [fxEnabled, setFxEnabled] = useState(true);
@@ -137,6 +331,20 @@ export default function Settings() {
     setToast({ msg, kind });
     setTimeout(() => setToast(null), 5000);
   };
+
+  useEffect(() => {
+    const ob = searchParams.get('ob');
+    if (!ob) return;
+    if (ob === 'connected') {
+      showToast('Bank connected successfully', 'success');
+      qc.invalidateQueries({ queryKey: ['openBankingConnections'] });
+    } else if (ob === 'error') {
+      showToast(searchParams.get('msg') || 'Bank connection failed', 'error');
+    }
+    searchParams.delete('ob');
+    searchParams.delete('msg');
+    setSearchParams(searchParams, { replace: true });
+  }, [searchParams, setSearchParams, qc]);
 
   const saveNetWorthFx = useMutation({
     mutationFn: () => updateNetWorthCurrencySetting({ enabled: fxEnabled, currency: fxCurrency }),
@@ -199,8 +407,11 @@ export default function Settings() {
           <li>Bank transaction CSV (LHV, SEB) — Transactions → Import / Export</li>
           <li>Revolut account CSV — Transactions → Import / Export</li>
           <li>Investment exports (Lightyear, Swedbank funds) — Investments → Import CSV</li>
+          <li>Open banking (Revolut, Swedbank, SEB) — Settings → Bank connections</li>
         </ul>
       </section>
+
+      <BankConnectionsPanel showToast={showToast} />
 
       <section className="card p-5 space-y-4">
         <div className="flex items-start gap-3">

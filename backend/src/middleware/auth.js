@@ -8,12 +8,17 @@ const PUBLIC_PATHS = [
   '/api/auth/register',
   '/api/auth/logout',
   '/api/network/info',
+  '/api/open-banking/callback',
+  '/open-banking/callback',
 ];
 
 function isPublicPath(req) {
   if (!config.AUTH_ENABLED) return true;
   const p = req.path;
-  return PUBLIC_PATHS.some((pub) => p === pub || p.startsWith(pub + '?'));
+  const full = (req.originalUrl || p).split('?')[0];
+  return PUBLIC_PATHS.some(
+    (pub) => p === pub || full === pub || p.startsWith(`${pub}?`) || full.startsWith(`${pub}?`),
+  );
 }
 
 function requireAuth(req, res, next) {

@@ -29,6 +29,7 @@ const wealthGoalsRoutes    = require('./routes/wealthGoals');
 const obligationsRoutes    = require('./routes/obligations');
 const tasksRoutes          = require('./routes/tasks');
 const settingsRoutes       = require('./routes/settings');
+const openBankingRoutes    = require('./routes/openBanking');
 
 function createApp() {
   const app = express();
@@ -122,6 +123,7 @@ function createApp() {
   app.use('/api/obligations', obligationsRoutes);
   app.use('/api/tasks', tasksRoutes);
   app.use('/api/settings', settingsRoutes);
+  app.use('/api/open-banking', openBankingRoutes);
 
   // Serve built React app when dist exists (LAN / production)
   const fs = require('fs');

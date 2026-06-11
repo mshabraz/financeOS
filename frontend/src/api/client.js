@@ -61,6 +61,17 @@ export const getNetWorthCurrencySetting = () => api.get('/settings/net-worth-cur
 export const updateNetWorthCurrencySetting = (body) =>
   api.put('/settings/net-worth-currency', body);
 
+// --- Open banking (Enable Banking) ---
+export const getOpenBankingStatus = () => api.get('/open-banking/status');
+export const getOpenBankingBanks = () => api.get('/open-banking/banks');
+export const connectOpenBankingBank = (aspspName, aspspCountry = 'EE') =>
+  api.post('/open-banking/connect', { aspspName, aspspCountry });
+export const getOpenBankingConnections = () => api.get('/open-banking/connections');
+export const disconnectOpenBankingConnection = (id) =>
+  api.delete(`/open-banking/connections/${id}`);
+export const syncOpenBanking = (connectionId) =>
+  api.post('/open-banking/sync', connectionId ? { connectionId } : {}, { timeout: 120000 });
+
 // --- Transactions ---
 export const getTransactions = (params) =>
   api.get('/transactions', { params: sanitizeTransactionParams(params) });

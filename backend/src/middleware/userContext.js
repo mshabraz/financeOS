@@ -8,6 +8,9 @@ const { openUserDatabase } = require('../db/database');
  * Must run after requireAuth on protected /api routes.
  */
 function attachUserContext(req, res, next) {
+  const full = (req.originalUrl || req.path || '').split('?')[0];
+  if (full.endsWith('/open-banking/callback')) return next();
+
   let userId = req.session?.userId;
 
   if (!config.AUTH_ENABLED) {
