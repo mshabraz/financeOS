@@ -435,6 +435,7 @@ git push origin main
 | `scripts/windows/Install-FinanceOSService.ps1` | NSSM Windows service |
 | `scripts/windows/Register-BackupTask.ps1` | Daily backup task |
 | `scripts/windows/Register-PollDeployTask.ps1` | Optional git poll deploy |
+| `scripts/windows/Start-FinanceOSTunnel.ps1` | New Cloudflare quick tunnel + update `.env` |
 | `.github/workflows/deploy-lan-selfhosted.yml` | Push-to-deploy |
 
 ### Manual commands (App Server)

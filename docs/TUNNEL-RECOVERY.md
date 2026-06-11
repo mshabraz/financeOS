@@ -45,7 +45,41 @@ Paths used in this guide:
 
 ---
 
-## Step 1 — Confirm FinanceOS is running locally
+## Automated steps 1–5 (recommended)
+
+On the **App Server**, run:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File C:\FinanceOS\app\scripts\windows\Start-FinanceOSTunnel.ps1
+```
+
+This script:
+
+1. Starts the FinanceOS service if needed and checks local `/api/health`
+2. Starts `cloudflared` quick tunnel (stops any previous `cloudflared tunnel` process)
+3. Waits for the new `https://….trycloudflare.com` URL and tests public `/api/health`
+4. Updates `OPEN_BANKING_REDIRECT_URL` in `C:\FinanceOS\app\.env`
+5. Restarts the FinanceOS service
+
+It saves the URL to `C:\FinanceOS\data\current-tunnel-url.txt` and prints **step 6** (Enable Banking redirect) for you to do in the browser.
+
+**Keep `cloudflared` running** — the script starts it in the background. Do not kill `cloudflared.exe` unless you are replacing the tunnel.
+
+Optional parameters:
+
+```powershell
+# Custom paths
+powershell -ExecutionPolicy Bypass -File C:\FinanceOS\app\scripts\windows\Start-FinanceOSTunnel.ps1 -FinanceOsRoot C:\FinanceOS
+
+# Update .env without restarting the service
+powershell -ExecutionPolicy Bypass -File C:\FinanceOS\app\scripts\windows\Start-FinanceOSTunnel.ps1 -SkipServiceRestart $true
+```
+
+---
+
+## Manual steps 1–5 (if you prefer)
+
+### Step 1 — Confirm FinanceOS is running locally
 
 On the **App Server**, open **PowerShell**.
 
@@ -239,21 +273,20 @@ You will still get a **new URL** after each reboot until you use a **named tunne
 ## One-page recovery (copy/paste)
 
 ```powershell
-# On App Server (192.168.1.25)
-nssm status FinanceOS
-nssm start FinanceOS   # if needed
-
-# New tunnel — copy URL from output, keep window open
-cloudflared tunnel --url http://127.0.0.1:3001
-
-# After editing C:\FinanceOS\app\.env OPEN_BANKING_REDIRECT_URL:
-nssm restart FinanceOS
-
-# Verify
-Invoke-RestMethod http://127.0.0.1:3001/api/health
+# On App Server (192.168.1.25) — automated
+powershell -ExecutionPolicy Bypass -File C:\FinanceOS\app\scripts\windows\Start-FinanceOSTunnel.ps1
 ```
 
-Then update Enable Banking redirect URL in the browser to match `.env`.
+Then complete **step 6** in Enable Banking (redirect URL printed by the script).
+
+Manual fallback:
+
+```powershell
+nssm status FinanceOS
+cloudflared tunnel --url http://127.0.0.1:3001
+# edit C:\FinanceOS\app\.env OPEN_BANKING_REDIRECT_URL
+nssm restart FinanceOS
+```
 
 ---
 
