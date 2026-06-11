@@ -483,6 +483,7 @@ Get-Content C:\FinanceOS\logs\deploy.log -Tail 50
 
 ## Related docs
 
+- [TUNNEL-RECOVERY.md](TUNNEL-RECOVERY.md) — **Cloudflare quick tunnel died / new URL after restart**
 - [CLOUD-MIGRATION.md](CLOUD-MIGRATION.md) — internet hosting (Oracle VM)
 - [GIT-BEGINNER-GUIDE.md](GIT-BEGINNER-GUIDE.md) — Git basics
 - [DATABASE.md](DATABASE.md) — backups and migrations
