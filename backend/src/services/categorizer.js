@@ -6,11 +6,10 @@
  */
 
 const { getDb } = require('../db/database');
-const {
-  keysFromBankRow,
-  keysFromRevolutRow,
-  hasManualCategoryLock,
-} = require('./manualCategoryLocks');
+
+function getManualLockHelpers() {
+  return require('./manualCategoryLocks');
+}
 
 let _rulesCache = null;
 let _cacheTs = 0;
@@ -173,6 +172,7 @@ function applyRuleToExisting(ruleId, { overrideManual = false } = {}) {
   let matched = 0;
   let bankUpdated = 0;
   let revolutUpdated = 0;
+  const { keysFromBankRow, keysFromRevolutRow, hasManualCategoryLock } = getManualLockHelpers();
 
   const run = db.transaction(() => {
     for (const tx of bankCandidates) {

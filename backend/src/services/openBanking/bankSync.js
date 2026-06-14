@@ -185,8 +185,16 @@ function importRevolutObTransactions(db, transactions, label, product) {
     skippedCount: 0,
   });
 
-  const rulesApplied = applyAllRulesToExisting();
-  const manualRestored = reapplyManualCategoryLocks(db);
+  let rulesRecategorized = 0;
+  let manualCategoriesRestored = 0;
+  try {
+    const rulesApplied = applyAllRulesToExisting();
+    rulesRecategorized = rulesApplied.updated || 0;
+    const manualRestored = reapplyManualCategoryLocks(db);
+    manualCategoriesRestored = manualRestored.bankUpdated + manualRestored.revolutUpdated;
+  } catch (err) {
+    logger.warn('[OpenBanking] Post-import categorization failed', { err: err.message });
+  }
 
   return {
     sessionId,
@@ -194,8 +202,8 @@ function importRevolutObTransactions(db, transactions, label, product) {
     duplicateCount,
     errorCount: 0,
     removedBankRows,
-    rulesRecategorized: rulesApplied.updated,
-    manualCategoriesRestored: manualRestored.bankUpdated + manualRestored.revolutUpdated,
+    rulesRecategorized,
+    manualCategoriesRestored,
     ledger: 'revolut',
   };
 }
@@ -224,33 +232,52 @@ async function syncConnection(db, connection, reqMeta) {
   );
 
   const label = `open-banking:${connection.aspsp_name}:${connection.account_iban || connection.account_uid}`;
-  let result;
+  let result = {};
+  let importError = null;
 
-  if (isRevolutConnection(connection)) {
-    const { transactions, errors } = normalizeObToRevolutBatch(
-      rawTxs,
-      connection.account_iban,
-      db,
-    );
-    result = importRevolutObTransactions(
-      db,
-      transactions,
-      label,
-      connection.account_iban || connection.account_uid,
-    );
-    result.parseErrors = errors.length;
-  } else {
-    const { transactions, errors } = normalizeTransactions(rawTxs, connection.account_iban);
-    result = importTransactions(db, transactions, label);
-    result.parseErrors = errors.length;
-    result.ledger = 'bank';
+  try {
+    if (isRevolutConnection(connection)) {
+      const { transactions, errors } = normalizeObToRevolutBatch(
+        rawTxs,
+        connection.account_iban,
+        db,
+      );
+      result = importRevolutObTransactions(
+        db,
+        transactions,
+        label,
+        connection.account_iban || connection.account_uid,
+      );
+      result.parseErrors = errors.length;
+    } else {
+      const { transactions, errors } = normalizeTransactions(rawTxs, connection.account_iban);
+      result = importTransactions(db, transactions, label);
+      result.parseErrors = errors.length;
+      result.ledger = 'bank';
+    }
+
+    db.prepare(
+      `UPDATE bank_connections SET last_sync_at = datetime('now') WHERE id = ?`,
+    ).run(connection.id);
+  } catch (err) {
+    importError = err;
+    logger.error('[OpenBanking] Transaction import failed', {
+      connectionId: connection.id,
+      err: err.message,
+    });
   }
 
-  db.prepare(
-    `UPDATE bank_connections SET last_sync_at = datetime('now') WHERE id = ?`,
-  ).run(connection.id);
+  let balance = null;
+  try {
+    balance = await refreshConnectionBalance(db, getConnection(db, connection.id), reqMeta);
+  } catch (err) {
+    logger.warn('[OpenBanking] Balance refresh failed', {
+      connectionId: connection.id,
+      err: err.message,
+    });
+  }
 
-  const balance = await refreshConnectionBalance(db, getConnection(db, connection.id), reqMeta);
+  if (importError) throw importError;
 
   return {
     connectionId: connection.id,
@@ -259,6 +286,7 @@ async function syncConnection(db, connection, reqMeta) {
     balanceAmount: balance?.amount ?? null,
     balanceCurrency: balance?.currency ?? null,
     balanceAsOf: balance?.asOf ?? null,
+    balanceType: balance?.balanceType ?? null,
     ...result,
   };
 }

@@ -105,6 +105,9 @@ async function computeAssetTotals(db) {
     revolutClosingBalance = obRevolut.total;
     revolutBalanceDate = obRevolut.date;
     revolutBalanceSource = 'open_banking';
+  } else if (hasOpenBankingConnections(db, { revolut: true })) {
+    revolutClosingBalance = null;
+    revolutBalanceSource = 'open_banking_pending';
   } else if (statementRevolut) {
     revolutClosingBalance = statementRevolut.amount;
     revolutBalanceDate = statementRevolut.date;

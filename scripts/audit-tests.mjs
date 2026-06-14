@@ -90,10 +90,10 @@ const { pickPrimaryBalance } = require(path.join(
 const clbd = pickPrimaryBalance({
   balances: [
     { balance_type: 'CLBD', balance_amount: { amount: '169.83', currency: 'EUR' }, reference_date: '2026-06-09' },
-    { balance_type: 'ITAV', balance_amount: { amount: '200.00', currency: 'EUR' } },
+    { balance_type: 'ITAV', balance_amount: { amount: '103.20', currency: 'EUR' }, reference_date: '2026-06-14' },
   ],
 });
-assert(clbd?.amount === 169.83, 'prefers CLBD booked balance');
+assert(clbd?.amount === 103.2, 'prefers ITAV available balance over CLBD booked');
 
 console.log(`\nAudit tests: ${failed} failed`);
 process.exit(failed ? 1 : 0);

@@ -1,9 +1,9 @@
 /**
  * Permanent manual category assignments — survive re-import, sync, and rule re-apply.
  * Keys: bank fingerprint, revolut fingerprint, and shared transfer_ref.
+ *
+ * Note: do not import categorizer at top level (circular dependency).
  */
-
-const { categorizeTransaction } = require('./categorizer');
 
 const PREFIX = {
   BANK_FP: 'fp:bank:',
@@ -85,6 +85,7 @@ function resolveImportCategory(db, ledger, tx) {
 
   if (ledger === 'revolut') {
     const desc = tx.description || '';
+    const { categorizeTransaction } = require('./categorizer');
     return categorizeTransaction({
       merchant: desc,
       beneficiary: desc,
@@ -92,6 +93,7 @@ function resolveImportCategory(db, ledger, tx) {
     });
   }
 
+  const { categorizeTransaction } = require('./categorizer');
   return categorizeTransaction(tx);
 }
 

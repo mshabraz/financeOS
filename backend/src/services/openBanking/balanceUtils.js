@@ -3,7 +3,7 @@
  * @see https://enablebanking.com/docs/faq/ — CLBD, ITAV, XPCD are common.
  */
 
-const PREFERRED_TYPES = ['CLBD', 'ITAV', 'XPCD', 'OPBD', 'OTHR'];
+const PREFERRED_TYPES = ['ITAV', 'CLBD', 'XPCD', 'OPBD', 'OTHR'];
 
 function parseAmount(raw) {
   if (raw == null || raw === '') return NaN;
