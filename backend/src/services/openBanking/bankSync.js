@@ -26,6 +26,9 @@ const { reapplyManualCategoryLocks } = require('../manualCategoryLocks');
 const { REDIRECT_URL } = require('./openBankingConfig');
 
 const { refreshConnectionBalance, isRevolutConnection } = require('./connectionBalances');
+const {
+  removeBankRowsMatchingRevolutCharges,
+} = require('../crossLedgerDedup');
 
 function listConnections(db) {
   return db
@@ -217,7 +220,9 @@ function removeLegacyBankRowsByTransferRef(db, transactionsOrRefs) {
 }
 
 function importRevolutObTransactions(db, transactions, label, product) {
-  const removedBankRows = removeLegacyBankRowsByTransferRef(db, transactions);
+  const removedByRef = removeLegacyBankRowsByTransferRef(db, transactions);
+  const removedByMatch = removeBankRowsMatchingRevolutCharges(db, transactions);
+  const removedBankRows = removedByRef + removedByMatch;
 
   const dates = transactions.map((t) => t.date).filter(Boolean).sort();
   const { sessionId, importedCount, duplicateCount } = importRevolutRows(db, transactions, {

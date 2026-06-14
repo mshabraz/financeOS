@@ -42,6 +42,9 @@ function normalizeTransaction(tx, accountIban) {
   if (!date || !Number.isFinite(absAmount)) {
     return { valid: false, reason: 'Missing date or amount', raw: tx };
   }
+  if (absAmount < 0.01) {
+    return { valid: false, reason: 'Skipped zero-amount transaction', raw: tx };
+  }
 
   const indicator = (tx.credit_debit_indicator || '').toUpperCase();
   const isCredit = indicator === 'CRDT' || indicator === 'C';

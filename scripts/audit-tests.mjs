@@ -158,5 +158,8 @@ const revSets = {
 assert(isDuplicateRevolutTx({ fingerprint: obRevFp, product: 'LT703250048821607547', transfer_ref: 'REV-REF-1', date: '2026-06-04', amount: 200, description: 'Payment from MUHAMMAD SHABRAZ' }, revSets), 'OB Revolut topup matches content key');
 assert(csvRevFp !== obRevFp, 'CSV and OB Revolut fingerprints differ');
 
+const { merchantsLikelyMatch } = require(path.join(ROOT, 'backend/src/services/crossLedgerDedup.js'));
+assert(merchantsLikelyMatch('Temu', { merchant: 'Temu.com', details: 'temu.com' }), 'Temu cross-ledger merchant match');
+
 console.log(`\nAudit tests: ${failed} failed`);
 process.exit(failed ? 1 : 0);

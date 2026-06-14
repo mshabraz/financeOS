@@ -1160,7 +1160,29 @@ const MIGRATION_V34 = {
   },
 };
 
-const ALL_MIGRATIONS = [...migrations.filter(m => m.version === 1), MIGRATION_V2, MIGRATION_V3, MIGRATION_V4, MIGRATION_V5, MIGRATION_V6, MIGRATION_V7, MIGRATION_V8, MIGRATION_V9, MIGRATION_V10, MIGRATION_V11, MIGRATION_V12, MIGRATION_V13, MIGRATION_V14, MIGRATION_V15, MIGRATION_V16, MIGRATION_V17, MIGRATION_V18, MIGRATION_V19, MIGRATION_V20, MIGRATION_V21, MIGRATION_V22, MIGRATION_V23, MIGRATION_V24, MIGRATION_V25, MIGRATION_V26, MIGRATION_V27, MIGRATION_V28, MIGRATION_V29, MIGRATION_V30, MIGRATION_V31, MIGRATION_V32, MIGRATION_V33, MIGRATION_V34];
+// ── Migration v35: Cross-ledger Revolut vs bank duplicates + zero-amount cleanup ─
+const MIGRATION_V35 = {
+  version: 35,
+  up: (db) => {
+    const {
+      removeBankRowsMatchingRevolutCharges,
+      removeZeroAmountBankRows,
+      removeZeroAmountRevolutRows,
+    } = require('../services/crossLedgerDedup');
+
+    const revolutRows = db.prepare(
+      `SELECT date, amount, description FROM revolut_transactions WHERE amount < -0.01`,
+    ).all();
+    const crossLedger = removeBankRowsMatchingRevolutCharges(db, revolutRows);
+    const zeroBank = removeZeroAmountBankRows(db);
+    const zeroRevolut = removeZeroAmountRevolutRows(db);
+    console.log(
+      `[DB] v35 cross-ledger: bank_removed=${crossLedger} zero_bank=${zeroBank} zero_revolut=${zeroRevolut}`,
+    );
+  },
+};
+
+const ALL_MIGRATIONS = [...migrations.filter(m => m.version === 1), MIGRATION_V2, MIGRATION_V3, MIGRATION_V4, MIGRATION_V5, MIGRATION_V6, MIGRATION_V7, MIGRATION_V8, MIGRATION_V9, MIGRATION_V10, MIGRATION_V11, MIGRATION_V12, MIGRATION_V13, MIGRATION_V14, MIGRATION_V15, MIGRATION_V16, MIGRATION_V17, MIGRATION_V18, MIGRATION_V19, MIGRATION_V20, MIGRATION_V21, MIGRATION_V22, MIGRATION_V23, MIGRATION_V24, MIGRATION_V25, MIGRATION_V26, MIGRATION_V27, MIGRATION_V28, MIGRATION_V29, MIGRATION_V30, MIGRATION_V31, MIGRATION_V32, MIGRATION_V33, MIGRATION_V34, MIGRATION_V35];
 
 function runMigrations(db) {
   db.exec(`CREATE TABLE IF NOT EXISTS schema_migrations (
