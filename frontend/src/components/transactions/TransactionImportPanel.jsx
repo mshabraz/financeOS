@@ -177,7 +177,7 @@ export default function TransactionImportPanel() {
           Import
         </h2>
         <p className="text-xs text-gray-500 dark:text-gray-400">
-          Drop any supported CSV — we detect LHV and SEB bank exports (semicolon) and Revolut exports (comma). Duplicates are skipped automatically.
+          Drop any supported CSV — we detect LHV, Swedbank, and SEB bank exports (semicolon) and Revolut exports (comma). Duplicates are skipped automatically.
         </p>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">

@@ -167,6 +167,17 @@ assert(slashDt?.isoDate === '2025-03-31' && slashDt?.isoDatetime === '2025-03-31
 const isoDt = parseRevolutDatetime('2025-03-31 04:16:29');
 assert(isoDt?.isoDate === '2025-03-31', 'Revolut ISO completed date');
 
+const { isSwedbankWrappedExport, preprocessBankCsvBuffer } = require(path.join(ROOT, 'backend/src/services/swedbankCsvNormalizer.js'));
+const swedSample = Buffer.from(
+  '"Client account;""Row type"";""Date"";""Beneficiary/Payer"";""Details"";""Amount"";""Currency"";""Debit/Credit"";""Transfer reference"";""Transaction type"";""Reference number"";""Document number"";",,,\n' +
+  '"EE702200221072319566;""20"";""02.01.2025"";""MY FITNESS AS"";""Arve"";""39","00"";""EUR"";""D"";""2025010200148310"";""MK"";""51666215"";""219"";",,,',
+);
+assert(isSwedbankWrappedExport(swedSample), 'Swedbank wrapped export detected');
+const { parseBankCSV } = require(path.join(ROOT, 'backend/src/services/bankCsvParser.js'));
+const swedParsed = parseBankCSV(swedSample);
+assert(swedParsed.transactions.length === 1, 'Swedbank wrapped row parses');
+assert(swedParsed.transactions[0].amount === -39, 'Swedbank wrapped amount');
+
 assert(normalizeBankReference('2026052301339966-1') === '2026052301339966', 'strips SEB-style ref suffix');
 const refSets = {
   fingerprints: new Set(),
