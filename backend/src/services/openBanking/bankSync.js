@@ -92,7 +92,48 @@ function isoDateOnly(d) {
   return d.toISOString().slice(0, 10);
 }
 
-function syncDateFrom(connection) {
+function getSyncBackfillDays(db) {
+  try {
+    const row = db.prepare(
+      'SELECT value FROM app_settings WHERE key = ?',
+    ).get('open_banking_sync_backfill_days');
+    const n = parseInt(row?.value || '365', 10);
+    if (Number.isFinite(n) && n > 0) return Math.min(n, 730);
+  } catch {
+    /* app_settings may not exist */
+  }
+  return 365;
+}
+
+function connectionHasStoredTransactions(db, connection) {
+  if (isRevolutConnection(connection)) {
+    const product = connection.account_iban || connection.account_uid;
+    const row = db.prepare(
+      `SELECT COUNT(*) AS n FROM revolut_transactions
+       WHERE product = ? OR product = ?`,
+    ).get(product, connection.account_iban || '');
+    return (row?.n ?? 0) > 0;
+  }
+  const account = connection.account_iban;
+  if (account) {
+    const row = db.prepare(
+      'SELECT COUNT(*) AS n FROM transactions WHERE account = ?',
+    ).get(account);
+    return (row?.n ?? 0) > 0;
+  }
+  const row = db.prepare('SELECT COUNT(*) AS n FROM transactions').get();
+  return (row?.n ?? 0) > 0;
+}
+
+function syncDateFrom(connection, db, options = {}) {
+  if (options.dateFrom) return options.dateFrom;
+
+  if (options.fullBackfill || !connectionHasStoredTransactions(db, connection)) {
+    const d = new Date();
+    d.setDate(d.getDate() - getSyncBackfillDays(db));
+    return isoDateOnly(d);
+  }
+
   if (connection.last_sync_at) {
     const d = new Date(connection.last_sync_at);
     if (!Number.isNaN(d.getTime())) {
@@ -100,6 +141,7 @@ function syncDateFrom(connection) {
       return isoDateOnly(d);
     }
   }
+
   const d = new Date();
   d.setDate(d.getDate() - 90);
   return isoDateOnly(d);
@@ -257,7 +299,7 @@ function importRevolutObTransactions(db, transactions, label, product) {
   };
 }
 
-async function syncConnection(db, connection, reqMeta) {
+async function syncConnection(db, connection, reqMeta, syncOptions = {}) {
   const sessionId = decrypt(connection.session_id);
   if (!sessionId) {
     const err = new Error('Stored session is invalid — reconnect the bank');
@@ -271,7 +313,7 @@ async function syncConnection(db, connection, reqMeta) {
     throw err;
   }
 
-  const dateFrom = syncDateFrom(connection);
+  const dateFrom = syncDateFrom(connection, db, syncOptions);
   const dateTo = isoDateOnly(new Date());
 
   const rawTxs = await fetchAllTransactions(
@@ -331,6 +373,8 @@ async function syncConnection(db, connection, reqMeta) {
   return {
     connectionId: connection.id,
     accountIban: connection.account_iban,
+    dateFrom,
+    dateTo,
     fetched: rawTxs.length,
     balanceAmount: balance?.amount ?? null,
     balanceCurrency: balance?.currency ?? null,
@@ -340,8 +384,9 @@ async function syncConnection(db, connection, reqMeta) {
   };
 }
 
-async function syncConnections(db, { connectionId } = {}, req) {
+async function syncConnections(db, { connectionId, fullBackfill, dateFrom } = {}, req) {
   const reqMeta = reqMetaFromExpress(req);
+  const syncOptions = { fullBackfill, dateFrom };
   const results = [];
 
   if (connectionId) {
@@ -351,14 +396,14 @@ async function syncConnections(db, { connectionId } = {}, req) {
       err.status = 404;
       throw err;
     }
-    results.push(await syncConnection(db, conn, reqMeta));
+    results.push(await syncConnection(db, conn, reqMeta, syncOptions));
     return { results };
   }
 
   const connections = db.prepare('SELECT * FROM bank_connections').all();
   for (const conn of connections) {
     try {
-      results.push(await syncConnection(db, conn, reqMeta));
+      results.push(await syncConnection(db, conn, reqMeta, syncOptions));
     } catch (err) {
       results.push({
         connectionId: conn.id,

@@ -147,8 +147,9 @@ function BankConnectionsPanel({ showToast }) {
   });
 
   const syncMut = useMutation({
-    mutationFn: (connectionId) => syncOpenBanking(connectionId),
-    onSuccess: (data) => {
+    mutationFn: ({ connectionId, fullBackfill }) =>
+      syncOpenBanking(connectionId, { fullBackfill }),
+    onSuccess: (data, vars) => {
       qc.invalidateQueries({ queryKey: ['openBankingConnections'] });
       ['transactions', 'summary', 'trend', 'bycat', 'importSessions'].forEach((k) =>
         qc.invalidateQueries({ queryKey: [k] }),
@@ -161,8 +162,12 @@ function BankConnectionsPanel({ showToast }) {
         },
         { imported: 0, duplicates: 0 },
       );
+      const range = data?.results?.[0]?.dateFrom;
+      const rangeNote = range ? ` from ${range}` : '';
       showToast(
-        `Sync complete — ${totals.imported} new, ${totals.duplicates} duplicates`,
+        vars?.fullBackfill
+          ? `Full sync complete${rangeNote} — ${totals.imported} new, ${totals.duplicates} duplicates`
+          : `Sync complete — ${totals.imported} new, ${totals.duplicates} duplicates`,
         'success',
       );
     },
@@ -226,9 +231,17 @@ function BankConnectionsPanel({ showToast }) {
                           type="button"
                           className="btn-primary text-xs"
                           disabled={syncMut.isPending}
-                          onClick={() => syncMut.mutate(c.id)}
+                          onClick={() => syncMut.mutate({ connectionId: c.id })}
                         >
                           Sync now
+                        </button>
+                        <button
+                          type="button"
+                          className="btn-secondary text-xs"
+                          disabled={syncMut.isPending}
+                          onClick={() => syncMut.mutate({ connectionId: c.id, fullBackfill: true })}
+                        >
+                          Full sync (1 yr)
                         </button>
                         <button
                           type="button"

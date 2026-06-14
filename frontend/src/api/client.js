@@ -69,8 +69,16 @@ export const connectOpenBankingBank = (aspspName, aspspCountry = 'EE') =>
 export const getOpenBankingConnections = () => api.get('/open-banking/connections');
 export const disconnectOpenBankingConnection = (id) =>
   api.delete(`/open-banking/connections/${id}`);
-export const syncOpenBanking = (connectionId) =>
-  api.post('/open-banking/sync', connectionId ? { connectionId } : {}, { timeout: 120000 });
+export const syncOpenBanking = (connectionId, options = {}) =>
+  api.post(
+    '/open-banking/sync',
+    {
+      ...(connectionId ? { connectionId } : {}),
+      ...(options.fullBackfill ? { fullBackfill: true } : {}),
+      ...(options.dateFrom ? { dateFrom: options.dateFrom } : {}),
+    },
+    { timeout: options.fullBackfill ? 300000 : 120000 },
+  );
 
 // --- Transactions ---
 export const getTransactions = (params) =>

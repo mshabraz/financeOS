@@ -192,13 +192,15 @@ router.post('/refresh-balances', async (req, res) => {
   }
 });
 
-// POST /api/open-banking/sync  { connectionId? }
+// POST /api/open-banking/sync  { connectionId?, fullBackfill?, dateFrom? }
 router.post('/sync', async (req, res) => {
   try {
     if (!isEnabled()) return disabledResponse(res);
     const db = require('../db/database').getDb();
     const connectionId = req.body?.connectionId ? Number(req.body.connectionId) : undefined;
-    const result = await syncConnections(db, { connectionId }, req);
+    const fullBackfill = Boolean(req.body?.fullBackfill);
+    const dateFrom = req.body?.dateFrom || undefined;
+    const result = await syncConnections(db, { connectionId, fullBackfill, dateFrom }, req);
     res.json(result);
   } catch (err) {
     return handleError(res, err);
