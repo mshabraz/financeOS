@@ -14,6 +14,24 @@ const {
 
 const router = express.Router();
 
+function memberUnifiedId(member) {
+  if (member == null) return null;
+  if (typeof member === 'string' || typeof member === 'number') return String(member);
+  return member.unified_id != null ? String(member.unified_id) : null;
+}
+
+function recordIgnoredPair(db, members, reason) {
+  if (!members?.length || members.length < 2) return false;
+  const a = memberUnifiedId(members[0]);
+  const b = memberUnifiedId(members[1]);
+  if (!a || !b) return false;
+  const ignoreKey = pairIgnoreKey({ unified_id: a }, { unified_id: b });
+  db.prepare(
+    `INSERT OR IGNORE INTO duplicate_ignore_rules (key, reason) VALUES (?, ?)`,
+  ).run(ignoreKey, reason);
+  return true;
+}
+
 function getDuplicateSettings(db) {
   const keys = [
     'duplicate_min_confidence',
@@ -90,26 +108,16 @@ router.post('/resolve', (req, res) => {
     const { action, keepId, removeIds, groupId, members } = req.body;
 
     if (action === 'keep_both') {
-      if (members?.length === 2) {
-        const ignoreKey = pairIgnoreKey(
-          { unified_id: members[0].unified_id || members[0] },
-          { unified_id: members[1].unified_id || members[1] },
-        );
-        db.prepare(
-          `INSERT OR IGNORE INTO duplicate_ignore_rules (key, reason) VALUES (?, ?)`,
-        ).run(ignoreKey, 'User marked as not duplicate');
-      }
-      return res.json({ ok: true, action: 'keep_both' });
+      recordIgnoredPair(db, members, 'User marked as not duplicate (keep both)');
+      return res.json({ ok: true, action: 'keep_both', ignored: true });
     }
 
     if (action === 'ignore_pattern') {
-      const ids = removeIds || members || [];
-      for (const id of ids) {
-        db.prepare(
-          `INSERT OR IGNORE INTO duplicate_ignore_rules (key, reason) VALUES (?, ?)`,
-        ).run(`id:${id}`, 'Ignored duplicate pattern');
+      const ok = recordIgnoredPair(db, members, 'User ignored duplicate match');
+      if (!ok) {
+        return res.status(400).json({ error: 'Could not record ignore rule for this pair' });
       }
-      return res.json({ ok: true, action: 'ignore_pattern' });
+      return res.json({ ok: true, action: 'ignore_pattern', ignored: true });
     }
 
     if (action === 'delete' || action === 'merge') {

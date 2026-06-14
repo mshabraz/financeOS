@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  AlertTriangle, Check, ChevronDown, RefreshCw, Shield, Trash2, Undo2, X,
+  AlertTriangle, Check, RefreshCw, Shield, Trash2, Undo2,
 } from 'lucide-react';
 import clsx from 'clsx';
 import {
@@ -39,27 +39,30 @@ function CompareCard({ tx, label, selected, onSelect }) {
   };
   return (
     <div
+      role="button"
+      tabIndex={0}
+      onClick={onSelect}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onSelect(); }}
       className={clsx(
-        'rounded-xl border p-4 space-y-2 transition-colors',
+        'rounded-xl border p-4 space-y-2 transition-colors cursor-pointer',
         selected
-          ? 'border-brand-500 bg-brand-50/50 dark:bg-brand-900/20'
-          : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900',
+          ? 'border-brand-500 bg-brand-50/50 dark:bg-brand-900/20 ring-2 ring-brand-500/30'
+          : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 hover:border-gray-300 dark:hover:border-gray-600',
       )}
     >
       <div className="flex items-center justify-between gap-2">
         <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">{label}</span>
-        <button
-          type="button"
-          onClick={onSelect}
+        <span
           className={clsx(
-            'text-xs font-medium px-2 py-1 rounded-lg border',
+            'inline-flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-lg border',
             selected
-              ? 'border-brand-500 text-brand-600'
+              ? 'border-brand-500 text-brand-600 bg-brand-50 dark:bg-brand-900/30'
               : 'border-gray-200 dark:border-gray-600 text-gray-500',
           )}
         >
-          {selected ? 'Keep this' : 'Keep'}
-        </button>
+          {selected && <Check size={12} />}
+          {selected ? 'Will keep' : 'Select to keep'}
+        </span>
       </div>
       <div className="text-lg font-semibold text-gray-900 dark:text-white tabular-nums">
         {fmt(tx.amount)}
@@ -92,6 +95,7 @@ function DuplicateGroupCard({ group, onResolved }) {
   const [keepId, setKeepId] = useState(group.suggestedKeepId);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
 
   const members = group.members || [];
   const removeIds = members.map((m) => m.unified_id).filter((id) => id !== keepId);
@@ -100,15 +104,21 @@ function DuplicateGroupCard({ group, onResolved }) {
   const handleAction = async (action) => {
     setBusy(true);
     setError('');
+    setSuccess('');
     try {
-      await resolveDuplicate({
+      const result = await resolveDuplicate({
         action,
         keepId: action === 'delete' || action === 'merge' ? keepId : undefined,
         removeIds: action === 'delete' || action === 'merge' ? removeIds : undefined,
         groupId: group.groupId,
         members: members.map((m) => ({ unified_id: m.unified_id })),
       });
-      onResolved?.();
+      if (action === 'keep_both' || action === 'ignore_pattern') {
+        setSuccess('Marked safe — this pair will not appear in future scans.');
+      } else if (action === 'merge') {
+        setSuccess(`Removed ${result.removed ?? removeIds.length} duplicate(s). Archived for recovery.`);
+      }
+      await onResolved?.();
     } catch (e) {
       setError(e.message);
     } finally {
@@ -157,6 +167,15 @@ function DuplicateGroupCard({ group, onResolved }) {
       {error && (
         <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
       )}
+      {success && (
+        <p className="text-sm text-green-700 dark:text-green-400 flex items-center gap-1">
+          <Check size={14} /> {success}
+        </p>
+      )}
+
+      <p className="text-xs text-gray-500 dark:text-gray-400">
+        Tap a transaction card to choose which row survives &quot;Remove duplicate&quot;.
+      </p>
 
       <div className="flex flex-wrap gap-2">
         <button
@@ -181,6 +200,7 @@ function DuplicateGroupCard({ group, onResolved }) {
           disabled={busy}
           onClick={() => handleAction('ignore_pattern')}
           className="btn-secondary min-h-[44px]"
+          title="Hide this pair from future scans — both transactions stay in your ledger"
         >
           Ignore match
         </button>
@@ -215,8 +235,8 @@ export default function DuplicateReviewPanel() {
     queryFn: () => getDuplicateArchive(),
   });
 
-  const invalidateAll = () => {
-    queryClient.invalidateQueries({ queryKey: ['duplicates'] });
+  const invalidateAll = async () => {
+    await queryClient.refetchQueries({ queryKey: ['duplicates'] });
     queryClient.invalidateQueries({ queryKey: ['duplicate-archive'] });
     queryClient.invalidateQueries({ queryKey: ['transactions'] });
     queryClient.invalidateQueries({ queryKey: ['dashboard'] });
