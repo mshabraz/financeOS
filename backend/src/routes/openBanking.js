@@ -73,10 +73,19 @@ router.get('/callback', async (req, res) => {
       reqMeta,
     );
 
+    let saved = [];
     await runWithUserId(pending.userId, async () => {
       const db = openUserDatabase(pending.userId);
-      saveConnectionsFromSession(db, sessionData, aspspName, aspspCountry);
+      saved = saveConnectionsFromSession(db, sessionData, aspspName, aspspCountry);
     });
+
+    if (!saved.length) {
+      const rawCount = sessionData?.accounts?.length ?? 0;
+      const hint = rawCount === 0
+        ? 'Enable Banking returned no accounts. In restricted (free) mode, each SEB/Revolut IBAN must be linked in the Enable Banking Control Panel before users can connect it in FinanceOS.'
+        : 'No accounts were saved. The authorized account may not be linked in the Enable Banking Control Panel (restricted mode).';
+      return res.redirect(settingsRedirect('error', hint));
+    }
 
     return res.redirect(settingsRedirect('connected'));
   } catch (err) {

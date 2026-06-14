@@ -484,6 +484,7 @@ Get-Content C:\FinanceOS\logs\deploy.log -Tail 50
 
 ## Related docs
 
+- [OPEN-BANKING-MULTI-USER.md](OPEN-BANKING-MULTI-USER.md) — restricted mode and multiple FinanceOS users
 - [TUNNEL-RECOVERY.md](TUNNEL-RECOVERY.md) — **Cloudflare quick tunnel died / new URL after restart**
 - [CLOUD-MIGRATION.md](CLOUD-MIGRATION.md) — internet hosting (Oracle VM)
 - [GIT-BEGINNER-GUIDE.md](GIT-BEGINNER-GUIDE.md) — Git basics
