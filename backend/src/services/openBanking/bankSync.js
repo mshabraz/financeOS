@@ -24,6 +24,7 @@ const { importRevolutRows } = require('../revolutImporter');
 const { applyAllRulesToExisting } = require('../categorizer');
 const { reapplyManualCategoryLocks } = require('../manualCategoryLocks');
 const { REDIRECT_URL } = require('./openBankingConfig');
+const { resolveTransactionSyncRange } = require('./transactionSyncPolicy');
 
 const { refreshConnectionBalance, isRevolutConnection } = require('./connectionBalances');
 const {
@@ -86,65 +87,6 @@ async function completeAuthorization(code, pending, reqMeta) {
   const aspspName = pending?.aspspName || aspsp.name;
   const aspspCountry = pending?.aspspCountry || aspsp.country;
   return { sessionData, aspspName, aspspCountry };
-}
-
-function isoDateOnly(d) {
-  return d.toISOString().slice(0, 10);
-}
-
-function getSyncBackfillDays(db) {
-  try {
-    const row = db.prepare(
-      'SELECT value FROM app_settings WHERE key = ?',
-    ).get('open_banking_sync_backfill_days');
-    const n = parseInt(row?.value || '365', 10);
-    if (Number.isFinite(n) && n > 0) return Math.min(n, 730);
-  } catch {
-    /* app_settings may not exist */
-  }
-  return 365;
-}
-
-function connectionHasStoredTransactions(db, connection) {
-  if (isRevolutConnection(connection)) {
-    const product = connection.account_iban || connection.account_uid;
-    const row = db.prepare(
-      `SELECT COUNT(*) AS n FROM revolut_transactions
-       WHERE product = ? OR product = ?`,
-    ).get(product, connection.account_iban || '');
-    return (row?.n ?? 0) > 0;
-  }
-  const account = connection.account_iban;
-  if (account) {
-    const row = db.prepare(
-      'SELECT COUNT(*) AS n FROM transactions WHERE account = ?',
-    ).get(account);
-    return (row?.n ?? 0) > 0;
-  }
-  const row = db.prepare('SELECT COUNT(*) AS n FROM transactions').get();
-  return (row?.n ?? 0) > 0;
-}
-
-function syncDateFrom(connection, db, options = {}) {
-  if (options.dateFrom) return options.dateFrom;
-
-  if (options.fullBackfill || !connectionHasStoredTransactions(db, connection)) {
-    const d = new Date();
-    d.setDate(d.getDate() - getSyncBackfillDays(db));
-    return isoDateOnly(d);
-  }
-
-  if (connection.last_sync_at) {
-    const d = new Date(connection.last_sync_at);
-    if (!Number.isNaN(d.getTime())) {
-      d.setDate(d.getDate() - 1);
-      return isoDateOnly(d);
-    }
-  }
-
-  const d = new Date();
-  d.setDate(d.getDate() - 90);
-  return isoDateOnly(d);
 }
 
 function importTransactions(db, transactions, label) {
@@ -313,8 +255,13 @@ async function syncConnection(db, connection, reqMeta, syncOptions = {}) {
     throw err;
   }
 
-  const dateFrom = syncDateFrom(connection, db, syncOptions);
-  const dateTo = isoDateOnly(new Date());
+  const {
+    dateFrom,
+    dateTo,
+    historyCapped,
+    historyNote,
+    maxTransactionDays,
+  } = resolveTransactionSyncRange(connection, db, syncOptions, isRevolutConnection);
 
   const rawTxs = await fetchAllTransactions(
     connection.account_uid,
@@ -375,6 +322,9 @@ async function syncConnection(db, connection, reqMeta, syncOptions = {}) {
     accountIban: connection.account_iban,
     dateFrom,
     dateTo,
+    historyCapped: historyCapped || false,
+    historyNote: historyNote || null,
+    maxTransactionDays: maxTransactionDays ?? null,
     fetched: rawTxs.length,
     balanceAmount: balance?.amount ?? null,
     balanceCurrency: balance?.currency ?? null,

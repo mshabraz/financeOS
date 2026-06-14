@@ -164,10 +164,15 @@ function BankConnectionsPanel({ showToast }) {
       );
       const range = data?.results?.[0]?.dateFrom;
       const rangeNote = range ? ` from ${range}` : '';
+      const historyNote = data?.results?.find((r) => r.historyNote)?.historyNote;
       showToast(
         vars?.fullBackfill
-          ? `Full sync complete${rangeNote} — ${totals.imported} new, ${totals.duplicates} duplicates`
-          : `Sync complete — ${totals.imported} new, ${totals.duplicates} duplicates`,
+          ? historyNote
+            ? `Full sync complete${rangeNote} — ${totals.imported} new, ${totals.duplicates} duplicates. ${historyNote}`
+            : `Full sync complete${rangeNote} — ${totals.imported} new, ${totals.duplicates} duplicates`
+          : historyNote
+            ? `Sync complete — ${totals.imported} new, ${totals.duplicates} duplicates. ${historyNote}`
+            : `Sync complete — ${totals.imported} new, ${totals.duplicates} duplicates`,
         'success',
       );
     },

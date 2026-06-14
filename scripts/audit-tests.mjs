@@ -180,5 +180,32 @@ assert(
   'suffix ref matches base ref on import',
 );
 
+const {
+  getAspspMaxTransactionDays,
+  resolveTransactionSyncRange,
+} = require(path.join(ROOT, 'backend/src/services/openBanking/transactionSyncPolicy.js'));
+assert(getAspspMaxTransactionDays('Swedbank') === 90, 'Swedbank capped at 90 days');
+assert(getAspspMaxTransactionDays('Revolut') === null, 'Revolut has no ASPSP cap');
+const now = new Date('2026-06-14T12:00:00.000Z');
+const swedbankRange = resolveTransactionSyncRange(
+  { aspsp_name: 'Swedbank', last_sync_at: null },
+  { prepare: () => ({ get: () => null }) },
+  { fullBackfill: true },
+  () => false,
+  now,
+);
+assert(swedbankRange.dateFrom === '2026-03-16', 'Swedbank full sync capped to 90 days');
+assert(swedbankRange.historyCapped === true, 'Swedbank full sync reports cap');
+assert(swedbankRange.dateTo === '2026-06-14', 'date_to is today');
+const revolutRange = resolveTransactionSyncRange(
+  { aspsp_name: 'Revolut', last_sync_at: null },
+  { prepare: () => ({ get: () => ({ value: '365' }) }) },
+  { fullBackfill: true },
+  () => true,
+  now,
+);
+assert(revolutRange.dateFrom === '2025-06-14', 'Revolut full sync keeps 365-day backfill');
+assert(revolutRange.historyCapped === false, 'Revolut full sync not capped');
+
 console.log(`\nAudit tests: ${failed} failed`);
 process.exit(failed ? 1 : 0);
