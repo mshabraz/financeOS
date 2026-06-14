@@ -18,10 +18,30 @@ function refKey(account, ref) {
   return `${account || ''}:${key}`;
 }
 
+/** SEB/CSV often emit sibling refs: 2026052301339966 vs 2026052301339966-1 */
+function normalizeBankReference(ref) {
+  const s = String(ref || '').trim();
+  if (!s) return s;
+  const m = s.match(/^(.+)-(\d{1,3})$/);
+  if (m && m[1].length >= 6) return m[1];
+  return s;
+}
+
+function refVariants(account, ref) {
+  const keys = [];
+  const raw = String(ref || '').trim();
+  if (!raw) return keys;
+  keys.push(refKey(account, raw));
+  const base = normalizeBankReference(raw);
+  if (base && base !== raw) keys.push(refKey(account, base));
+  return keys.filter(Boolean);
+}
+
 function contentKey(row) {
   const absAmount = Math.abs(parseFloat(row.amount));
   const rounded = Number.isFinite(absAmount) ? absAmount.toFixed(2) : String(row.amount ?? '');
-  return `${row.date}|${rounded}|${row.direction || ''}|${normalizeText(row.beneficiary)}`;
+  const party = row.beneficiary || row.merchant || '';
+  return `${row.date}|${rounded}|${row.direction || ''}|${normalizeText(party)}`;
 }
 
 function pickBankRef(tx) {
@@ -57,8 +77,7 @@ function collectRefKeys(tx) {
     tx.reference_number,
     tx.document_number,
   ]) {
-    const rk = refKey(account, field);
-    if (rk) keys.push(rk);
+    for (const rk of refVariants(account, field)) keys.push(rk);
   }
   return keys;
 }
@@ -129,11 +148,13 @@ function dedupeBankTransactions(db) {
 
       if (!keeperId) {
         for (const field of [row.transfer_ref, row.reference_number, row.document_number]) {
-          const rk = refKey(row.account, field);
-          if (rk && seenRef.has(rk)) {
-            keeperId = seenRef.get(rk);
-            break;
+          for (const rk of refVariants(row.account, field)) {
+            if (seenRef.has(rk)) {
+              keeperId = seenRef.get(rk);
+              break;
+            }
           }
+          if (keeperId) break;
         }
       }
 
@@ -146,8 +167,9 @@ function dedupeBankTransactions(db) {
 
       seenContent.set(ck, row.id);
       for (const field of [row.transfer_ref, row.reference_number, row.document_number]) {
-        const rk = refKey(row.account, field);
-        if (rk) seenRef.set(rk, row.id);
+        for (const rk of refVariants(row.account, field)) {
+          if (rk) seenRef.set(rk, row.id);
+        }
       }
     }
 
@@ -175,6 +197,8 @@ module.exports = {
   canonicalBankFingerprint,
   contentKey,
   refKey,
+  refVariants,
+  normalizeBankReference,
   loadBankDedupSets,
   isDuplicateBankTx,
   registerBankTx,

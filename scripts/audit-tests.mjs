@@ -98,7 +98,7 @@ assert(clbd?.amount === 103.2, 'prefers ITAV available balance over CLBD booked'
 const {
   canonicalBankFingerprint,
   isDuplicateBankTx,
-  loadBankDedupSets,
+  normalizeBankReference,
 } = require(path.join(ROOT, 'backend/src/services/bankDedup.js'));
 const sebFp = canonicalBankFingerprint({
   account: 'EE702200221072319566',
@@ -160,6 +160,25 @@ assert(csvRevFp !== obRevFp, 'CSV and OB Revolut fingerprints differ');
 
 const { merchantsLikelyMatch } = require(path.join(ROOT, 'backend/src/services/crossLedgerDedup.js'));
 assert(merchantsLikelyMatch('Temu', { merchant: 'Temu.com', details: 'temu.com' }), 'Temu cross-ledger merchant match');
+
+assert(normalizeBankReference('2026052301339966-1') === '2026052301339966', 'strips SEB-style ref suffix');
+const refSets = {
+  fingerprints: new Set(),
+  refKeys: new Set(['EE123:2026052301339966']),
+  contentKeys: new Set(),
+};
+assert(
+  isDuplicateBankTx({
+    fingerprint: 'newfp',
+    account: 'EE123',
+    transfer_ref: '2026052301339966-1',
+    date: '2026-05-23',
+    amount: -92,
+    direction: 'D',
+    beneficiary: 'RIMI',
+  }, refSets),
+  'suffix ref matches base ref on import',
+);
 
 console.log(`\nAudit tests: ${failed} failed`);
 process.exit(failed ? 1 : 0);

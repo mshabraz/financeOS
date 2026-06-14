@@ -5,6 +5,7 @@
 
 const crypto = require('crypto');
 const { merchantsLikelyMatch } = require('./crossLedgerDedup');
+const { normalizeBankReference } = require('./bankDedup');
 
 const CONFIDENCE_LEVELS = ['very_high', 'high', 'medium', 'low'];
 
@@ -50,6 +51,16 @@ function loadIgnoreRules(db) {
   return rules;
 }
 
+function refsLikelyMatch(aRef, bRef) {
+  if (!aRef || !bRef) return false;
+  const ra = String(aRef).trim();
+  const rb = String(bRef).trim();
+  if (ra === rb) return true;
+  const ba = normalizeBankReference(ra);
+  const bb = normalizeBankReference(rb);
+  return ba === bb;
+}
+
 function scorePair(a, b) {
   const reasons = [];
   let score = 0;
@@ -75,20 +86,15 @@ function scorePair(a, b) {
     }
   }
 
-  const refs = new Set(
-    [a.transfer_ref, a.reference_number, a.document_number, b.transfer_ref, b.reference_number, b.document_number]
-      .filter(Boolean)
-      .map((r) => String(r).trim()),
-  );
-  if (
-    a.transfer_ref && b.transfer_ref &&
-    String(a.transfer_ref).trim() === String(b.transfer_ref).trim()
-  ) {
+  const aRef = a.transfer_ref || a.reference_number;
+  const bRef = b.transfer_ref || b.reference_number;
+  if (refsLikelyMatch(aRef, bRef)) {
     score += 45;
-    reasons.push('Same bank transaction / reference ID');
-  } else if (refs.size === 1 && a.transfer_ref && b.transfer_ref) {
-    score += 45;
-    reasons.push('Matching reference ID');
+    if (aRef !== bRef) {
+      reasons.push('Matching reference ID (suffix variant, e.g. -1)');
+    } else {
+      reasons.push('Same bank transaction / reference ID');
+    }
   }
 
   if (amountsMatch(a.amount, b.amount)) {
