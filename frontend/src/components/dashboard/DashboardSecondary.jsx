@@ -23,12 +23,13 @@ export default function DashboardSecondary({ assets, tagSummary, monthLabel, sha
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
                 <CreditCard size={14} className="text-purple-500" />
-                <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Revolut share</span>
+                <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Revolut</span>
               </div>
               <Link to="/transactions?source=revolut" className="text-[10px] text-brand-600 hover:underline">
                 Transactions
               </Link>
             </div>
+            <p className="text-lg font-bold text-purple-600 tabular-nums">{fmtEur(assets.revolutClosingBalance)}</p>
             <p className="text-xs text-gray-500">{ratio}% of joint expenses in analytics</p>
             {tags.length > 0 && (
               <ul className="mt-2 space-y-1">

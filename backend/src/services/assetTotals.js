@@ -1,8 +1,10 @@
 /**
  * Single source of truth for total assets / net worth (matches Dashboard "Total assets").
+ * Bank and Revolut balances prefer live Enable Banking figures; fall back to CSV-derived data.
  */
 const { buildPortfolioValuation } = require('./investmentValuation');
 const { getRevolutExpenseSplitRatio } = require('./revolutCalculations');
+const { isRevolutConnection } = require('./openBanking/connectionBalances');
 
 function latestBankBalance(db) {
   const bankRow = db.prepare(
@@ -13,40 +15,108 @@ function latestBankBalance(db) {
          SELECT id FROM account_balances ab2
          WHERE ab2.account = ab1.account AND ab2.balance_type = 'closing'
          ORDER BY balance_date DESC LIMIT 1
-       )`
+       )`,
   ).get();
   return bankRow?.total ?? 0;
 }
 
-/**
- * @param {import('better-sqlite3').Database} db
- * @returns {Promise<{
- *   bankBalance: number,
- *   manualTotal: number,
- *   revolutSharedAsset: number,
- *   totalAssets: number,
- *   investmentPortfolio: object|null,
- *   manuals: Array,
- * }>}
- */
-async function computeAssetTotals(db) {
-  const bankBalance = latestBankBalance(db);
+function sumOpenBankingBalances(db, { revolut }) {
+  const rows = db.prepare(
+    `SELECT aspsp_name, balance_amount, balance_as_of, balance_currency
+     FROM bank_connections
+     WHERE balance_amount IS NOT NULL`,
+  ).all();
 
-  const allManuals = db.prepare('SELECT key, label, icon, amount, currency FROM manual_balances').all();
-  const manuals = allManuals.filter((r) => r.key !== 'investment_cash');
+  let total = 0;
+  let latestDate = null;
+  let currency = 'EUR';
+  let count = 0;
 
-  const revolutLatest = db.prepare(
+  for (const row of rows) {
+    const isRev = isRevolutConnection(row);
+    if (revolut !== isRev) continue;
+    total += row.balance_amount;
+    count += 1;
+    if (row.balance_currency) currency = row.balance_currency;
+    const d = row.balance_as_of?.slice(0, 10) || null;
+    if (d && (!latestDate || d > latestDate)) latestDate = d;
+  }
+
+  return {
+    total: Math.round(total * 100) / 100,
+    date: latestDate,
+    currency,
+    count,
+  };
+}
+
+function hasOpenBankingConnections(db, { revolut }) {
+  const rows = db.prepare('SELECT aspsp_name FROM bank_connections').all();
+  return rows.some((r) => isRevolutConnection(r) === revolut);
+}
+
+function latestRevolutStatementBalance(db) {
+  const row = db.prepare(
     `SELECT balance_after, date, product, currency
      FROM revolut_transactions
      WHERE balance_after IS NOT NULL
      ORDER BY COALESCE(completed_datetime, date) DESC, id DESC
-     LIMIT 1`
+     LIMIT 1`,
   ).get();
+  if (!row || row.balance_after == null) return null;
+  return {
+    amount: row.balance_after,
+    date: row.date,
+    product: row.product,
+    currency: row.currency || 'EUR',
+    source: 'revolut_statement',
+  };
+}
 
+/**
+ * @param {import('better-sqlite3').Database} db
+ */
+async function computeAssetTotals(db) {
   const splitRatio = getRevolutExpenseSplitRatio(db);
-  const revolutClosingBalance = revolutLatest?.balance_after ?? null;
-  const revolutSharedAsset =
-    revolutClosingBalance != null ? Math.round(revolutClosingBalance * splitRatio * 100) / 100 : 0;
+
+  const obBank = sumOpenBankingBalances(db, { revolut: false });
+  const obRevolut = sumOpenBankingBalances(db, { revolut: true });
+  const statementRevolut = latestRevolutStatementBalance(db);
+
+  let bankBalance;
+  let bankBalanceSource;
+  if (obBank.count > 0) {
+    bankBalance = obBank.total;
+    bankBalanceSource = 'open_banking';
+  } else if (hasOpenBankingConnections(db, { revolut: false })) {
+    bankBalance = 0;
+    bankBalanceSource = 'open_banking_pending';
+  } else {
+    bankBalance = latestBankBalance(db);
+    bankBalanceSource = 'csv';
+  }
+
+  let revolutClosingBalance = null;
+  let revolutBalanceDate = null;
+  let revolutProduct = null;
+  let revolutBalanceSource = null;
+
+  if (obRevolut.count > 0) {
+    revolutClosingBalance = obRevolut.total;
+    revolutBalanceDate = obRevolut.date;
+    revolutBalanceSource = 'open_banking';
+  } else if (statementRevolut) {
+    revolutClosingBalance = statementRevolut.amount;
+    revolutBalanceDate = statementRevolut.date;
+    revolutProduct = statementRevolut.product;
+    revolutBalanceSource = statementRevolut.source;
+  }
+
+  // Net worth uses full bank balances (not the 50% expense split).
+  const revolutBalanceForAssets = revolutClosingBalance ?? 0;
+
+  const allManuals = db.prepare('SELECT key, label, icon, amount, currency FROM manual_balances').all();
+  const manuals = allManuals.filter((r) => r.key !== 'investment_cash');
 
   let investmentPortfolio = null;
   try {
@@ -71,16 +141,22 @@ async function computeAssetTotals(db) {
   });
 
   const manualTotal = manualsWithPortfolio.reduce((s, r) => s + (r.amount || 0), 0);
-  const totalAssets = bankBalance + manualTotal + revolutSharedAsset;
+  const totalAssets = bankBalance + manualTotal + revolutBalanceForAssets;
 
   return {
     bankBalance: Math.round(bankBalance * 100) / 100,
+    bankBalanceSource,
     manualTotal: Math.round(manualTotal * 100) / 100,
-    revolutSharedAsset: Math.round(revolutSharedAsset * 100) / 100,
+    revolutClosingBalance:
+      revolutClosingBalance != null ? Math.round(revolutClosingBalance * 100) / 100 : null,
+    revolutSharedAsset:
+      revolutClosingBalance != null ? Math.round(revolutClosingBalance * 100) / 100 : 0,
+    revolutBalanceDate,
+    revolutProduct,
+    revolutBalanceSource,
     totalAssets: Math.round(totalAssets * 100) / 100,
     investmentPortfolio,
     manuals: manualsWithPortfolio,
-    revolutClosingBalance,
     revolutSplitRatio: splitRatio,
   };
 }

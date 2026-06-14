@@ -394,6 +394,10 @@ router.get('/assets', async (req, res) => {
     investmentPortfolio: portfolioBase,
     manuals: manualsWithPortfolio,
     revolutClosingBalance,
+    revolutBalanceDate,
+    revolutProduct,
+    revolutBalanceSource,
+    bankBalanceSource,
     revolutSplitRatio: splitRatio,
   } = totals;
 
@@ -498,14 +502,16 @@ router.get('/assets', async (req, res) => {
 
   res.json({
     bankBalance,
+    bankBalanceSource,
     manuals: manualsEnriched,
     manualTotal,
     investmentPortfolio,
     revolutClosingBalance,
     revolutSharedAsset,
     revolutSplitRatio: splitRatio,
-    revolutBalanceDate: revolutLatest?.date ?? null,
-    revolutProduct: revolutLatest?.product ?? null,
+    revolutBalanceDate: revolutBalanceDate ?? revolutLatest?.date ?? null,
+    revolutProduct: revolutProduct ?? revolutLatest?.product ?? null,
+    revolutBalanceSource,
     totalAssets,
     netWorthConversion,
   });

@@ -139,13 +139,23 @@ export default function DashboardAssets({
                 </button>
               </div>
               <div className="flex justify-between py-2 border-b border-gray-100 dark:border-gray-800 text-sm">
-                <span className="text-gray-600">Bank</span>
+                <span className="text-gray-600">
+                  Bank
+                  {assets?.bankBalanceSource === 'open_banking' && (
+                    <span className="text-[10px] text-gray-400 block">Live from bank</span>
+                  )}
+                </span>
                 <span className="font-semibold tabular-nums">{fmtEur(assets?.bankBalance)}</span>
               </div>
               {assets?.revolutClosingBalance != null && (
                 <div className="flex justify-between py-2 border-b border-gray-100 dark:border-gray-800 text-sm gap-2">
-                  <span className="text-gray-600">Revolut share</span>
-                  <span className="font-semibold tabular-nums text-purple-600">{fmtEur(assets.revolutSharedAsset)}</span>
+                  <span className="text-gray-600">
+                    Revolut
+                    {assets?.revolutBalanceSource === 'open_banking' && (
+                      <span className="text-[10px] text-gray-400 block">Live from bank</span>
+                    )}
+                  </span>
+                  <span className="font-semibold tabular-nums text-purple-600">{fmtEur(assets.revolutClosingBalance)}</span>
                 </div>
               )}
               {(assets?.manuals ?? manuals)?.map((row) => (

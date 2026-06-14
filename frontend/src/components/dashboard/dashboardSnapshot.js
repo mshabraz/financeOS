@@ -10,14 +10,14 @@ export function buildDashboardSnapshot({
 }) {
   const netWorth = assets?.totalAssets ?? 0;
   const bankBalance = assets?.bankBalance ?? 0;
-  const revolutShare = assets?.revolutSharedAsset ?? 0;
+  const revolutBalance = assets?.revolutClosingBalance ?? assets?.revolutSharedAsset ?? 0;
   const invCash = portfolio?.cashBalance ?? 0;
   const investmentsTotal =
     portfolio?.totalPortfolio
     ?? assets?.manuals?.find((m) => m.key === 'investments')?.amount
     ?? 0;
 
-  const totalCash = bankBalance + revolutShare + invCash;
+  const totalCash = bankBalance + revolutBalance + invCash;
 
   const pctOfNet = (amount) =>
     netWorth > 0 && amount != null ? (amount / netWorth) * 100 : null;
@@ -35,7 +35,7 @@ export function buildDashboardSnapshot({
     totalCash,
     investmentsTotal,
     bankBalance,
-    revolutShare,
+    revolutShare: revolutBalance,
     invCash,
     holdingsValue: portfolio?.holdingsValue ?? 0,
     unrealizedPnLEur: portfolio?.unrealizedPnLEur,

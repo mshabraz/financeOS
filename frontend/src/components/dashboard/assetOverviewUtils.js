@@ -15,12 +15,13 @@ export function buildAssetSegments(assets) {
     });
   }
 
-  if ((assets.revolutSharedAsset ?? 0) > 0) {
+  const revolutAmount = assets.revolutClosingBalance ?? assets.revolutSharedAsset ?? 0;
+  if (revolutAmount > 0) {
     segments.push({
       key: 'revolut',
-      label: 'Revolut (your share)',
+      label: 'Revolut',
       icon: '💳',
-      amount: assets.revolutSharedAsset,
+      amount: revolutAmount,
       color: '#a855f7',
     });
   }

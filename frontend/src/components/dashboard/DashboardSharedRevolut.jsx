@@ -20,13 +20,16 @@ export function DashboardRevolut({ assets, tagSummary, monthLabel }) {
       </div>
       {assets?.revolutClosingBalance != null && (
         <div className="rounded-xl bg-purple-500/5 border border-purple-500/20 p-3 mb-3">
-          <p className="text-xs text-gray-500">Your share ({ratio}%)</p>
+          <p className="text-xs text-gray-500">Balance</p>
           <p className="text-xl font-bold text-purple-600 dark:text-purple-400 tabular-nums">
-            {fmtEur(assets.revolutSharedAsset ?? 0)}
+            {fmtEur(assets.revolutClosingBalance)}
           </p>
           <p className="text-[10px] text-gray-400 mt-1">
-            Statement {fmtEur(assets.revolutClosingBalance)}
+            {assets.revolutBalanceSource === 'open_banking' ? 'Live from bank' : 'From statement'}
             {assets.revolutBalanceDate ? ` · ${assets.revolutBalanceDate}` : ''}
+          </p>
+          <p className="text-[10px] text-gray-400 mt-0.5">
+            Joint expenses counted at {ratio}% in analytics
           </p>
         </div>
       )}

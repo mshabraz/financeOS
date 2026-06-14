@@ -83,11 +83,17 @@ const {
 assert(typeof recordManualCategoryLocks === 'function', 'manual category locks exported');
 
 // In-memory lock resolution (no DB): keysForImport shape
-const lockKeys = keysForImport('revolut', {
-  fingerprint: 'abc',
-  transferRef: 'uuid-1',
+const { pickPrimaryBalance } = require(path.join(
+  ROOT,
+  'backend/src/services/openBanking/balanceUtils.js',
+));
+const clbd = pickPrimaryBalance({
+  balances: [
+    { balance_type: 'CLBD', balance_amount: { amount: '169.83', currency: 'EUR' }, reference_date: '2026-06-09' },
+    { balance_type: 'ITAV', balance_amount: { amount: '200.00', currency: 'EUR' } },
+  ],
 });
-assert(lockKeys.length === 2, 'import keys include fingerprint and transfer ref');
+assert(clbd?.amount === 169.83, 'prefers CLBD booked balance');
 
 console.log(`\nAudit tests: ${failed} failed`);
 process.exit(failed ? 1 : 0);

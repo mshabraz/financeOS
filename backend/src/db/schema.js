@@ -1125,7 +1125,27 @@ const MIGRATION_V32 = {
   },
 };
 
-const ALL_MIGRATIONS = [...migrations.filter(m => m.version === 1), MIGRATION_V2, MIGRATION_V3, MIGRATION_V4, MIGRATION_V5, MIGRATION_V6, MIGRATION_V7, MIGRATION_V8, MIGRATION_V9, MIGRATION_V10, MIGRATION_V11, MIGRATION_V12, MIGRATION_V13, MIGRATION_V14, MIGRATION_V15, MIGRATION_V16, MIGRATION_V17, MIGRATION_V18, MIGRATION_V19, MIGRATION_V20, MIGRATION_V21, MIGRATION_V22, MIGRATION_V23, MIGRATION_V24, MIGRATION_V25, MIGRATION_V26, MIGRATION_V27, MIGRATION_V28, MIGRATION_V29, MIGRATION_V30, MIGRATION_V31, MIGRATION_V32];
+// ── Migration v33: Live balances on open banking connections ────────────────────
+const MIGRATION_V33 = {
+  version: 33,
+  up: (db) => {
+    const cols = db.prepare('PRAGMA table_info(bank_connections)').all().map((r) => r.name);
+    if (!cols.includes('balance_amount')) {
+      db.exec('ALTER TABLE bank_connections ADD COLUMN balance_amount REAL');
+    }
+    if (!cols.includes('balance_currency')) {
+      db.exec('ALTER TABLE bank_connections ADD COLUMN balance_currency TEXT');
+    }
+    if (!cols.includes('balance_as_of')) {
+      db.exec('ALTER TABLE bank_connections ADD COLUMN balance_as_of TEXT');
+    }
+    if (!cols.includes('balance_updated_at')) {
+      db.exec('ALTER TABLE bank_connections ADD COLUMN balance_updated_at TEXT');
+    }
+  },
+};
+
+const ALL_MIGRATIONS = [...migrations.filter(m => m.version === 1), MIGRATION_V2, MIGRATION_V3, MIGRATION_V4, MIGRATION_V5, MIGRATION_V6, MIGRATION_V7, MIGRATION_V8, MIGRATION_V9, MIGRATION_V10, MIGRATION_V11, MIGRATION_V12, MIGRATION_V13, MIGRATION_V14, MIGRATION_V15, MIGRATION_V16, MIGRATION_V17, MIGRATION_V18, MIGRATION_V19, MIGRATION_V20, MIGRATION_V21, MIGRATION_V22, MIGRATION_V23, MIGRATION_V24, MIGRATION_V25, MIGRATION_V26, MIGRATION_V27, MIGRATION_V28, MIGRATION_V29, MIGRATION_V30, MIGRATION_V31, MIGRATION_V32, MIGRATION_V33];
 
 function runMigrations(db) {
   db.exec(`CREATE TABLE IF NOT EXISTS schema_migrations (

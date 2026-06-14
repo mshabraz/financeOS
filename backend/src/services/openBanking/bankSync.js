@@ -21,15 +21,14 @@ const { applyAllRulesToExisting } = require('../categorizer');
 const { reapplyManualCategoryLocks } = require('../manualCategoryLocks');
 const { REDIRECT_URL } = require('./openBankingConfig');
 
-function isRevolutConnection(connection) {
-  return /revolut/i.test(connection?.aspsp_name || '');
-}
+const { refreshConnectionBalance, isRevolutConnection } = require('./connectionBalances');
 
 function listConnections(db) {
   return db
     .prepare(
       `SELECT id, aspsp_name, aspsp_country, account_uid, account_iban, account_name,
-              valid_until, last_sync_at, created_at
+              valid_until, last_sync_at, created_at,
+              balance_amount, balance_currency, balance_as_of, balance_updated_at
        FROM bank_connections
        ORDER BY created_at DESC`,
     )
@@ -251,10 +250,15 @@ async function syncConnection(db, connection, reqMeta) {
     `UPDATE bank_connections SET last_sync_at = datetime('now') WHERE id = ?`,
   ).run(connection.id);
 
+  const balance = await refreshConnectionBalance(db, getConnection(db, connection.id), reqMeta);
+
   return {
     connectionId: connection.id,
     accountIban: connection.account_iban,
     fetched: rawTxs.length,
+    balanceAmount: balance?.amount ?? null,
+    balanceCurrency: balance?.currency ?? null,
+    balanceAsOf: balance?.asOf ?? null,
     ...result,
   };
 }
@@ -319,4 +323,5 @@ module.exports = {
   syncConnections,
   disconnectConnection,
   REDIRECT_URL,
+  isRevolutConnection,
 };

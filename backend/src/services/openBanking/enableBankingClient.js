@@ -93,7 +93,11 @@ async function startAuthorization({ aspspName, aspspCountry, state, redirectUrl,
   return apiRequest('POST', '/auth', {
     reqMeta,
     body: {
-      access: { valid_until: validUntil },
+      access: {
+        valid_until: validUntil,
+        balances: true,
+        transactions: true,
+      },
       aspsp: { name: aspspName, country: aspspCountry },
       state,
       redirect_url: redirectUrl,
@@ -112,6 +116,10 @@ async function getSession(sessionId, reqMeta) {
 
 async function deleteSession(sessionId, reqMeta) {
   return apiRequest('DELETE', `/sessions/${sessionId}`, { reqMeta });
+}
+
+async function getAccountBalances(accountId, reqMeta) {
+  return apiRequest('GET', `/accounts/${accountId}/balances`, { reqMeta });
 }
 
 async function getAccountTransactions(accountId, { dateFrom, dateTo, continuationKey }, reqMeta) {
@@ -166,6 +174,7 @@ module.exports = {
   authorizeSession,
   getSession,
   deleteSession,
+  getAccountBalances,
   getAccountTransactions,
   fetchAllTransactions,
   defaultValidUntil,

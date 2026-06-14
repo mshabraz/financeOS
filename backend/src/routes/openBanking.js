@@ -77,6 +77,12 @@ router.get('/callback', async (req, res) => {
     await runWithUserId(pending.userId, async () => {
       const db = openUserDatabase(pending.userId);
       saved = saveConnectionsFromSession(db, sessionData, aspspName, aspspCountry);
+      const { refreshConnectionBalance } = require('../services/openBanking/connectionBalances');
+      const { getConnection } = require('../services/openBanking/bankSync');
+      for (const row of saved) {
+        const full = getConnection(db, row.id);
+        if (full) await refreshConnectionBalance(db, full, reqMeta);
+      }
     });
 
     if (!saved.length) {
@@ -168,6 +174,19 @@ router.delete('/connections/:id', async (req, res) => {
     const db = require('../db/database').getDb();
     const result = await disconnectConnection(db, Number(req.params.id), req);
     res.json(result);
+  } catch (err) {
+    return handleError(res, err);
+  }
+});
+
+// POST /api/open-banking/refresh-balances — fetch live balances for all connections
+router.post('/refresh-balances', async (req, res) => {
+  try {
+    if (!isEnabled()) return disabledResponse(res);
+    const db = require('../db/database').getDb();
+    const { refreshAllConnectionBalances } = require('../services/openBanking/connectionBalances');
+    const results = await refreshAllConnectionBalances(db, reqMetaFromExpress(req));
+    res.json({ results });
   } catch (err) {
     return handleError(res, err);
   }
