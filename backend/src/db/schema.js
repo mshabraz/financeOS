@@ -1160,7 +1160,6 @@ const MIGRATION_V34 = {
   },
 };
 
-// ── Migration v35: Cross-ledger Revolut vs bank duplicates + zero-amount cleanup ─
 const MIGRATION_V35 = {
   version: 35,
   up: (db) => {
@@ -1182,7 +1181,44 @@ const MIGRATION_V35 = {
   },
 };
 
-const ALL_MIGRATIONS = [...migrations.filter(m => m.version === 1), MIGRATION_V2, MIGRATION_V3, MIGRATION_V4, MIGRATION_V5, MIGRATION_V6, MIGRATION_V7, MIGRATION_V8, MIGRATION_V9, MIGRATION_V10, MIGRATION_V11, MIGRATION_V12, MIGRATION_V13, MIGRATION_V14, MIGRATION_V15, MIGRATION_V16, MIGRATION_V17, MIGRATION_V18, MIGRATION_V19, MIGRATION_V20, MIGRATION_V21, MIGRATION_V22, MIGRATION_V23, MIGRATION_V24, MIGRATION_V25, MIGRATION_V26, MIGRATION_V27, MIGRATION_V28, MIGRATION_V29, MIGRATION_V30, MIGRATION_V31, MIGRATION_V32, MIGRATION_V33, MIGRATION_V34, MIGRATION_V35];
+// ── Migration v36: Duplicate review archive + ignore rules ────────────────────
+const MIGRATION_V36 = {
+  version: 36,
+  up: (db) => {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS transaction_archive (
+        id                INTEGER PRIMARY KEY AUTOINCREMENT,
+        ledger            TEXT NOT NULL,
+        original_id       INTEGER NOT NULL,
+        row_json          TEXT NOT NULL,
+        tags_json         TEXT,
+        deleted_at        TEXT DEFAULT (datetime('now')),
+        deleted_by        TEXT,
+        duplicate_group_id TEXT,
+        restore_token     TEXT UNIQUE
+      );
+      CREATE INDEX IF NOT EXISTS idx_tx_archive_deleted ON transaction_archive(deleted_at);
+
+      CREATE TABLE IF NOT EXISTS duplicate_ignore_rules (
+        key         TEXT PRIMARY KEY,
+        reason      TEXT,
+        created_at  TEXT DEFAULT (datetime('now'))
+      );
+    `);
+
+    db.prepare(
+      `INSERT OR IGNORE INTO app_settings (key, value) VALUES ('duplicate_min_confidence', 'medium')`,
+    ).run();
+    db.prepare(
+      `INSERT OR IGNORE INTO app_settings (key, value) VALUES ('duplicate_skip_pending_zero', 'true')`,
+    ).run();
+    db.prepare(
+      `INSERT OR IGNORE INTO app_settings (key, value) VALUES ('duplicate_sync_overlap_days', '3')`,
+    ).run();
+  },
+};
+
+const ALL_MIGRATIONS = [...migrations.filter(m => m.version === 1), MIGRATION_V2, MIGRATION_V3, MIGRATION_V4, MIGRATION_V5, MIGRATION_V6, MIGRATION_V7, MIGRATION_V8, MIGRATION_V9, MIGRATION_V10, MIGRATION_V11, MIGRATION_V12, MIGRATION_V13, MIGRATION_V14, MIGRATION_V15, MIGRATION_V16, MIGRATION_V17, MIGRATION_V18, MIGRATION_V19, MIGRATION_V20, MIGRATION_V21, MIGRATION_V22, MIGRATION_V23, MIGRATION_V24, MIGRATION_V25, MIGRATION_V26, MIGRATION_V27, MIGRATION_V28, MIGRATION_V29, MIGRATION_V30, MIGRATION_V31, MIGRATION_V32, MIGRATION_V33, MIGRATION_V34, MIGRATION_V35, MIGRATION_V36];
 
 function runMigrations(db) {
   db.exec(`CREATE TABLE IF NOT EXISTS schema_migrations (

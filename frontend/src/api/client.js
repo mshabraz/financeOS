@@ -278,6 +278,16 @@ export const bulkUpdateCategory = (ids, categoryId) =>
 export const bulkDeleteTransactions = (ids) =>
   api.post('/transactions/bulk-delete', { ids });
 
+// --- Duplicate review ---
+export const scanDuplicates = (params) => api.get('/duplicates/scan', { params });
+export const resolveDuplicate = (body) => api.post('/duplicates/resolve', body);
+export const bulkResolveDuplicates = (body) => api.post('/duplicates/bulk-resolve', body);
+export const getDuplicateArchive = (params) => api.get('/duplicates/archive', { params });
+export const restoreArchivedTransactions = (restoreTokens) =>
+  api.post('/duplicates/restore', { restoreTokens });
+export const getDuplicateSettings = () => api.get('/duplicates/settings');
+export const updateDuplicateSettings = (body) => api.put('/duplicates/settings', body);
+
 // --- Shared expenses (standalone) ---
 export const getSharedEvents = async () => {
   const data = await api.get('/shared/events');

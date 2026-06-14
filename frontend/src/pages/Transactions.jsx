@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Search, Download, ChevronLeft, ChevronRight, Check, X,
-  Tag, Layers, AlertCircle, ChevronDown, ChevronRight as ChevronRt, Copy, Upload, Trash2,
+  Tag, Layers, AlertCircle, ChevronDown, ChevronRight as ChevronRt, Copy, Upload, Trash2, Shield,
 } from 'lucide-react';
 import {
   getTransactions, updateTransaction, getCategories,
@@ -18,6 +18,7 @@ import PageHeader from '../components/ui/PageHeader';
 import MonthFilterSelect from '../components/ui/MonthFilterSelect';
 import DatePicker from '../components/ui/DatePicker';
 import TransactionImportPanel from '../components/transactions/TransactionImportPanel';
+import DuplicateReviewPanel from '../components/transactions/DuplicateReviewPanel';
 import UserNoteField from '../components/transactions/UserNoteField';
 import { getMonthRange } from '../utils/dateFilters';
 import { fmtCurrency, privText } from '../utils/displayFormat';
@@ -251,10 +252,12 @@ export default function Transactions() {
   usePrivacy();
   const qc = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
-  const tab = searchParams.get('tab') === 'import' ? 'import' : 'list';
+  const tabParam = searchParams.get('tab');
+  const tab = tabParam === 'import' ? 'import' : tabParam === 'duplicates' ? 'duplicates' : 'list';
   const setTab = (t) => {
     const next = new URLSearchParams(searchParams);
     if (t === 'import') next.set('tab', 'import');
+    else if (t === 'duplicates') next.set('tab', 'duplicates');
     else next.delete('tab');
     setSearchParams(next, { replace: true });
   };
@@ -473,7 +476,7 @@ export default function Transactions() {
 
       <PageHeader
         title="Transactions"
-        subtitle={tab === 'list' ? `${data?.total ?? 0} bank + Revolut · Revolut expenses counted at 50% in analytics` : 'Import or export bank and Revolut CSV'}
+        subtitle={tab === 'list' ? `${data?.total ?? 0} bank + Revolut · Revolut expenses counted at 50% in analytics` : tab === 'duplicates' ? 'Review possible duplicates before removing' : 'Import or export bank and Revolut CSV'}
       >
         {tab === 'list' && (
           <button type="button" onClick={handleExport} className="btn-secondary gap-2 w-full sm:w-auto">
@@ -485,6 +488,7 @@ export default function Transactions() {
       <div className="flex gap-1 p-1 bg-gray-100 dark:bg-gray-800 rounded-xl w-full sm:w-auto">
         {[
           { id: 'list', label: 'List' },
+          { id: 'duplicates', label: 'Duplicate review', icon: Shield },
           { id: 'import', label: 'Import / Export', icon: Upload },
         ].map(({ id, label, icon: Icon }) => (
           <button
@@ -506,6 +510,8 @@ export default function Transactions() {
 
       {tab === 'import' ? (
         <TransactionImportPanel />
+      ) : tab === 'duplicates' ? (
+        <DuplicateReviewPanel />
       ) : (
       <>
       {/* Filters */}
