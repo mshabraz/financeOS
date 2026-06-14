@@ -3,8 +3,9 @@
  * (same 50% household split rules as Revolut CSV import).
  */
 
-const crypto = require('crypto');
 const { computeRevolutAmountFields, getRevolutExpenseSplitRatio } = require('../revolutCalculations');
+const { canonicalRevolutFingerprint } = require('../revolutDedup');
+const { shouldImportObTransaction } = require('./obTransactionFilter');
 
 function parseAmount(raw) {
   if (raw == null || raw === '') return NaN;
@@ -47,19 +48,25 @@ function isoDatetimeFromDate(date) {
   return `${m[1]} 00:00:00`;
 }
 
-function generateObRevolutFingerprint({ transferRef, date, amount, description }) {
-  const key = transferRef
-    ? `ob-revolut:ref:${transferRef}`
-    : `ob-revolut:tx:${date}:${amount}:${(description || '').toLowerCase()}`;
-  return crypto.createHash('sha256').update(key).digest('hex').slice(0, 32);
+function pickCompletedDatetime(tx, date) {
+  const raw =
+    tx.booking_date_time ||
+    tx.value_date_time ||
+    tx.creation_time ||
+    tx.transaction_date_time ||
+    null;
+  if (raw) {
+    const normalized = String(raw).replace('T', ' ').slice(0, 19);
+    if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(normalized)) return normalized;
+  }
+  return isoDatetimeFromDate(date);
 }
 
-/**
- * @param {object} tx Enable Banking transaction
- * @param {string} accountIban Owner account IBAN
- * @param {number} splitRatio Global Revolut expense split from settings
- */
 function normalizeObToRevolut(tx, accountIban, splitRatio) {
+  if (!shouldImportObTransaction(tx)) {
+    return { valid: false, reason: 'Skipped pending transaction', raw: tx };
+  }
+
   const date = pickDate(tx);
   const absAmount = parseAmount(tx.transaction_amount?.amount);
   if (!date || !Number.isFinite(absAmount)) {
@@ -80,7 +87,7 @@ function normalizeObToRevolut(tx, accountIban, splitRatio) {
   const revolutType = mapRevolutType(tx);
   const transferRef = tx.entry_reference || tx.transaction_id || null;
   const currency = tx.transaction_amount?.currency || 'EUR';
-  const completedDatetime = isoDatetimeFromDate(date);
+  const completedDatetime = pickCompletedDatetime(tx, date);
 
   const amountFields = computeRevolutAmountFields({
     amount,
@@ -89,11 +96,16 @@ function normalizeObToRevolut(tx, accountIban, splitRatio) {
     splitRatioOverride: splitRatio,
   });
 
-  const fingerprint = generateObRevolutFingerprint({
-    transferRef,
-    date,
-    amount,
+  const fingerprint = canonicalRevolutFingerprint({
+    product: accountIban || 'Revolut',
+    transfer_ref: transferRef,
+    revolut_type: revolutType,
+    completed_datetime: completedDatetime,
     description,
+    amount,
+    fee: 0,
+    currency,
+    state: 'COMPLETED',
   });
 
   return {

@@ -4,7 +4,11 @@
 
 const { getDb } = require('../../db/database');
 const { resolveImportCategory } = require('../manualCategoryLocks');
-const { loadFingerprintSet } = require('../importDedup');
+const {
+  loadBankDedupSets,
+  isDuplicateBankTx,
+  registerBankTx,
+} = require('../bankDedup');
 const logger = require('../logger');
 const { encrypt, decrypt } = require('./sessionCrypto');
 const {
@@ -99,7 +103,7 @@ function syncDateFrom(connection) {
 }
 
 function importTransactions(db, transactions, label) {
-  const existing = loadFingerprintSet(db, 'transactions');
+  const existing = loadBankDedupSets(db);
   let importedCount = 0;
   let duplicateCount = 0;
   let errorCount = 0;
@@ -118,7 +122,7 @@ function importTransactions(db, transactions, label) {
   const doImport = db.transaction(() => {
     for (const tx of transactions) {
       try {
-        if (existing.has(tx.fingerprint)) {
+        if (isDuplicateBankTx(tx, existing)) {
           duplicateCount++;
           continue;
         }
@@ -130,7 +134,7 @@ function importTransactions(db, transactions, label) {
         });
         if (result.changes > 0) {
           importedCount++;
-          existing.add(tx.fingerprint);
+          registerBankTx(tx, existing);
         } else {
           duplicateCount++;
         }
@@ -142,6 +146,17 @@ function importTransactions(db, transactions, label) {
   });
 
   doImport();
+
+  let rulesRecategorized = 0;
+  let manualCategoriesRestored = 0;
+  try {
+    const rulesApplied = applyAllRulesToExisting();
+    rulesRecategorized = rulesApplied.updated || 0;
+    const manualRestored = reapplyManualCategoryLocks(db);
+    manualCategoriesRestored = manualRestored.bankUpdated + manualRestored.revolutUpdated;
+  } catch (err) {
+    logger.warn('[OpenBanking] Post-import categorization failed', { err: err.message });
+  }
 
   const dates = transactions.map((t) => t.date).filter(Boolean).sort();
   const sessionId = db.prepare(`
@@ -159,21 +174,50 @@ function importTransactions(db, transactions, label) {
     dates[dates.length - 1] || null,
   ).lastInsertRowid;
 
-  return { sessionId, importedCount, duplicateCount, errorCount };
+  return {
+    sessionId,
+    importedCount,
+    duplicateCount,
+    errorCount,
+    rulesRecategorized,
+    manualCategoriesRestored,
+  };
 }
 
-function removeLegacyBankRowsByTransferRef(db, transferRefs) {
-  const refs = [...new Set((transferRefs || []).filter(Boolean))];
+function collectBankRefValues(transactions) {
+  const refs = new Set();
+  for (const tx of transactions || []) {
+    for (const field of [
+      tx.transferRef,
+      tx.transfer_ref,
+      tx.referenceNumber,
+      tx.reference_number,
+      tx.document_number,
+      tx.archiveId,
+      tx.documentNo,
+    ]) {
+      if (field) refs.add(String(field).trim());
+    }
+  }
+  return [...refs];
+}
+
+function removeLegacyBankRowsByTransferRef(db, transactionsOrRefs) {
+  const refs = Array.isArray(transactionsOrRefs)
+    ? collectBankRefValues(transactionsOrRefs)
+    : [...new Set((transactionsOrRefs || []).filter(Boolean))];
   if (!refs.length) return 0;
   const placeholders = refs.map(() => '?').join(',');
   return db.prepare(
-    `DELETE FROM transactions WHERE transfer_ref IN (${placeholders})`,
-  ).run(...refs).changes;
+    `DELETE FROM transactions
+     WHERE transfer_ref IN (${placeholders})
+        OR reference_number IN (${placeholders})
+        OR document_number IN (${placeholders})`,
+  ).run(...refs, ...refs, ...refs).changes;
 }
 
 function importRevolutObTransactions(db, transactions, label, product) {
-  const transferRefs = transactions.map((t) => t.transfer_ref).filter(Boolean);
-  const removedBankRows = removeLegacyBankRowsByTransferRef(db, transferRefs);
+  const removedBankRows = removeLegacyBankRowsByTransferRef(db, transactions);
 
   const dates = transactions.map((t) => t.date).filter(Boolean).sort();
   const { sessionId, importedCount, duplicateCount } = importRevolutRows(db, transactions, {

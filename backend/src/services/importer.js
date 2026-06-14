@@ -6,7 +6,7 @@ const { getDb } = require('../db/database');
 const { parseBankCSV } = require('./bankCsvParser');
 const { isRevolutCSV } = require('./revolutParser');
 const { resolveImportCategory } = require('./manualCategoryLocks');
-const { loadFingerprintSet } = require('./importDedup');
+const { loadBankDedupSets, isDuplicateBankTx, registerBankTx } = require('./bankDedup');
 const logger = require('./logger');
 
 const PREVIEW_ROW_LIMIT = 100;
@@ -26,19 +26,19 @@ function previewImport(buffer, filename) {
 
   const { transactions, errors, summary, openingBalance, closingBalance } = parseBankCSV(buffer);
   const db = getDb();
-  const existing = loadFingerprintSet(db, 'transactions');
+  const existing = loadBankDedupSets(db);
 
   let newCount = 0;
   let dupCount = 0;
 
   const previewed = transactions.map((tx) => {
-    const isDuplicate = existing.has(tx.fingerprint);
+    const isDuplicate = isDuplicateBankTx(tx, existing);
     if (isDuplicate) dupCount++;
     else newCount++;
 
     const catResult = isDuplicate
       ? { categoryName: null, categoryId: null }
-      : categorizeTransaction(tx);
+      : resolveImportCategory(db, 'bank', tx);
 
     return {
       ...tx,
@@ -79,6 +79,7 @@ function commitImport(buffer, filename) {
 
   const { transactions, errors, summary, openingBalance, closingBalance } = parseBankCSV(buffer);
   const db = getDb();
+  const existing = loadBankDedupSets(db);
 
   let importedCount  = 0;
   let duplicateCount = 0;
@@ -98,6 +99,11 @@ function commitImport(buffer, filename) {
   const doImport = db.transaction(() => {
     for (const tx of transactions) {
       try {
+        if (isDuplicateBankTx(tx, existing)) {
+          duplicateCount++;
+          continue;
+        }
+
         const catResult = resolveImportCategory(db, 'bank', tx);
 
         const result = insertTx.run({
@@ -106,8 +112,10 @@ function commitImport(buffer, filename) {
           categorySource: catResult.source,
         });
 
-        if (result.changes > 0) importedCount++;
-        else duplicateCount++;
+        if (result.changes > 0) {
+          importedCount++;
+          registerBankTx(tx, existing);
+        } else duplicateCount++;
       } catch (err) {
         logger.error(`[Import] Failed row: ${err.message}`, { tx });
         errorCount++;

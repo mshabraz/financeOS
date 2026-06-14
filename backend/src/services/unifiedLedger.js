@@ -55,7 +55,7 @@ const UNIFIED_LEDGER_SQL = `
       (SELECT id FROM categories WHERE is_default = 1 LIMIT 1)
     ) AS category_id,
     r.notes AS notes,
-    NULL AS transfer_ref,
+    r.transfer_ref AS transfer_ref,
     r.revolut_type AS transaction_type,
     r.revolut_type AS revolut_type,
     r.product AS product

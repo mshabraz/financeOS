@@ -85,9 +85,11 @@ async function computeAssetTotals(db) {
 
   let bankBalance;
   let bankBalanceSource;
+  let bankBalanceDate = null;
   if (obBank.count > 0) {
     bankBalance = obBank.total;
     bankBalanceSource = 'open_banking';
+    bankBalanceDate = obBank.date;
   } else if (hasOpenBankingConnections(db, { revolut: false })) {
     bankBalance = 0;
     bankBalanceSource = 'open_banking_pending';
@@ -149,6 +151,7 @@ async function computeAssetTotals(db) {
   return {
     bankBalance: Math.round(bankBalance * 100) / 100,
     bankBalanceSource,
+    bankBalanceDate,
     manualTotal: Math.round(manualTotal * 100) / 100,
     revolutClosingBalance:
       revolutClosingBalance != null ? Math.round(revolutClosingBalance * 100) / 100 : null,

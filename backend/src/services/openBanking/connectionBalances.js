@@ -13,10 +13,21 @@ function isRevolutConnection(connection) {
 function upsertCsvStyleBankBalance(db, connection, balance) {
   const account = connection.account_iban || connection.account_name || connection.account_uid;
   const balanceDate = balance.asOf?.slice(0, 10) || new Date().toISOString().slice(0, 10);
-  db.prepare(`
-    INSERT INTO account_balances (account, balance_type, amount, currency, balance_date)
-    VALUES (?, 'closing', ?, ?, ?)
-  `).run(account, balance.amount, balance.currency, balanceDate);
+  const existing = db.prepare(
+    `SELECT id FROM account_balances
+     WHERE account = ? AND balance_type = 'closing' AND balance_date = ?`,
+  ).get(account, balanceDate);
+
+  if (existing) {
+    db.prepare(
+      `UPDATE account_balances SET amount = ?, currency = ? WHERE id = ?`,
+    ).run(balance.amount, balance.currency, existing.id);
+  } else {
+    db.prepare(`
+      INSERT INTO account_balances (account, balance_type, amount, currency, balance_date)
+      VALUES (?, 'closing', ?, ?, ?)
+    `).run(account, balance.amount, balance.currency, balanceDate);
+  }
 }
 
 function storeConnectionBalance(db, connection, balance) {

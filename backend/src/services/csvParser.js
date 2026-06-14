@@ -26,8 +26,8 @@
  *   11 Document number
  */
 
-const crypto = require('crypto');
 const iconv = require('iconv-lite');
+const { canonicalBankFingerprint } = require('./bankDedup');
 
 const COLUMN_MAP = {
   account:          0,
@@ -205,10 +205,13 @@ function parseRow(fields, idx) {
     // Extract the clean merchant name
     const merchant = extractMerchant(beneficiary, details, fields[COLUMN_MAP.transactionType]);
 
-    const fingerprint = generateFingerprint({
+    const fingerprint = canonicalBankFingerprint({
+      account: fields[COLUMN_MAP.account],
       transferRef,
+      referenceNumber: fields[COLUMN_MAP.referenceNumber] || null,
+      document_number: fields[COLUMN_MAP.documentNumber] || null,
       date,
-      amount: absAmount,
+      amount,
       direction,
       beneficiary,
     });
@@ -303,19 +306,6 @@ function normalizeMerchantName(raw) {
   name = name.replace(/\s+\d+[A-Z]{2}\s+[A-Z]+$/, '').trim();
 
   return name;
-}
-
-/**
- * Generate a SHA-256 fingerprint for duplicate detection.
- * Uses transfer reference when available (most reliable), otherwise falls
- * back to date + amount + direction + beneficiary combo.
- */
-function generateFingerprint({ transferRef, date, amount, direction, beneficiary }) {
-  const key = transferRef
-    ? `ref:${transferRef}`
-    : `tx:${date}:${amount}:${direction}:${(beneficiary || '').toLowerCase()}`;
-
-  return crypto.createHash('sha256').update(key).digest('hex').slice(0, 32);
 }
 
 module.exports = { parseCSV, parseDate, parseAmount, normalizeMerchantName };

@@ -5,9 +5,9 @@
  * Stored using app-wide convention: direction K/D, signed amount.
  */
 
-const crypto = require('crypto');
 const iconv = require('iconv-lite');
 const { parseDate, parseAmount, normalizeMerchantName } = require('./csvParser');
+const { canonicalBankFingerprint } = require('./bankDedup');
 const { normalizeBankDirection, signedAmountFromIndicator } = require('./bankDirection');
 
 const HEADER_ALIASES = {
@@ -128,16 +128,6 @@ function extractSebMerchant(beneficiary, description) {
   return normalizeMerchantName(description);
 }
 
-function generateFingerprint({ archiveId, documentNo, date, amount, direction, beneficiary }) {
-  const key = archiveId
-    ? `seb:arch:${archiveId}`
-    : documentNo
-      ? `seb:doc:${documentNo}:${date}`
-      : `seb:tx:${date}:${amount}:${direction}:${(beneficiary || '').toLowerCase()}`;
-
-  return crypto.createHash('sha256').update(key).digest('hex').slice(0, 32);
-}
-
 function parseRow(fields, idx, col) {
   try {
     const get = (key) => {
@@ -175,11 +165,16 @@ function parseRow(fields, idx, col) {
     const archiveId = get('archiveId') || '';
     const documentNo = get('documentNo') || '';
 
-    const fingerprint = generateFingerprint({
+    const account = get('account');
+    const fingerprint = canonicalBankFingerprint({
+      account,
       archiveId,
       documentNo,
+      transferRef: get('referenceNo') || archiveId || null,
+      referenceNumber: get('referenceNo') || null,
+      document_number: documentNo || null,
       date,
-      amount: absAmount,
+      amount,
       direction: bankDirection,
       beneficiary,
     });

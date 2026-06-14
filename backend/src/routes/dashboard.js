@@ -302,31 +302,25 @@ router.get('/recurring', (req, res) => {
   res.json(rows);
 });
 
-// GET /api/dashboard/bank-balance
-router.get('/bank-balance', (req, res) => {
+// GET /api/dashboard/bank-balance — aligned with live OB balances from computeAssetTotals
+router.get('/bank-balance', async (req, res) => {
   const db = getDb();
+  const { computeAssetTotals } = require('../services/assetTotals');
+  const totals = await computeAssetTotals(db);
 
-  const latest = db.prepare(
-    `SELECT account, amount, currency, balance_date
-     FROM account_balances
-     WHERE balance_type = 'closing'
-     ORDER BY balance_date DESC, id DESC
-     LIMIT 1`
-  ).get();
+  const latest = totals.bankBalance != null
+    ? {
+        account: 'bank',
+        amount: totals.bankBalance,
+        currency: 'EUR',
+        balance_date: totals.bankBalanceDate || null,
+        source: totals.bankBalanceSource,
+      }
+    : null;
 
-  const allAccounts = db.prepare(
-    `SELECT account, amount, currency, balance_date
-     FROM account_balances ab1
-     WHERE balance_type = 'closing'
-       AND id = (
-         SELECT id FROM account_balances ab2
-         WHERE ab2.account = ab1.account AND ab2.balance_type = 'closing'
-         ORDER BY balance_date DESC LIMIT 1
-       )
-     ORDER BY balance_date DESC`
-  ).all();
+  const accounts = latest ? [latest] : [];
 
-  res.json({ latest, accounts: allAccounts });
+  res.json({ latest, accounts });
 });
 
 router.get('/manual-balances', (req, res) => {

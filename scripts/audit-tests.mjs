@@ -95,5 +95,68 @@ const clbd = pickPrimaryBalance({
 });
 assert(clbd?.amount === 103.2, 'prefers ITAV available balance over CLBD booked');
 
+const {
+  canonicalBankFingerprint,
+  isDuplicateBankTx,
+  loadBankDedupSets,
+} = require(path.join(ROOT, 'backend/src/services/bankDedup.js'));
+const sebFp = canonicalBankFingerprint({
+  account: 'EE702200221072319566',
+  archiveId: 'ARCH123',
+  documentNo: 'DOC1',
+  date: '2026-06-05',
+  amount: 2323.37,
+  direction: 'K',
+  beneficiary: 'GENIUS SPORTS SERVICES EESTI OÜ',
+});
+const obFp = canonicalBankFingerprint({
+  account: 'EE702200221072319566',
+  transferRef: 'OB-ENTRY-999',
+  date: '2026-06-05',
+  amount: 2323.37,
+  direction: 'K',
+  beneficiary: 'GENIUS SPORTS SERVICES EESTI OÜ',
+});
+const sets = {
+  fingerprints: new Set(),
+  refKeys: new Set(),
+  contentKeys: new Set(['2026-06-05|2323.37|K|genius sports services eesti oü']),
+};
+assert(isDuplicateBankTx({ fingerprint: obFp, account: 'EE702200221072319566', transferRef: 'OB-ENTRY-999', date: '2026-06-05', amount: 2323.37, direction: 'K', beneficiary: 'GENIUS SPORTS SERVICES EESTI OÜ' }, sets), 'OB salary matches existing content key');
+assert(sebFp !== obFp, 'SEB and OB fingerprints differ but content dedup catches dupes');
+
+const {
+  canonicalRevolutFingerprint,
+  isDuplicateRevolutTx,
+} = require(path.join(ROOT, 'backend/src/services/revolutDedup.js'));
+const csvRevFp = canonicalRevolutFingerprint({
+  product: 'Revolut',
+  revolut_type: 'Topup',
+  completed_datetime: '2026-06-04 12:00:00',
+  description: 'Payment from MUHAMMAD SHABRAZ',
+  amount: 200,
+  fee: 0,
+  currency: 'EUR',
+  state: 'COMPLETED',
+});
+const obRevFp = canonicalRevolutFingerprint({
+  product: 'LT703250048821607547',
+  transfer_ref: 'REV-REF-1',
+  revolut_type: 'Topup',
+  completed_datetime: '2026-06-04 00:00:00',
+  description: 'Payment from MUHAMMAD SHABRAZ',
+  amount: 200,
+  fee: 0,
+  currency: 'EUR',
+  state: 'COMPLETED',
+});
+const revSets = {
+  fingerprints: new Set(),
+  refKeys: new Set(),
+  contentKeys: new Set(['2026-06-04|200.00|payment from muhammad shabraz']),
+};
+assert(isDuplicateRevolutTx({ fingerprint: obRevFp, product: 'LT703250048821607547', transfer_ref: 'REV-REF-1', date: '2026-06-04', amount: 200, description: 'Payment from MUHAMMAD SHABRAZ' }, revSets), 'OB Revolut topup matches content key');
+assert(csvRevFp !== obRevFp, 'CSV and OB Revolut fingerprints differ');
+
 console.log(`\nAudit tests: ${failed} failed`);
 process.exit(failed ? 1 : 0);

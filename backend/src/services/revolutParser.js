@@ -7,9 +7,9 @@
  * Completed Date is authoritative for booking date & dedup fingerprint.
  */
 
-const crypto = require('crypto');
 const iconv = require('iconv-lite');
 const { computeRevolutAmountFields } = require('./revolutCalculations');
+const { canonicalRevolutFingerprint } = require('./revolutDedup');
 
 /** Canonical column keys → accepted header labels (any locale). */
 const HEADER_ALIASES = {
@@ -150,19 +150,6 @@ function parseNumber(raw) {
   return Number.isFinite(n) ? n : NaN;
 }
 
-function generateFingerprint(parts) {
-  const key = [
-    parts.revolutType,
-    parts.completedDatetime,
-    parts.description,
-    String(parts.amount),
-    String(parts.fee),
-    parts.currency,
-    parts.state,
-  ].join('|');
-  return crypto.createHash('sha256').update(key).digest('hex').slice(0, 32);
-}
-
 /**
  * Parse Revolut CSV buffer → { transactions, skipped, summary }
  * Only imports rows with State === COMPLETED (case-insensitive).
@@ -236,9 +223,10 @@ function parseRevolutCSV(buffer) {
     const balanceRaw = get('balance');
     const balanceAfter = parseNumber(balanceRaw);
 
-    const fingerprint = generateFingerprint({
-      revolutType,
-      completedDatetime: completed.isoDatetime,
+    const fingerprint = canonicalRevolutFingerprint({
+      product,
+      revolut_type: revolutType,
+      completed_datetime: completed.isoDatetime,
       description,
       amount,
       fee,

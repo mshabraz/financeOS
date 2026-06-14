@@ -2,8 +2,9 @@
  * Map Enable Banking transaction objects to FinanceOS bank import rows.
  */
 
-const crypto = require('crypto');
 const { normalizeMerchantName } = require('../csvParser');
+const { canonicalBankFingerprint } = require('../bankDedup');
+const { shouldImportObTransaction } = require('./obTransactionFilter');
 
 function pickDate(tx) {
   return tx.booking_date || tx.value_date || tx.transaction_date || null;
@@ -27,18 +28,15 @@ function counterpartyName(tx, isCredit) {
   return party?.name || '';
 }
 
-function generateFingerprint({ transferRef, date, amount, direction, beneficiary }) {
-  const key = transferRef
-    ? `ref:${transferRef}`
-    : `tx:${date}:${amount}:${direction}:${(beneficiary || '').toLowerCase()}`;
-  return crypto.createHash('sha256').update(key).digest('hex').slice(0, 32);
-}
-
 /**
  * @param {object} tx Enable Banking transaction
  * @param {string} accountIban Owner account IBAN
  */
 function normalizeTransaction(tx, accountIban) {
+  if (!shouldImportObTransaction(tx)) {
+    return { valid: false, reason: 'Skipped pending transaction', raw: tx };
+  }
+
   const date = pickDate(tx);
   const absAmount = parseAmount(tx.transaction_amount?.amount);
   if (!date || !Number.isFinite(absAmount)) {
@@ -64,10 +62,12 @@ function normalizeTransaction(tx, accountIban) {
     null;
   const currency = tx.transaction_amount?.currency || 'EUR';
 
-  const fingerprint = generateFingerprint({
+  const fingerprint = canonicalBankFingerprint({
+    account: accountIban || 'UNKNOWN',
     transferRef,
+    reference_number: tx.reference_number || null,
     date,
-    amount: absAmount,
+    amount,
     direction,
     beneficiary,
   });
@@ -101,4 +101,4 @@ function normalizeTransactions(rawTransactions, accountIban) {
   return { transactions, errors };
 }
 
-module.exports = { normalizeTransaction, normalizeTransactions, generateFingerprint };
+module.exports = { normalizeTransaction, normalizeTransactions };

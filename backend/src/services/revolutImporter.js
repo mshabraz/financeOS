@@ -6,7 +6,11 @@ const { getDb } = require('../db/database');
 const { parseRevolutCSV } = require('./revolutParser');
 const { categorizeTransaction } = require('./categorizer');
 const { resolveImportCategory } = require('./manualCategoryLocks');
-const { loadFingerprintSet } = require('./importDedup');
+const {
+  loadRevolutDedupSets,
+  isDuplicateRevolutTx,
+  registerRevolutTx,
+} = require('./revolutDedup');
 const logger = require('./logger');
 
 const PREVIEW_ROW_LIMIT = 100;
@@ -14,13 +18,13 @@ const PREVIEW_ROW_LIMIT = 100;
 function previewRevolutImport(buffer, filename) {
   const { transactions, skipped, summary } = parseRevolutCSV(buffer);
   const db = getDb();
-  const existing = loadFingerprintSet(db, 'revolut_transactions');
+  const existing = loadRevolutDedupSets(db);
 
   let newCount = 0;
   let dupCount = 0;
 
   const previewed = transactions.map((tx) => {
-    const isDuplicate = existing.has(tx.fingerprint);
+    const isDuplicate = isDuplicateRevolutTx(tx, existing);
     if (isDuplicate) dupCount++;
     else newCount++;
 
@@ -71,7 +75,7 @@ function importRevolutRows(db, transactions, sessionMeta) {
 
   let importedCount = 0;
   let duplicateCount = 0;
-  const existing = loadFingerprintSet(db, 'revolut_transactions');
+  const existing = loadRevolutDedupSets(db);
 
   const insertSession = db.prepare(`
     INSERT INTO revolut_import_sessions
@@ -109,7 +113,7 @@ function importRevolutRows(db, transactions, sessionMeta) {
     }).lastInsertRowid;
 
     for (const tx of transactions) {
-      if (existing.has(tx.fingerprint)) {
+      if (isDuplicateRevolutTx(tx, existing)) {
         duplicateCount++;
         continue;
       }
@@ -140,7 +144,7 @@ function importRevolutRows(db, transactions, sessionMeta) {
       });
       if (r.changes > 0) {
         importedCount++;
-        existing.add(tx.fingerprint);
+        registerRevolutTx(tx, existing);
       } else {
         duplicateCount++;
       }
