@@ -192,7 +192,7 @@ router.post('/refresh-balances', async (req, res) => {
   }
 });
 
-// POST /api/open-banking/sync  { connectionId?, fullBackfill?, dateFrom? }
+// POST /api/open-banking/sync  { connectionId?, fullBackfill?, dateFrom?, auto? }
 router.post('/sync', async (req, res) => {
   try {
     if (!isEnabled()) return disabledResponse(res);
@@ -200,8 +200,19 @@ router.post('/sync', async (req, res) => {
     const connectionId = req.body?.connectionId ? Number(req.body.connectionId) : undefined;
     const fullBackfill = Boolean(req.body?.fullBackfill);
     const dateFrom = req.body?.dateFrom || undefined;
+    const auto = Boolean(req.body?.auto);
+
+    if (auto && !connectionId) {
+      const { shouldRunAutoSync, recordAutoSyncRun } = require('../services/openBanking/autoSyncPolicy');
+      const userId = req.financeosUserId || req.session?.userId;
+      if (!shouldRunAutoSync(db, userId)) {
+        return res.json({ skipped: true, reason: 'recent_auto_sync', results: [] });
+      }
+      recordAutoSyncRun(userId, db);
+    }
+
     const result = await syncConnections(db, { connectionId, fullBackfill, dateFrom }, req);
-    res.json(result);
+    res.json({ ...result, auto });
   } catch (err) {
     return handleError(res, err);
   }

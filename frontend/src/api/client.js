@@ -76,6 +76,7 @@ export const syncOpenBanking = (connectionId, options = {}) =>
       ...(connectionId ? { connectionId } : {}),
       ...(options.fullBackfill ? { fullBackfill: true } : {}),
       ...(options.dateFrom ? { dateFrom: options.dateFrom } : {}),
+      ...(options.auto ? { auto: true } : {}),
     },
     { timeout: options.fullBackfill ? 300000 : 120000 },
   );

@@ -199,6 +199,7 @@ function BankConnectionsPanel({ showToast }) {
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Bank connections</h2>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
             Connect Revolut, Swedbank, or SEB via Enable Banking to import transactions automatically.
+            Connected banks sync in the background when you sign in; use Sync now for a manual refresh.
           </p>
 
           {statusQ.isLoading && (

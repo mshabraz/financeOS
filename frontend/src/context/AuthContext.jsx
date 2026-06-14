@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { getAuthStatus, login as apiLogin, register as apiRegister, logout as apiLogout } from '../api/client';
+import { OPEN_BANKING_AUTO_SYNC_SESSION_KEY } from '../hooks/useOpenBankingAutoSync';
 
 const AuthContext = createContext(null);
 
@@ -42,6 +43,7 @@ export function AuthProvider({ children }) {
 
   const logout = async () => {
     await apiLogout();
+    sessionStorage.removeItem(OPEN_BANKING_AUTO_SYNC_SESSION_KEY);
     await refresh();
   };
 

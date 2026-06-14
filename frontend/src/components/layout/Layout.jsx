@@ -7,6 +7,7 @@ import {
 import { useTheme } from '../../hooks/useTheme';
 import { useAuth } from '../../context/AuthContext';
 import { usePrivacy } from '../../context/PrivacyContext';
+import { useOpenBankingAutoSync } from '../../hooks/useOpenBankingAutoSync';
 import clsx from 'clsx';
 import FinanceLogo from '../ui/FinanceLogo';
 
@@ -74,6 +75,7 @@ export default function Layout({ children }) {
   const { privacyMode, togglePrivacy } = usePrivacy();
   const [moreOpen, setMoreOpen] = useState(false);
   const location = useLocation();
+  const { syncing: bankAutoSyncing } = useOpenBankingAutoSync(true);
 
   const isMoreActive = MORE_NAV.some((n) => location.pathname.startsWith(n.to));
 
@@ -125,6 +127,14 @@ export default function Layout({ children }) {
       </aside>
 
       <div className="flex-1 flex flex-col min-w-0 min-h-0">
+        {bankAutoSyncing && (
+          <div
+            className="shrink-0 border-b border-brand-200/60 dark:border-brand-800/40 bg-brand-50/80 dark:bg-brand-950/40 px-4 py-1.5 text-center text-xs text-brand-700 dark:text-brand-300"
+            role="status"
+          >
+            Syncing connected banks…
+          </div>
+        )}
         <main className="flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain">
           <div className="mx-auto w-full max-w-7xl px-4 py-4 sm:px-5 sm:py-5 lg:p-6 pb-28 lg:pb-6">
             {children}

@@ -3,6 +3,7 @@ const config = require('../config');
 const userRegistry = require('../services/userRegistry');
 const { createUserDatabase } = require('../db/database');
 const { attachPendingLegacyOnRegister } = require('../db/legacyMigration');
+const { triggerAutoSyncOnAuth } = require('../services/openBanking/loginAutoSync');
 
 const router = express.Router();
 
@@ -47,6 +48,7 @@ router.post('/register', async (req, res) => {
     createUserDatabase(user.id);
     attachPendingLegacyOnRegister(user.id);
     setSession(req, user);
+    triggerAutoSyncOnAuth(user.id, req);
     res.json({ ok: true, user });
   } catch (err) {
     res.status(400).json({ error: err.message });
@@ -60,6 +62,7 @@ router.post('/login', async (req, res) => {
       const dev = userRegistry.getOrCreateDevUser();
       createUserDatabase(dev.id);
       setSession(req, dev);
+      triggerAutoSyncOnAuth(dev.id, req);
       return res.json({ ok: true, authEnabled: false, user: dev });
     }
     if (!userRegistry.hasUsers()) {
@@ -76,6 +79,7 @@ router.post('/login', async (req, res) => {
     }
     createUserDatabase(user.id);
     setSession(req, user);
+    triggerAutoSyncOnAuth(user.id, req);
     res.json({ ok: true, user });
   } catch (err) {
     res.status(429).json({ error: err.message });
