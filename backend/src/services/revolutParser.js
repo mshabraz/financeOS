@@ -120,14 +120,47 @@ function isCompletedRevolutState(rawState) {
 function parseRevolutDatetime(raw) {
   if (!raw) return null;
   const trimmed = raw.trim().replace(/^"|"$/g, '');
-  // "2025-03-31 04:16:29" or date-only ...
-  const m = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})(?:[\sT](\d{2}):(\d{2})(?::(\d{2}))?)?$/);
-  if (!m) return null;
-  const [, y, mo, d] = m;
-  return {
-    isoDate: `${y}-${mo}-${d}`,
-    isoDatetime: trimmed.length >= 19 ? trimmed.slice(0, 19) : `${y}-${mo}-${d} 00:00:00`,
-  };
+
+  // ISO: "2025-03-31 04:16:29" or date-only
+  const iso = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})(?:[\sT](\d{2}):(\d{2})(?::(\d{2}))?)?$/);
+  if (iso) {
+    const [, y, mo, d, h = '00', mi = '00', s = '00'] = iso;
+    const isoDate = `${y}-${mo}-${d}`;
+    const isoDatetime =
+      trimmed.length >= 19 ? trimmed.slice(0, 19).replace('T', ' ') : `${isoDate} ${h}:${mi}:${s}`;
+    return { isoDate, isoDatetime };
+  }
+
+  // Slash dates: "31/03/2025 04:16" (Revolut EU/UK exports, including some en-us files)
+  const slash = trimmed.match(
+    /^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{2}):(\d{2})(?::(\d{2}))?)?$/,
+  );
+  if (slash) {
+    const [, a, b, y, h = '00', mi = '00', s = '00'] = slash;
+    const na = parseInt(a, 10);
+    const nb = parseInt(b, 10);
+    let day;
+    let month;
+    if (na > 12) {
+      day = na;
+      month = nb;
+    } else if (nb > 12) {
+      month = na;
+      day = nb;
+    } else {
+      // Ambiguous — Revolut statement exports default to day-first (EU).
+      day = na;
+      month = nb;
+    }
+    if (month < 1 || month > 12 || day < 1 || day > 31) return null;
+    const mo = String(month).padStart(2, '0');
+    const d = String(day).padStart(2, '0');
+    const isoDate = `${y}-${mo}-${d}`;
+    const isoDatetime = `${isoDate} ${h}:${mi}:${s}`;
+    return { isoDate, isoDatetime };
+  }
+
+  return null;
 }
 
 /** Parse numeric; supports "1,234.56" and European "1.234,56" heuristic. */
@@ -283,4 +316,5 @@ module.exports = {
   peekFirstCsvLine,
   parseRevolutCSV,
   parseCsvLineComma,
+  parseRevolutDatetime,
 };

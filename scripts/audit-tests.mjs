@@ -161,6 +161,12 @@ assert(csvRevFp !== obRevFp, 'CSV and OB Revolut fingerprints differ');
 const { merchantsLikelyMatch } = require(path.join(ROOT, 'backend/src/services/crossLedgerDedup.js'));
 assert(merchantsLikelyMatch('Temu', { merchant: 'Temu.com', details: 'temu.com' }), 'Temu cross-ledger merchant match');
 
+const { parseRevolutDatetime } = require(path.join(ROOT, 'backend/src/services/revolutParser.js'));
+const slashDt = parseRevolutDatetime('31/03/2025 04:16');
+assert(slashDt?.isoDate === '2025-03-31' && slashDt?.isoDatetime === '2025-03-31 04:16:00', 'Revolut DD/MM completed date');
+const isoDt = parseRevolutDatetime('2025-03-31 04:16:29');
+assert(isoDt?.isoDate === '2025-03-31', 'Revolut ISO completed date');
+
 assert(normalizeBankReference('2026052301339966-1') === '2026052301339966', 'strips SEB-style ref suffix');
 const refSets = {
   fingerprints: new Set(),

@@ -151,6 +151,7 @@ export default function TransactionImportPanel() {
   const isRevolut = importKind === 'revolut';
   const sum = preview?.summary;
   const newCount = sum?.newCount ?? 0;
+  const skippedRows = sum?.skippedRows ?? preview?.skipped?.length ?? 0;
 
   return (
     <div className="space-y-6 max-w-4xl">
@@ -260,7 +261,9 @@ export default function TransactionImportPanel() {
             {newCount === 0 && (
               <div className="flex items-center gap-2 text-amber-600 bg-amber-50 dark:bg-amber-900/20 rounded-lg px-4 py-3 text-sm">
                 <AlertTriangle size={16} />
-                Nothing new to import (all rows already exist or were skipped).
+                {skippedRows > 0 && (sum?.duplicateCount ?? 0) === 0 && preview?.totalRows === 0
+                  ? `${skippedRows} row(s) could not be parsed — check date format or row state in the CSV.`
+                  : `Nothing new to import (all rows already exist or were skipped${skippedRows > 0 ? `; ${skippedRows} skipped` : ''}).`}
               </div>
             )}
 
