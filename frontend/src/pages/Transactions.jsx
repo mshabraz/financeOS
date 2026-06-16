@@ -23,6 +23,7 @@ import UserNoteField from '../components/transactions/UserNoteField';
 import { getMonthRange } from '../utils/dateFilters';
 import { fmtCurrency, privText } from '../utils/displayFormat';
 import { usePrivacy } from '../context/PrivacyContext';
+import { invalidateDashboardData } from '../lib/queryKeys';
 import clsx from 'clsx';
 
 const fmt = (n) => fmtCurrency(n, 'EUR', { abs: true });
@@ -370,7 +371,7 @@ export default function Transactions() {
         return;
       }
       qc.invalidateQueries({ queryKey: ['transactions'] });
-      qc.invalidateQueries({ queryKey: ['dashboard'] });
+      invalidateDashboardData(qc);
       clearSel();
     } catch (err) {
       setBulkError(err.message || 'Failed to apply category');
@@ -390,14 +391,7 @@ export default function Transactions() {
   };
 
   const invalidateAfterTxnDelete = () => {
-    qc.invalidateQueries({ queryKey: ['transactions'] });
-    qc.invalidateQueries({ queryKey: ['dashboard'] });
-    qc.invalidateQueries({ queryKey: ['trend'] });
-    qc.invalidateQueries({ queryKey: ['bycat'] });
-    qc.invalidateQueries({ queryKey: ['byincome'] });
-    qc.invalidateQueries({ queryKey: ['merchants'] });
-    qc.invalidateQueries({ queryKey: ['recurring'] });
-    qc.invalidateQueries({ queryKey: ['tagSummary'] });
+    invalidateDashboardData(qc);
     qc.invalidateQueries({ queryKey: ['tagAnalytics'] });
   };
 

@@ -20,6 +20,8 @@ import {
   disconnectOpenBankingConnection,
   syncOpenBanking,
 } from '../api/client';
+import ManualBalancesPanel from '../components/settings/ManualBalancesPanel';
+import { invalidateDashboardData } from '../lib/queryKeys';
 
 function AdminUsersPanel({ showToast }) {
   const { user } = useAuth();
@@ -151,9 +153,8 @@ function BankConnectionsPanel({ showToast }) {
       syncOpenBanking(connectionId, { fullBackfill }),
     onSuccess: (data, vars) => {
       qc.invalidateQueries({ queryKey: ['openBankingConnections'] });
-      ['transactions', 'summary', 'trend', 'bycat', 'importSessions'].forEach((k) =>
-        qc.invalidateQueries({ queryKey: [k] }),
-      );
+      invalidateDashboardData(qc);
+      qc.invalidateQueries({ queryKey: ['importSessions'] });
       const totals = (data?.results || []).reduce(
         (acc, r) => {
           acc.imported += r.importedCount || 0;
@@ -379,7 +380,7 @@ export default function Settings() {
     mutationFn: () => updateRevolutSplitSetting(splitPct / 100),
     onSuccess: (r) => {
       qc.invalidateQueries({ queryKey: ['revolutSplit'] });
-      ['transactions', 'summary', 'trend', 'bycat', 'assets'].forEach((k) =>
+      ['transactions', 'summary', 'trend', 'monthlyTrend', 'bycat', 'assets', 'manualBalances'].forEach((k) =>
         qc.invalidateQueries({ queryKey: [k] })
       );
       showToast(`Revolut split saved (${r.rowsUpdated ?? 0} rows recalculated)`, 'success');
@@ -431,6 +432,8 @@ export default function Settings() {
       </section>
 
       <BankConnectionsPanel showToast={showToast} />
+
+      <ManualBalancesPanel showToast={showToast} />
 
       <section className="card p-5 space-y-4">
         <div className="flex items-start gap-3">

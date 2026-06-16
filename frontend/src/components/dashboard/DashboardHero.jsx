@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import {
-  Wallet, TrendingUp, TrendingDown, PiggyBank, Layers, Target,
+  Wallet, TrendingUp, TrendingDown, PiggyBank, Layers,
   ArrowUpRight, ArrowDownRight, Landmark,
 } from 'lucide-react';
 import clsx from 'clsx';
@@ -70,7 +70,6 @@ export default function DashboardHero({
   netWorthConversion,
   portfolio,
   summary,
-  goalSnapshot,
   trendSpark,
 }) {
   if (!snapshot) return null;
@@ -132,7 +131,7 @@ export default function DashboardHero({
           label="Savings rate"
           value={snapshot.savingsRate != null ? fmtPct(snapshot.savingsRate) : '—'}
           sub={summary?.totalSavings > 0 ? `Transfers ${fmtEur(summary.totalSavings)}` : 'Income − spending'}
-          positive={snapshot.savingsRate >= 15}
+          positive={snapshot.savingsRate != null && snapshot.savingsRate >= 15}
           icon={PiggyBank}
           href="/analytics?focus=savings-rate"
         />
@@ -151,15 +150,6 @@ export default function DashboardHero({
           icon={(snapshot.unrealizedPnLEur ?? 0) >= 0 ? TrendingUp : TrendingDown}
           href="/investments?tab=holdings"
         />
-        {goalSnapshot && (
-          <HeroKpi
-            label="Goal progress"
-            value={goalSnapshot.pct != null ? fmtPct(goalSnapshot.pct) : '—'}
-            sub={goalSnapshot.name}
-            href="/investments?tab=planner"
-            icon={Target}
-          />
-        )}
       </div>
     </section>
   );

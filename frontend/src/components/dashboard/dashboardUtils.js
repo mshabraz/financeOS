@@ -43,6 +43,24 @@ export function prevMonthValue(monthKey) {
   return format(d, 'yyyy-MM');
 }
 
+export function prevPeriodValue(periodType, periodValue) {
+  if (!periodValue) return null;
+  if (periodType === 'month') return prevMonthValue(periodValue);
+  if (periodType === 'quarter') {
+    const [yStr, qStr] = periodValue.split('-Q');
+    const y = Number(yStr);
+    const q = Number(qStr);
+    if (!y || !q) return null;
+    if (q === 1) return `${y - 1}-Q4`;
+    return `${y}-Q${q - 1}`;
+  }
+  if (periodType === 'year') {
+    const y = Number(periodValue);
+    return Number.isFinite(y) ? String(y - 1) : null;
+  }
+  return null;
+}
+
 export function pctChange(current, previous) {
   if (previous == null || previous === 0) return null;
   return ((current - previous) / Math.abs(previous)) * 100;
@@ -67,8 +85,8 @@ export function buildDashboardInsights({
       lines.push({
         level: ch < 0 ? 'positive' : 'warning',
         text: ch < 0
-          ? `Spending is ${Math.abs(ch).toFixed(0)}% lower than last month.`
-          : `Spending is ${ch.toFixed(0)}% higher than last month.`,
+          ? `Spending is ${Math.abs(ch).toFixed(0)}% lower than the prior period.`
+          : `Spending is ${ch.toFixed(0)}% higher than the prior period.`,
       });
     }
   }
@@ -151,7 +169,7 @@ export function buildAttentionItems({ portfolio, budgets, sharedEvents, obligati
     items.push({
       id: 'budget',
       severity: 'warning',
-      title: `${over.length} budget${over.length === 1 ? '' : 's'} exceeded`,
+      title: `${over.length} budget${over.length === 1 ? '' : 's'} exceeded this month`,
       href: '/analytics',
     });
   }
@@ -183,4 +201,14 @@ export function buildAttentionItems({ portfolio, budgets, sharedEvents, obligati
     });
   }
   return items;
+}
+
+/** Convert contextual insights into attention-row shape (no link). */
+export function insightsToAttentionItems(insights) {
+  return (insights ?? []).map((ins, i) => ({
+    id: `insight-${i}`,
+    severity: ins.level === 'warning' ? 'warning' : ins.level === 'positive' ? 'info' : 'info',
+    title: ins.text,
+    href: null,
+  }));
 }

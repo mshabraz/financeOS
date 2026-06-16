@@ -5,22 +5,12 @@ import {
   getOpenBankingConnections,
   syncOpenBanking,
 } from '../api/client';
+import { invalidateDashboardData } from '../lib/queryKeys';
 
 export const OPEN_BANKING_AUTO_SYNC_SESSION_KEY = 'financeos:ob-auto-synced';
 
-const DATA_QUERY_KEYS = [
-  'transactions',
-  'summary',
-  'trend',
-  'bycat',
-  'importSessions',
-  'openBankingConnections',
-  'assets',
-  'manualBalances',
-];
-
 function invalidateSyncedData(qc) {
-  DATA_QUERY_KEYS.forEach((k) => qc.invalidateQueries({ queryKey: [k] }));
+  invalidateDashboardData(qc);
 }
 
 /**

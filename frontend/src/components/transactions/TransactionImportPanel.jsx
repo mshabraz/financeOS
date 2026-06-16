@@ -10,6 +10,7 @@ import {
 import clsx from 'clsx';
 import { fmtEur, privText } from '../../utils/displayFormat';
 import { usePrivacy } from '../../context/PrivacyContext';
+import { invalidateDashboardData } from '../../lib/queryKeys';
 
 const fmt = fmtEur;
 
@@ -63,11 +64,8 @@ export default function TransactionImportPanel() {
   const qc = useQueryClient();
 
   const invalidateAll = () => {
-    const keys = [
-      'transactions', 'summary', 'trend', 'bycat', 'byincome', 'merchants', 'recurring',
-      'assets', 'tagSummary', 'tagAnalytics', 'categories', 'dashboard',
-    ];
-    keys.forEach((k) => qc.invalidateQueries({ queryKey: [k] }));
+    invalidateDashboardData(qc);
+    ['importSessions'].forEach((k) => qc.invalidateQueries({ queryKey: [k] }));
   };
 
   const runPreview = useCallback(async (f, kind) => {

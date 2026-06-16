@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { invalidateDashboardData } from '../../lib/queryKeys';
 import {
   AlertTriangle, Check, RefreshCw, Shield, Trash2, Undo2,
 } from 'lucide-react';
@@ -238,8 +239,7 @@ export default function DuplicateReviewPanel() {
   const invalidateAll = async () => {
     await queryClient.refetchQueries({ queryKey: ['duplicates'] });
     queryClient.invalidateQueries({ queryKey: ['duplicate-archive'] });
-    queryClient.invalidateQueries({ queryKey: ['transactions'] });
-    queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+    invalidateDashboardData(queryClient);
   };
 
   const restoreMutation = useMutation({
@@ -357,7 +357,11 @@ export default function DuplicateReviewPanel() {
 
       {scanQuery.isLoading && <LoadingSpinner />}
       {scanQuery.isError && (
-        <QueryErrorPanel error={scanQuery.error} onRetry={() => scanQuery.refetch()} />
+        <QueryErrorPanel
+          title="Duplicate scan failed"
+          message={scanQuery.error?.message}
+          onRetry={() => scanQuery.refetch()}
+        />
       )}
 
       {!scanQuery.isLoading && groups.length === 0 && (

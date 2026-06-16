@@ -368,7 +368,7 @@ router.post('/manual-balances', (req, res) => {
 router.delete('/manual-balances/:key', (req, res) => {
   const db = getDb();
   const { key } = req.params;
-  if (['pension', 'investments', 'investment_cash'].includes(key)) {
+  if (['pension', 'paypal', 'investments', 'investment_cash'].includes(key)) {
     return res.status(400).json({ error: 'Cannot delete built-in balance slots' });
   }
   db.prepare('DELETE FROM manual_balances WHERE key = ?').run(key);

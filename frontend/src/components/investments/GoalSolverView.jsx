@@ -89,8 +89,8 @@ export default function GoalSolverView({
       });
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['wealth-goals'] });
-      qc.invalidateQueries({ queryKey: ['wealth-goal-progress'] });
+      qc.invalidateQueries({ queryKey: ['wealthGoals'] });
+      qc.invalidateQueries({ queryKey: ['wealthGoalProgress'] });
       onTrackingStarted?.();
     },
   });

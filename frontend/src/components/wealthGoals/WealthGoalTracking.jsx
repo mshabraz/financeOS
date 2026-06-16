@@ -172,13 +172,13 @@ export default function WealthGoalTracking() {
   const [defaultGoalId, setDefaultGoalId] = useGoalsPageDefaultGoalId();
 
   const activeGoalsQ = useQuery({
-    queryKey: ['wealth-goals', 'active'],
+    queryKey: ['wealthGoals', 'active'],
     queryFn: () => getWealthGoals({ status: 'active' }),
     retry: 2,
   });
 
   const archivesQ = useQuery({
-    queryKey: ['wealth-goals', 'archived'],
+    queryKey: ['wealthGoals', 'archived'],
     queryFn: () => getWealthGoals({ status: 'archived' }),
     retry: 1,
   });
@@ -204,7 +204,7 @@ export default function WealthGoalTracking() {
   }, [activeGoals, archives, selectedId, panel]);
 
   const progressQ = useQuery({
-    queryKey: ['wealth-goal-progress', selectedId],
+    queryKey: ['wealthGoalProgress', selectedId],
     queryFn: () => getWealthGoalProgress(selectedId),
     enabled: selectedId != null && panel === 'track',
     retry: 2,
@@ -218,8 +218,8 @@ export default function WealthGoalTracking() {
   });
 
   const invalidateAll = () => {
-    qc.invalidateQueries({ queryKey: ['wealth-goals'] });
-    qc.invalidateQueries({ queryKey: ['wealth-goal-progress'] });
+    qc.invalidateQueries({ queryKey: ['wealthGoals'] });
+    qc.invalidateQueries({ queryKey: ['wealthGoalProgress'] });
   };
 
   const saveMut = useMutation({
