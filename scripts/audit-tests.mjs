@@ -224,5 +224,9 @@ const revolutRange = resolveTransactionSyncRange(
 assert(revolutRange.dateFrom === '2025-06-14', 'Revolut full sync keeps 365-day backfill');
 assert(revolutRange.historyCapped === false, 'Revolut full sync not capped');
 
+const { defaultTierForCategory } = require(path.join(ROOT, 'backend/src/services/essentialExpenseTiers.js'));
+assert(defaultTierForCategory({ name: 'Groceries', type: 'expense' }) === 'essential', 'groceries essential');
+assert(defaultTierForCategory({ name: 'Restaurants', type: 'expense' }) === 'variable', 'restaurants variable');
+
 console.log(`\nAudit tests: ${failed} failed`);
 process.exit(failed ? 1 : 0);

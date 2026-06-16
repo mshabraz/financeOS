@@ -1264,14 +1264,9 @@ const MIGRATION_V40 = {
 const MIGRATION_V41 = {
   version: 41,
   up: (db) => {
-    try {
-      db.exec(
-        `ALTER TABLE categories ADD COLUMN expense_tier TEXT CHECK (
-          expense_tier IN ('essential', 'variable') OR expense_tier IS NULL
-        )`,
-      );
-    } catch {
-      /* column may already exist */
+    const cols = db.prepare('PRAGMA table_info(categories)').all();
+    if (!cols.some((c) => c.name === 'expense_tier')) {
+      db.exec('ALTER TABLE categories ADD COLUMN expense_tier TEXT');
     }
     const { applyDefaultExpenseTiers } = require('../services/essentialExpenseTiers');
     const n = applyDefaultExpenseTiers(db);
@@ -1279,7 +1274,21 @@ const MIGRATION_V41 = {
   },
 };
 
-const ALL_MIGRATIONS = [...migrations.filter(m => m.version === 1), MIGRATION_V2, MIGRATION_V3, MIGRATION_V4, MIGRATION_V5, MIGRATION_V6, MIGRATION_V7, MIGRATION_V8, MIGRATION_V9, MIGRATION_V10, MIGRATION_V11, MIGRATION_V12, MIGRATION_V13, MIGRATION_V14, MIGRATION_V15, MIGRATION_V16, MIGRATION_V17, MIGRATION_V18, MIGRATION_V19, MIGRATION_V20, MIGRATION_V21, MIGRATION_V22, MIGRATION_V23, MIGRATION_V24, MIGRATION_V25, MIGRATION_V26, MIGRATION_V27, MIGRATION_V28, MIGRATION_V29, MIGRATION_V30, MIGRATION_V31, MIGRATION_V32, MIGRATION_V33, MIGRATION_V34, MIGRATION_V35, MIGRATION_V36, MIGRATION_V37, MIGRATION_V38, MIGRATION_V39, MIGRATION_V40, MIGRATION_V41];
+// ── Migration v42: repair expense_tier if v41 ALTER failed silently ─────────────
+const MIGRATION_V42 = {
+  version: 42,
+  up: (db) => {
+    const cols = db.prepare('PRAGMA table_info(categories)').all();
+    if (!cols.some((c) => c.name === 'expense_tier')) {
+      db.exec('ALTER TABLE categories ADD COLUMN expense_tier TEXT');
+      console.log('[DB] v42 repaired missing expense_tier column');
+    }
+    const { applyDefaultExpenseTiers } = require('../services/essentialExpenseTiers');
+    applyDefaultExpenseTiers(db);
+  },
+};
+
+const ALL_MIGRATIONS = [...migrations.filter(m => m.version === 1), MIGRATION_V2, MIGRATION_V3, MIGRATION_V4, MIGRATION_V5, MIGRATION_V6, MIGRATION_V7, MIGRATION_V8, MIGRATION_V9, MIGRATION_V10, MIGRATION_V11, MIGRATION_V12, MIGRATION_V13, MIGRATION_V14, MIGRATION_V15, MIGRATION_V16, MIGRATION_V17, MIGRATION_V18, MIGRATION_V19, MIGRATION_V20, MIGRATION_V21, MIGRATION_V22, MIGRATION_V23, MIGRATION_V24, MIGRATION_V25, MIGRATION_V26, MIGRATION_V27, MIGRATION_V28, MIGRATION_V29, MIGRATION_V30, MIGRATION_V31, MIGRATION_V32, MIGRATION_V33, MIGRATION_V34, MIGRATION_V35, MIGRATION_V36, MIGRATION_V37, MIGRATION_V38, MIGRATION_V39, MIGRATION_V40, MIGRATION_V41, MIGRATION_V42];
 
 function runMigrations(db) {
   db.exec(`CREATE TABLE IF NOT EXISTS schema_migrations (

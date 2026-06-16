@@ -5,8 +5,17 @@
 const { computeAssetTotals } = require('./assetTotals');
 const { ANALYTICS_LEDGER_SQL, wherePeriodUnified } = require('./unifiedLedger');
 const { sqlExpenseAmountCase } = require('./categoryAnalytics');
+const { applyDefaultExpenseTiers } = require('./essentialExpenseTiers');
 
 const LOOKBACK_MONTHS = 3;
+
+function ensureExpenseTierColumn(db) {
+  const cols = db.prepare('PRAGMA table_info(categories)').all();
+  if (!cols.some((c) => c.name === 'expense_tier')) {
+    db.exec('ALTER TABLE categories ADD COLUMN expense_tier TEXT');
+    applyDefaultExpenseTiers(db);
+  }
+}
 
 function tierExpenseSumSql(tier) {
   const amt = sqlExpenseAmountCase('u', 'c');
@@ -80,6 +89,7 @@ function periodTierBreakdown(db, dateFrom, dateTo) {
 }
 
 async function computeEssentialMetrics(db, { dateFrom = null, dateTo = null } = {}) {
+  ensureExpenseTierColumn(db);
   const assets = await computeAssetTotals(db);
   const bank = assets.bankBalance ?? 0;
   const revolut = assets.revolutClosingBalance ?? 0;

@@ -161,6 +161,7 @@ export default function Analytics() {
   const essentialMetrics = useQuery({
     queryKey: ['essentialMetrics', rangeParams.dateFrom, rangeParams.dateTo],
     queryFn: () => getEssentialMetrics(rangeParams),
+    retry: 1,
   });
 
   const budgetMut = useMutation({
@@ -181,7 +182,7 @@ export default function Analytics() {
     essentialPeriod.variable > 0
       ? (essentialPeriod.essential || 0) / essentialPeriod.variable
       : null;
-  const loadError = trend.error || byCat.error || byIncome.error || essentialMetrics.error;
+  const loadError = trend.error || byCat.error || byIncome.error;
 
   if (loadError) {
     return (
@@ -194,6 +195,7 @@ export default function Analytics() {
             trend.refetch();
             byCat.refetch();
             byIncome.refetch();
+            essentialMetrics.refetch();
           }}
         />
       </div>
@@ -269,6 +271,10 @@ export default function Analytics() {
           </p>
           {essentialMetrics.isLoading ? (
             <p className="text-sm text-gray-400">Calculating...</p>
+          ) : essentialMetrics.isError ? (
+            <p className="text-sm text-red-500">
+              {essentialMetrics.error?.message || 'Could not load runway metrics'}
+            </p>
           ) : (
             <>
               <p className="text-2xl font-bold text-gray-900 dark:text-white">
@@ -288,6 +294,10 @@ export default function Analytics() {
           </p>
           {essentialMetrics.isLoading ? (
             <p className="text-sm text-gray-400">Calculating...</p>
+          ) : essentialMetrics.isError ? (
+            <p className="text-sm text-red-500">
+              {essentialMetrics.error?.message || 'Could not load runway metrics'}
+            </p>
           ) : (
             <>
               <p className="text-2xl font-bold text-gray-900 dark:text-white">
