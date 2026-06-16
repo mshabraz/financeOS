@@ -144,8 +144,37 @@ function listUnifiedTransactions(options = {}) {
   }
 
   const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
-  const allowedSort = ['date', 'amount', 'merchant', 'category_id', 'effective_amount'];
-  const col = allowedSort.includes(sortBy) ? `u.${sortBy}` : 'u.date';
+  const sortMap = {
+    date: 'u.date',
+    amount: 'u.amount',
+    merchant: 'u.merchant',
+    merchant_details: "COALESCE(NULLIF(TRIM(u.merchant), ''), NULLIF(TRIM(u.details), ''), '')",
+    notes: 'u.notes',
+    category_id: 'u.category_id',
+    category: 'c.name',
+    tags: `CASE
+      WHEN u.source = 'bank' THEN COALESCE((
+        SELECT GROUP_CONCAT(t.name, ',') FROM (
+          SELECT tg.name
+          FROM transaction_tags tt
+          JOIN tags tg ON tg.id = tt.tag_id
+          WHERE tt.transaction_id = u.bank_id
+          ORDER BY tg.name
+        ) t
+      ), '')
+      ELSE COALESCE((
+        SELECT GROUP_CONCAT(t.name, ',') FROM (
+          SELECT tg.name
+          FROM revolut_transaction_tags rt
+          JOIN tags tg ON tg.id = rt.tag_id
+          WHERE rt.revolut_transaction_id = u.revolut_id
+          ORDER BY tg.name
+        ) t
+      ), '')
+    END`,
+    effective_amount: 'u.effective_amount',
+  };
+  const col = sortMap[sortBy] || 'u.date';
   const dir = String(sortDir).toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
   const offset = (parseInt(page, 10) - 1) * parseInt(limit, 10);
 
@@ -156,6 +185,7 @@ function listUnifiedTransactions(options = {}) {
   const rows = db
     .prepare(
       `SELECT u.* FROM (${UNIFIED_LEDGER_SQL}) u
+       LEFT JOIN categories c ON c.id = u.category_id
        ${where}
        ORDER BY ${col} ${dir}, u.source DESC, u.bank_id DESC, u.revolut_id DESC
        LIMIT ? OFFSET ?`

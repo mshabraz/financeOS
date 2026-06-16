@@ -10,7 +10,7 @@ import { RefreshCw, PiggyBank } from 'lucide-react';
 import clsx from 'clsx';
 import {
   getMonthlyTrend, getByCategory, getBudgets, upsertBudget, getCategories,
-  getTopMerchants, getRecurring,
+  getTopMerchants, getRecurring, getEssentialMetrics,
 } from '../api/client';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 import QueryErrorPanel from '../components/ui/QueryErrorPanel';
@@ -158,6 +158,10 @@ export default function Analytics() {
     queryKey: ['recurring', rangeParams.dateFrom, rangeParams.dateTo],
     queryFn: () => getRecurring(rangeParams),
   });
+  const essentialMetrics = useQuery({
+    queryKey: ['essentialMetrics', rangeParams.dateFrom, rangeParams.dateTo],
+    queryFn: () => getEssentialMetrics(rangeParams),
+  });
 
   const budgetMut = useMutation({
     mutationFn: upsertBudget,
@@ -172,7 +176,12 @@ export default function Analytics() {
   const totalIncome   = trend.data?.reduce((s, r) => s + (r.income   || 0), 0) ?? 0;
   const totalExpenses = trend.data?.reduce((s, r) => s + (r.expenses || 0), 0) ?? 0;
   const totalCatSpend = byCat.data?.reduce((s, r) => s + (r.total   || 0), 0) ?? 0;
-  const loadError = trend.error || byCat.error || byIncome.error;
+  const essentialPeriod = essentialMetrics.data?.period || {};
+  const fixedVariableRatio =
+    essentialPeriod.variable > 0
+      ? (essentialPeriod.essential || 0) / essentialPeriod.variable
+      : null;
+  const loadError = trend.error || byCat.error || byIncome.error || essentialMetrics.error;
 
   if (loadError) {
     return (
@@ -251,6 +260,45 @@ export default function Analytics() {
             {hint && <p className="text-[10px] text-gray-400 mt-1">{hint}</p>}
           </div>
         ))}
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+        <div className="card p-4">
+          <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+            Income runway duration
+          </p>
+          {essentialMetrics.isLoading ? (
+            <p className="text-sm text-gray-400">Calculating...</p>
+          ) : (
+            <>
+              <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                {essentialMetrics.data?.incomeRunwayMonths == null
+                  ? 'N/A'
+                  : `${essentialMetrics.data.incomeRunwayMonths.toFixed(1)} months`}
+              </p>
+              <p className="text-[11px] text-gray-400 mt-1">
+                Liquid assets ({fmt(essentialMetrics.data?.liquidAssets || 0)}) / avg monthly essential expenses ({fmt(essentialMetrics.data?.monthlyEssentialExpenses || 0)})
+              </p>
+            </>
+          )}
+        </div>
+        <div className="card p-4">
+          <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+            Fixed vs variable expense ratio
+          </p>
+          {essentialMetrics.isLoading ? (
+            <p className="text-sm text-gray-400">Calculating...</p>
+          ) : (
+            <>
+              <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                {fixedVariableRatio == null ? 'N/A' : `${fixedVariableRatio.toFixed(2)} : 1`}
+              </p>
+              <p className="text-[11px] text-gray-400 mt-1">
+                Essential {essentialPeriod.essentialPct ?? 0}% ({fmt(essentialPeriod.essential || 0)}) vs discretionary {essentialPeriod.variablePct ?? 0}% ({fmt(essentialPeriod.variable || 0)}) for {periodLabel}
+              </p>
+            </>
+          )}
+        </div>
       </div>
 
       {/* ── Savings rate (12 months) ── */}

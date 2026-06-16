@@ -144,6 +144,8 @@ export const getByCategory   = (params) => api.get('/dashboard/by-category',  { 
 export const getMonthlyTrend = (params) => api.get('/dashboard/monthly-trend', { params });
 export const getQuarterlyTrend = (year)  => api.get('/dashboard/quarterly-trend', { params: { year } });
 export const getYearlyTrend   = (years)  => api.get('/dashboard/yearly-trend',    { params: { years } });
+export const getEssentialMetrics = (params = {}) =>
+  api.get('/dashboard/essential-metrics', { params: sanitizeTransactionParams(params) });
 export const getTopMerchants = (paramsOrType, periodValue, limit = 10) => {
   const params = typeof paramsOrType === 'object'
     ? paramsOrType

@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Search, Download, ChevronLeft, ChevronRight, Check, X,
-  Tag, Layers, AlertCircle, ChevronDown, ChevronRight as ChevronRt, Copy, Upload, Trash2, Shield,
+  Tag, Layers, AlertCircle, ChevronDown, ChevronRight as ChevronRt, Copy, Upload, Trash2, Shield, ArrowUpDown,
 } from 'lucide-react';
 import {
   getTransactions, updateTransaction, getCategories,
@@ -115,6 +115,25 @@ function TagChip({ tag, onRemove }) {
       {tag.name}
       {onRemove && <button onClick={onRemove} className="hover:opacity-70 ml-0.5"><X size={9} /></button>}
     </span>
+  );
+}
+
+function SortHeader({ label, sortKey, activeSortBy, activeSortDir, onToggle, className = '' }) {
+  const active = activeSortBy === sortKey;
+  const icon = active ? (activeSortDir === 'asc' ? '↑' : '↓') : '';
+  return (
+    <button
+      type="button"
+      onClick={() => onToggle(sortKey)}
+      className={clsx(
+        'inline-flex items-center gap-1 text-xs font-medium text-gray-500 hover:text-gray-700 dark:hover:text-gray-200',
+        className,
+      )}
+      title={`Sort by ${label}`}
+    >
+      <span>{label}</span>
+      {active ? <span className="text-[10px]">{icon}</span> : <ArrowUpDown size={11} />}
+    </button>
   );
 }
 
@@ -273,6 +292,8 @@ export default function Transactions() {
   const [tagFilter, setTagFilter] = useState('');
   const [sourceFilter, setSourceFilter] = useState('');
   const [hasNotesOnly, setHasNotesOnly] = useState(false);
+  const [sortBy, setSortBy] = useState('date');
+  const [sortDir, setSortDir] = useState('desc');
   const [editId, setEditId]     = useState(null);
   const [editCat, setEditCat]   = useState('');
   const [tagEditId, setTagEditId] = useState(null);
@@ -291,7 +312,7 @@ export default function Transactions() {
   const { data: allTags }    = useQuery({ queryKey: ['tags'],       queryFn: getTags });
 
   const { data, isLoading, isError, error, refetch } = useQuery({
-    queryKey: ['transactions', page, search, category, direction, dateFrom, dateTo, tagFilter, sourceFilter, hasNotesOnly],
+    queryKey: ['transactions', page, search, category, direction, dateFrom, dateTo, tagFilter, sourceFilter, hasNotesOnly, sortBy, sortDir],
     queryFn: () => getTransactions({
       page, limit: 50, search,
       category: category || undefined,
@@ -301,6 +322,8 @@ export default function Transactions() {
       tag: tagFilter || undefined,
       source: sourceFilter || undefined,
       hasNotes: hasNotesOnly ? '1' : undefined,
+      sortBy,
+      sortDir,
     }),
   });
 
@@ -447,6 +470,15 @@ export default function Transactions() {
   const selectedSplit = useMemo(() => splitSelectedIds(selected), [selected]);
 
   const toggleExpand = (id) => setExpandedId((prev) => prev === id ? null : id);
+  const toggleSort = (key) => {
+    if (sortBy === key) {
+      setSortDir((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortBy(key);
+      setSortDir('asc');
+    }
+    setPage(1);
+  };
 
   const COL_COUNT = 9; // checkbox + date + merchant + note + amount + category + tags + expand + edit
 
@@ -694,12 +726,31 @@ export default function Transactions() {
                         className="rounded"
                       />
                     </th>
-                    <th className="text-left px-4 py-3 text-xs font-medium text-gray-500">Date</th>
-                    <th className="text-left px-4 py-3 text-xs font-medium text-gray-500">Merchant / Details</th>
-                    <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 max-w-[200px]">Your note</th>
-                    <th className="text-right px-4 py-3 text-xs font-medium text-gray-500">Amount</th>
-                    <th className="text-left px-4 py-3 text-xs font-medium text-gray-500">Category</th>
-                    <th className="text-left px-4 py-3 text-xs font-medium text-gray-500">Tags</th>
+                    <th className="text-left px-4 py-3">
+                      <SortHeader label="Date" sortKey="date" activeSortBy={sortBy} activeSortDir={sortDir} onToggle={toggleSort} />
+                    </th>
+                    <th className="text-left px-4 py-3">
+                      <SortHeader label="Merchant / Details" sortKey="merchant_details" activeSortBy={sortBy} activeSortDir={sortDir} onToggle={toggleSort} />
+                    </th>
+                    <th className="text-left px-4 py-3 max-w-[200px]">
+                      <SortHeader label="Your note" sortKey="notes" activeSortBy={sortBy} activeSortDir={sortDir} onToggle={toggleSort} />
+                    </th>
+                    <th className="text-right px-4 py-3">
+                      <SortHeader
+                        label="Amount"
+                        sortKey="amount"
+                        activeSortBy={sortBy}
+                        activeSortDir={sortDir}
+                        onToggle={toggleSort}
+                        className="ml-auto"
+                      />
+                    </th>
+                    <th className="text-left px-4 py-3">
+                      <SortHeader label="Category" sortKey="category" activeSortBy={sortBy} activeSortDir={sortDir} onToggle={toggleSort} />
+                    </th>
+                    <th className="text-left px-4 py-3">
+                      <SortHeader label="Tags" sortKey="tags" activeSortBy={sortBy} activeSortDir={sortDir} onToggle={toggleSort} />
+                    </th>
                     <th className="w-8"></th>
                     <th className="w-12"></th>
                   </tr>

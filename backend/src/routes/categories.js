@@ -1,6 +1,7 @@
 const express = require('express');
 const { getDb } = require('../db/database');
 const { invalidateCache, applyRuleToExisting, applyAllRulesToExisting } = require('../services/categorizer');
+const { defaultTierForCategory } = require('../services/essentialExpenseTiers');
 const logger = require('../services/logger');
 
 const router = express.Router();
@@ -20,8 +21,8 @@ router.post('/', (req, res) => {
     if (!name) return res.status(400).json({ error: 'Name is required' });
 
     const result = db
-      .prepare('INSERT INTO categories (name, icon, color, type) VALUES (?, ?, ?, ?)')
-      .run(name, icon, color, type);
+      .prepare('INSERT INTO categories (name, icon, color, type, expense_tier) VALUES (?, ?, ?, ?, ?)')
+      .run(name, icon, color, type, defaultTierForCategory({ name, type }));
 
     res.json(db.prepare('SELECT * FROM categories WHERE id = ?').get(result.lastInsertRowid));
   } catch (err) {
@@ -33,8 +34,10 @@ router.post('/', (req, res) => {
 // PATCH /api/categories/:id
 router.patch('/:id', (req, res) => {
   const db = getDb();
-  const { name, icon, color, type } = req.body;
+  const { name, icon, color, type, expense_tier } = req.body;
   const id = req.params.id;
+  const existing = db.prepare('SELECT * FROM categories WHERE id = ?').get(id);
+  if (!existing) return res.status(404).json({ error: 'Category not found' });
 
   const fields = [];
   const vals   = [];
@@ -42,6 +45,24 @@ router.patch('/:id', (req, res) => {
   if (icon  !== undefined) { fields.push('icon = ?');  vals.push(icon); }
   if (color !== undefined) { fields.push('color = ?'); vals.push(color); }
   if (type  !== undefined) { fields.push('type = ?');  vals.push(type); }
+  if (expense_tier !== undefined) {
+    const tier = expense_tier === '' || expense_tier === null ? null : expense_tier;
+    if (tier && !['essential', 'variable'].includes(tier)) {
+      return res.status(400).json({ error: 'expense_tier must be essential, variable, or null' });
+    }
+    fields.push('expense_tier = ?');
+    vals.push(tier);
+  }
+  if (
+    expense_tier === undefined &&
+    (name !== undefined || type !== undefined)
+  ) {
+    const nextName = name !== undefined ? name : existing.name;
+    const nextType = type !== undefined ? type : existing.type;
+    const implied = defaultTierForCategory({ name: nextName, type: nextType });
+    fields.push('expense_tier = ?');
+    vals.push(implied);
+  }
 
   if (!fields.length) return res.status(400).json({ error: 'Nothing to update' });
 

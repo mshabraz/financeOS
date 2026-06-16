@@ -24,6 +24,7 @@ export default function Categories() {
   const [editCatIcon, setEditCatIcon] = useState('');
   const [editCatColor, setEditCatColor] = useState('');
   const [editCatType, setEditCatType] = useState('expense');
+  const [editCatTier, setEditCatTier] = useState('variable');
   const [deleteConfirmId, setDeleteConfirmId] = useState(null);
 
   // Rule form
@@ -50,7 +51,13 @@ export default function Categories() {
   });
 
   const saveCat = useMutation({
-    mutationFn: () => updateCategory(editCatId, { name: editCatName, icon: editCatIcon, color: editCatColor, type: editCatType }),
+    mutationFn: () => updateCategory(editCatId, {
+      name: editCatName,
+      icon: editCatIcon,
+      color: editCatColor,
+      type: editCatType,
+      expense_tier: editCatType === 'expense' ? editCatTier : null,
+    }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['categories'] }); setEditCatId(null); },
   });
 
@@ -64,12 +71,18 @@ export default function Categories() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['categories'] }),
   });
 
+  const tierMut = useMutation({
+    mutationFn: ({ id, expense_tier }) => updateCategory(id, { expense_tier }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['categories'] }),
+  });
+
   const startEditCat = (c) => {
     setEditCatId(c.id);
     setEditCatName(c.name);
     setEditCatIcon(c.icon);
     setEditCatColor(c.color);
     setEditCatType(c.type);
+    setEditCatTier(c.expense_tier || 'variable');
   };
 
   const addRule = useMutation({
@@ -178,6 +191,16 @@ export default function Categories() {
                       <option value="income">Income</option>
                       <option value="transfer">Transfer</option>
                     </select>
+                    {editCatType === 'expense' && (
+                      <select
+                        value={editCatTier}
+                        onChange={(e) => setEditCatTier(e.target.value)}
+                        className="input w-28 py-1.5 text-sm"
+                      >
+                        <option value="essential">Essential</option>
+                        <option value="variable">Variable</option>
+                      </select>
+                    )}
                     <button onClick={() => saveCat.mutate()} className="p-1.5 rounded-lg text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20">
                       <Check size={15} />
                     </button>
@@ -191,8 +214,22 @@ export default function Categories() {
                     <span className="text-lg">{c.icon}</span>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-gray-800 dark:text-gray-200">{c.name}</p>
-                      <p className="text-xs text-gray-400 capitalize">{c.type}</p>
+                      <p className="text-xs text-gray-400 capitalize">
+                        {c.type}
+                        {c.type === 'expense' ? ` · ${c.expense_tier || 'variable'}` : ''}
+                      </p>
                     </div>
+                    {c.type === 'expense' && (
+                      <select
+                        value={c.expense_tier || 'variable'}
+                        onChange={(e) => tierMut.mutate({ id: c.id, expense_tier: e.target.value })}
+                        className="input py-1 text-xs w-24"
+                        title="Essential vs variable"
+                      >
+                        <option value="essential">Essential</option>
+                        <option value="variable">Variable</option>
+                      </select>
+                    )}
                     <input
                       type="color"
                       value={c.color}

@@ -9,6 +9,7 @@ const {
   sqlExcludeSavingsCategories,
   sqlIsSavingsCategory,
 } = require('../services/categoryAnalytics');
+const { computeEssentialMetrics } = require('../services/essentialExpenseAnalytics');
 
 const router = express.Router();
 
@@ -78,6 +79,21 @@ router.get('/summary', (req, res) => {
     dateFrom,
     dateTo,
   });
+});
+
+// GET /api/dashboard/essential-metrics?dateFrom=YYYY-MM-DD&dateTo=YYYY-MM-DD
+router.get('/essential-metrics', async (req, res) => {
+  try {
+    const db = getDb();
+    const { dateFrom, dateTo } = sanitizeDateRange({
+      dateFrom: req.query.dateFrom,
+      dateTo: req.query.dateTo,
+    });
+    const metrics = await computeEssentialMetrics(db, { dateFrom, dateTo });
+    res.json(metrics);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
 });
 
 // GET /api/dashboard/by-category
