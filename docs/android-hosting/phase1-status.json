@@ -1,0 +1,28 @@
+{
+  "phase": 1,
+  "status": "ready",
+  "branch": "android-hosting",
+  "pcProduction": {
+    "url": "http://192.168.1.25:3001",
+    "unchanged": true
+  },
+  "phoneTrial": {
+    "plannedUrl": "http://192.168.1.26:3001",
+    "financeosHome": "~/financeos",
+    "dataDir": "~/financeos/data",
+    "appDir": "~/financeos/app"
+  },
+  "scripts": {
+    "termux": [
+      "scripts/android/01-install-termux-deps.sh",
+      "scripts/android/02-clone-and-setup.sh",
+      "scripts/android/03-restore-backup.sh",
+      "scripts/android/04-start-lan.sh",
+      "scripts/android/05-verify-phone.sh"
+    ],
+    "windows": [
+      "scripts/android/windows/Export-BackupForPhone.ps1",
+      "scripts/android/windows/Verify-PhonePhase1.ps1"
+    ]
+  }
+}

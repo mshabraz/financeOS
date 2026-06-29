@@ -29,7 +29,8 @@ Independent phone hosting on **LineageOS (rooted Redmi Note 8T)**. PC production
 | **4** | Pre-cutover checklist | Manual backup on PC only |
 | **5** | Cutover: stop PC service, phone becomes production | Yes — intentional |
 
-See `docs/ANDROID-PHASE0-CHECKLIST.md` for Phase 0 completion and verification.
+See `docs/ANDROID-PHASE0-CHECKLIST.md` for Phase 0 completion and verification.  
+See `docs/ANDROID-PHASE1-CHECKLIST.md` for **Phase 1** (phone install).
 
 ---
 
