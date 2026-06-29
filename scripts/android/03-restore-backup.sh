@@ -44,6 +44,24 @@ echo "[restore] Stop FinanceOS if it is running (Ctrl+C in start terminal)."
 read -r -p "Continue? [y/N] " ans
 [[ "$ans" =~ ^[Yy]$ ]] || exit 0
 
+# Backups from zip/sdcard often have modes that block Termux (cp -a → Permission denied).
+fix_import_permissions() {
+  local dir="$1"
+  echo "[restore] Fixing permissions on import folder..."
+  chmod -R u+rwX "$dir" 2>/dev/null || true
+  find "$dir" -type d -exec chmod u+rwx {} + 2>/dev/null || true
+  find "$dir" -type f -exec chmod u+rw {} + 2>/dev/null || true
+}
+
+copy_tree() {
+  local from="$1"
+  local to="$2"
+  mkdir -p "$to"
+  # tar avoids cp -a ownership/ACL issues from Windows/Android storage
+  (cd "$from" && tar cf - .) | (cd "$to" && tar xf -)
+}
+
+fix_import_permissions "$SRC"
 mkdir -p "$FINANCEOS_DATA"
 
 for name in finance.db auth.json users-registry.json .session-secret; do
@@ -54,14 +72,25 @@ for name in finance.db auth.json users-registry.json .session-secret; do
 done
 
 if [[ -d "$SRC/users" ]]; then
+  echo "[restore] users/ (per-account databases)"
   rm -rf "$FINANCEOS_DATA/users"
-  cp -a "$SRC/users" "$FINANCEOS_DATA/users"
-  echo "[restore] users/"
+  mkdir -p "$FINANCEOS_DATA/users"
+  if ! copy_tree "$SRC/users" "$FINANCEOS_DATA/users"; then
+    echo "[restore] tar copy failed — try: chmod -R u+rwX $SRC" >&2
+    exit 1
+  fi
+  # Sanity check: at least one finance.db under users/
+  if ! find "$FINANCEOS_DATA/users" -name 'finance.db' | grep -q .; then
+    echo "[restore] ERROR: no finance.db found under users/ after restore" >&2
+    echo "[restore] List import: ls -la $SRC/users/" >&2
+    exit 1
+  fi
+  echo "[restore] users/ OK"
 fi
 
 if [[ -d "$SRC/certs" ]]; then
   mkdir -p "$FINANCEOS_DATA/certs"
-  cp -a "$SRC/certs/." "$FINANCEOS_DATA/certs/"
+  copy_tree "$SRC/certs" "$FINANCEOS_DATA/certs"
   echo "[restore] certs/"
 fi
 

@@ -105,7 +105,21 @@ Unzip/copy so this exists:
 ### Restore:
 
 ```bash
+# If restore failed with "Permission denied", fix import perms first:
+chmod -R u+rwX ~/financeos/backup-import/<folder-name>
+
 bash ~/financeos/app/scripts/android/03-restore-backup.sh --latest
+```
+
+If still blocked, pull latest script (`git pull`) or manual restore:
+
+```bash
+SRC=~/financeos/backup-import/<folder-name>
+chmod -R u+rwX "$SRC"
+rm -rf ~/financeos/data/users
+mkdir -p ~/financeos/data/users
+(cd "$SRC/users" && tar cf - .) | (cd ~/financeos/data/users && tar xf -)
+cp -f "$SRC/users-registry.json" "$SRC/.session-secret" ~/financeos/data/ 2>/dev/null || true
 ```
 
 ---
@@ -156,6 +170,7 @@ Or browser: `http://192.168.1.26:3001` — log in with your **existing** credent
 | Termux killed app | Disable battery optimization for Termux; keep charger |
 | Cannot reach phone from PC | Same Wi‑Fi; confirm phone IP; disable VPN |
 | Login fails | Re-run restore; check `~/financeos/data/users/` exists |
+| `Permission denied` on restore | `chmod -R u+rwX ~/financeos/backup-import/<folder>` then re-run restore; use `tar` copy (see checklist) |
 | Wrong branch on phone | `git -C ~/financeos/app checkout android-hosting` |
 
 ---
