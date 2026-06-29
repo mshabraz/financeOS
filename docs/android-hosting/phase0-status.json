@@ -1,0 +1,37 @@
+{
+  "phase": 0,
+  "status": "complete",
+  "completedAt": "2026-06-29T15:01:00+03:00",
+  "branch": "android-hosting",
+  "baseCommit": "4cb806cec4e80f1c7fac0690aa01f7a9c9ae7e68",
+  "pcProduction": {
+    "hostname": "ShabrazPC",
+    "lanUrl": "http://192.168.1.25:3001",
+    "apiHealth": "http://192.168.1.25:3001/api/health",
+    "dataDir": "C:\\FinanceOS\\data",
+    "appDir": "C:\\FinanceOS\\app",
+    "deployBranch": "main",
+    "serviceName": "FinanceOS"
+  },
+  "androidPlanned": {
+    "device": "Xiaomi Redmi Note 8T",
+    "os": "LineageOS (rooted)",
+    "plannedLanIp": "192.168.1.26",
+    "plannedPort": 3001,
+    "plannedUrl": "http://192.168.1.26:3001",
+    "gitBranch": "android-hosting",
+    "dataDir": "~/financeos/data"
+  },
+  "isolationRules": [
+    "No merge to main until cutover-ready",
+    "No PC deploy from android-hosting pushes",
+    "No live database sync during trial",
+    "No open banking on phone until cutover",
+    "PC remains source of truth until Phase 5"
+  ],
+  "pendingUserActions": [
+    "Reserve static DHCP 192.168.1.26 for phone MAC on router",
+    "Optional: verify FinanceOS-DailyBackup scheduled task on ShabrazPC",
+    "Phase 1: install Termux stack on phone"
+  ]
+}

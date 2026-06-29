@@ -1,0 +1,33 @@
+# Validates android-hosting branch only — runs on GitHub-hosted runners.
+# Does NOT deploy to C:\FinanceOS\app and does NOT use the self-hosted PC runner.
+
+name: Android hosting CI
+
+on:
+  push:
+    branches: [android-hosting]
+  pull_request:
+    branches: [android-hosting]
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm run setup
+
+      - name: Smoke + audit tests
+        run: npm test
+
+      - name: Confirm PC deploy workflow unchanged on this branch
+        run: |
+          grep -q 'branches: \[main\]' .github/workflows/deploy-lan-selfhosted.yml
+          echo "PC deploy still main-only (this job does not run it)."
