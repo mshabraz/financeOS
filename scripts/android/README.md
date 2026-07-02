@@ -14,6 +14,7 @@ These scripts support **phone-side** FinanceOS hosting. They must **not** be run
 | `07-stop-financeos.sh` | Stop background server |
 | `08-watchdog.sh` | Restart if health check fails |
 | `09-install-boot-autostart.sh` | Install Termux:Boot script |
+| `10-install-home-shortcuts.sh` | One-tap home screen shortcuts (Termux:Widget) |
 | `verify-phase0.ps1` | Read-only PC production checks (Windows) |
 | `windows/Export-BackupForPhone.ps1` | Create PC backup for phone import |
 | `windows/Verify-PhonePhase1.ps1` | LAN check PC + phone endpoints |
