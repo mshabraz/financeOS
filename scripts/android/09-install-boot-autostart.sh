@@ -8,10 +8,18 @@ source "$SCRIPT_DIR/phone-paths.sh"
 BOOT_DIR="$HOME/.termux/boot"
 BOOT_SCRIPT="$BOOT_DIR/financeos.sh"
 
-if ! command -v termux-boot >/dev/null 2>&1; then
-  echo "[boot] Termux:Boot app not detected."
-  echo "[boot] Install 'Termux:Boot' from F-Droid, then re-run this script."
-  exit 1
+# Termux:Boot has no CLI — it runs ~/.termux/boot/*.sh on device boot.
+has_termux_boot() {
+  pm list packages 2>/dev/null | grep -q 'com.termux.boot' && return 0
+  pm list packages 2>/dev/null | grep -q 'termux.boot' && return 0
+  return 1
+}
+
+if has_termux_boot; then
+  echo "[boot] Termux:Boot package detected (com.termux.boot)"
+else
+  echo "[boot] Warning: could not verify com.termux.boot via pm."
+  echo "[boot] If Termux:Boot is installed, continuing anyway..."
 fi
 
 mkdir -p "$BOOT_DIR" "$FINANCEOS_LOGS"

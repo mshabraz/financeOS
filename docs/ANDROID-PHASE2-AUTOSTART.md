@@ -1,6 +1,6 @@
 # Phase 2 — Auto-start after reboot
 
-**Requires:** Termux:Boot (F-Droid)
+**Requires:** Termux:Boot (F-Droid) — no CLI needed; scripts in `~/.termux/boot/` run on boot.
 
 ---
 
