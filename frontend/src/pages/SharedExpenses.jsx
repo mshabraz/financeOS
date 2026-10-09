@@ -5,6 +5,9 @@ import { Plus, Users, Receipt, ChevronRight, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { getSharedEvents, createSharedEvent, deleteSharedEvent, importSharedParticipants } from '../api/client';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
+import TableSkeleton from '../components/ui/TableSkeleton';
+import EmptyState from '../components/ui/EmptyState';
+import ConfirmDialog from '../components/ui/ConfirmDialog';
 import { fmtCurrency, privText } from '../utils/displayFormat';
 import { usePrivacy } from '../context/PrivacyContext';
 
@@ -17,6 +20,7 @@ export default function SharedExpenses() {
   const [name, setName] = useState('');
   const [importFromId, setImportFromId] = useState('');
   const [showForm, setShowForm] = useState(false);
+  const [eventToDelete, setEventToDelete] = useState(null);
 
   const events = useQuery({ queryKey: ['sharedEvents'], queryFn: getSharedEvents });
 
@@ -42,7 +46,14 @@ export default function SharedExpenses() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['sharedEvents'] }),
   });
 
-  if (events.isLoading) return <LoadingSpinner />;
+  if (events.isLoading) {
+    return (
+      <div className="space-y-4 max-w-3xl mx-auto">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Shared Expenses</h1>
+        <TableSkeleton rows={4} />
+      </div>
+    );
+  }
 
   if (events.isError) {
     return (
@@ -144,9 +155,12 @@ export default function SharedExpenses() {
       )}
 
       {eventList.length === 0 ? (
-        <div className="card p-8 text-center text-gray-500 dark:text-gray-400">
-          <Users size={40} className="mx-auto mb-3 opacity-40" />
-          <p>No events yet. Create one for a trip or group expense.</p>
+        <div className="card p-4">
+          <EmptyState
+            icon={Users}
+            title="No events yet"
+            description="Create an event for a trip, group outing, or shared household expenses."
+          />
         </div>
       ) : (
         <ul className="space-y-2">
@@ -171,9 +185,7 @@ export default function SharedExpenses() {
                   type="button"
                   className="p-2 text-gray-400 hover:text-red-500"
                   title="Delete event"
-                  onClick={() => {
-                    if (window.confirm(`Delete "${ev.name}" and all its data?`)) deleteMut.mutate(ev.id);
-                  }}
+                  onClick={() => setEventToDelete(ev)}
                 >
                   <Trash2 size={16} />
                 </button>
@@ -182,6 +194,18 @@ export default function SharedExpenses() {
           ))}
         </ul>
       )}
+
+      <ConfirmDialog
+        isOpen={!!eventToDelete}
+        title="Delete Event"
+        message={`Delete "${eventToDelete?.name}" and all associated expenses? This cannot be undone.`}
+        confirmText="Delete"
+        onConfirm={() => {
+          if (eventToDelete?.id) deleteMut.mutate(eventToDelete.id);
+          setEventToDelete(null);
+        }}
+        onCancel={() => setEventToDelete(null)}
+      />
     </div>
   );
 }

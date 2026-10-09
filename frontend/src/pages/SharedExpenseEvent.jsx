@@ -17,6 +17,8 @@ import {
   deleteSharedEvent,
 } from '../api/client';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
+import TableSkeleton from '../components/ui/TableSkeleton';
+import ConfirmDialog from '../components/ui/ConfirmDialog';
 import SettlementSharePanel from '../components/shared/SettlementSharePanel';
 import { transferToPayload, transferRowId, isValidTransfer } from '../utils/sharedTransfer';
 import { fmtCurrency, privText } from '../utils/displayFormat';
@@ -108,6 +110,7 @@ export default function SharedExpenseEvent() {
   const [showExpenseForm, setShowExpenseForm] = useState(false);
   const [editExpenseId, setEditExpenseId] = useState(null);
   const [expenseForm, setExpenseForm] = useState(null);
+  const [confirmDialog, setConfirmDialog] = useState(null);
 
   const eventQ = useQuery({
     queryKey: ['sharedEvent', id],
@@ -262,7 +265,13 @@ export default function SharedExpenseEvent() {
       .filter((p) => p.fromParticipantId && p.toParticipantId && p.amount > 0);
   };
 
-  if (eventQ.isLoading) return <LoadingSpinner />;
+  if (eventQ.isLoading) {
+    return (
+      <div className="space-y-4 max-w-4xl mx-auto pb-24 lg:pb-6">
+        <TableSkeleton rows={6} />
+      </div>
+    );
+  }
   if (!data?.event) {
     return (
       <div className="card p-6 text-center">
@@ -288,7 +297,11 @@ export default function SharedExpenseEvent() {
           type="button"
           className="text-xs text-red-500 hover:underline shrink-0"
           onClick={() => {
-            if (window.confirm('Delete this entire event?')) deleteEventMut.mutate();
+            setConfirmDialog({
+              title: 'Delete Event',
+              message: 'Delete this entire event and all associated expenses? This cannot be undone.',
+              onConfirm: () => deleteEventMut.mutate(),
+            });
           }}
         >
           Delete
@@ -372,7 +385,11 @@ export default function SharedExpenseEvent() {
                   type="button"
                   className="text-gray-400 hover:text-red-500"
                   onClick={() => {
-                    if (window.confirm(`Remove ${p.name}?`)) deletePersonMut.mutate(p.id);
+                    setConfirmDialog({
+                      title: 'Remove Person',
+                      message: `Remove ${p.name}?`,
+                      onConfirm: () => deletePersonMut.mutate(p.id),
+                    });
                   }}
                 >
                   <Trash2 size={16} />
@@ -590,7 +607,11 @@ export default function SharedExpenseEvent() {
                         type="button"
                         className="p-1.5 text-gray-400 hover:text-red-500"
                         onClick={() => {
-                          if (window.confirm('Delete this expense?')) deleteExpenseMut.mutate(exp.id);
+                          setConfirmDialog({
+                            title: 'Delete Expense',
+                            message: `Delete this expense (${exp.description || 'expense'})? This cannot be undone.`,
+                            onConfirm: () => deleteExpenseMut.mutate(exp.id),
+                          });
                         }}
                       >
                         <Trash2 size={14} />
@@ -819,6 +840,18 @@ export default function SharedExpenseEvent() {
           </p>
         </div>
       )}
+
+      <ConfirmDialog
+        isOpen={!!confirmDialog}
+        title={confirmDialog?.title}
+        message={confirmDialog?.message}
+        confirmText="Confirm"
+        onConfirm={() => {
+          confirmDialog?.onConfirm?.();
+          setConfirmDialog(null);
+        }}
+        onCancel={() => setConfirmDialog(null)}
+      />
     </div>
   );
 }

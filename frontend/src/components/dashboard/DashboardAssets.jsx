@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Plus, Check, X, Pencil, Trash2, Wallet } from 'lucide-react';
 import LoadingSpinner from '../ui/LoadingSpinner';
+import TableSkeleton from '../ui/TableSkeleton';
 import { fmtEur, fmtCurrency, privText, fmtPct } from '../../utils/displayFormat';
 import { usePrivacy } from '../../context/PrivacyContext';
 
@@ -152,7 +153,7 @@ export default function DashboardAssets({
       </div>
 
       {isLoading ? (
-        <LoadingSpinner />
+        <TableSkeleton rows={4} />
       ) : (
         <>
           <div className="flex justify-between py-2 border-b border-gray-100 dark:border-gray-800 text-sm">

@@ -3,11 +3,13 @@ import { maskIfPrivacy, maskTextIfPrivacy } from './privacyMask';
 export function fmtEur(n, opts = {}) {
   if (n == null || Number.isNaN(n)) return maskIfPrivacy('—');
   const amount = opts.abs ? Math.abs(n) : n;
-  const formatted = new Intl.NumberFormat('et-EE', {
+  const decimals = opts.decimals ?? 2;
+  const formatted = new Intl.NumberFormat(opts.locale ?? 'et-EE', {
     style: 'currency',
     currency: 'EUR',
-    maximumFractionDigits: opts.decimals ?? 2,
-    signDisplay: opts.sign ? 'exceptZero' : 'auto',
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
+    signDisplay: opts.sign ? 'exceptZero' : (opts.signDisplay || 'auto'),
   }).format(amount ?? 0);
   return maskIfPrivacy(formatted);
 }
@@ -15,12 +17,24 @@ export function fmtEur(n, opts = {}) {
 export function fmtCurrency(n, currency = 'EUR', opts = {}) {
   if (n == null || Number.isNaN(n)) return maskIfPrivacy('—');
   const amount = opts.abs ? Math.abs(n) : n;
-  const formatted = new Intl.NumberFormat('et-EE', {
+  const decimals = opts.decimals ?? 2;
+  const formatted = new Intl.NumberFormat(opts.locale ?? 'et-EE', {
     style: 'currency',
     currency,
-    maximumFractionDigits: opts.decimals ?? 2,
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
+    signDisplay: opts.sign ? 'exceptZero' : (opts.signDisplay || 'auto'),
   }).format(amount ?? 0);
   return maskIfPrivacy(formatted);
+}
+
+export function formatFinancialValue(n, opts = {}) {
+  return fmtCurrency(n, opts.currency || 'EUR', opts);
+}
+
+export function formatFinancialDelta(n, currency = 'EUR', opts = {}) {
+  if (n == null || Number.isNaN(n)) return maskIfPrivacy('—');
+  return fmtCurrency(n, currency, { ...opts, sign: true });
 }
 
 export function fmtPkr(n) {

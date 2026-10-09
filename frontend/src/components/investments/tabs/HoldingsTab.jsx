@@ -1,6 +1,7 @@
 import { useMemo, useState, useCallback } from 'react';
 import { ChevronDown, ChevronUp, Wallet } from 'lucide-react';
 import LoadingSpinner from '../../ui/LoadingSpinner';
+import EmptyState from '../../ui/EmptyState';
 import { ManualCashBox } from '../holdings';
 import HoldingsSummaryHeader from '../holdings/HoldingsSummaryHeader';
 import HoldingsToolbar from '../holdings/HoldingsToolbar';
@@ -153,9 +154,11 @@ export default function HoldingsTab({
                 />
               </>
             ) : (
-              <div className="py-16 text-center text-sm text-gray-400">
-                No open positions. Import a broker CSV or add a manual transaction.
-              </div>
+              <EmptyState
+                icon={Wallet}
+                title="No open positions"
+                description="No open holdings found. Import a broker CSV or add a manual transaction in the ledger."
+              />
             )}
           </div>
 

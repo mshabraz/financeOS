@@ -2,10 +2,12 @@ import { maskIfPrivacy } from './privacyMask';
 
 export function fmtEur(n, opts = {}) {
   if (n == null || Number.isNaN(n)) return maskIfPrivacy('—');
-  return maskIfPrivacy(new Intl.NumberFormat('et-EE', {
+  const decimals = opts.decimals ?? 2;
+  return maskIfPrivacy(new Intl.NumberFormat(opts.locale ?? 'et-EE', {
     style: 'currency',
     currency: 'EUR',
-    maximumFractionDigits: opts.decimals ?? 2,
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
     signDisplay: opts.sign ? 'exceptZero' : 'auto',
   }).format(n));
 }

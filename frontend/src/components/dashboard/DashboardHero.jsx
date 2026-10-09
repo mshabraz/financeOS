@@ -11,10 +11,10 @@ function HeroKpi({
   label, value, sub, delta, spark, positive, icon: Icon, href,
 }) {
   const inner = (
-    <div className="rounded-2xl border border-gray-200/80 dark:border-gray-700/80 bg-white/50 dark:bg-gray-900/40 p-3.5 sm:p-4 h-full flex flex-col gap-2 min-w-0 overflow-hidden">
+    <div className="rounded-xl bg-gray-50/70 dark:bg-gray-800/40 hover:bg-gray-100/60 dark:hover:bg-gray-800/70 border border-gray-100 dark:border-gray-800/60 p-3.5 sm:p-4 h-full flex flex-col gap-2 min-w-0 overflow-hidden transition-colors">
       <div className="flex items-start justify-between gap-2 min-w-0">
         <div className="min-w-0 flex-1">
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 leading-tight">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 leading-tight">
             {label}
           </p>
           <p className="text-[1.0625rem] leading-snug sm:text-xl font-bold text-gray-900 dark:text-white tabular-nums mt-1 break-words [overflow-wrap:anywhere]">
@@ -28,8 +28,8 @@ function HeroKpi({
           {delta != null && (
             <p
               className={clsx(
-                'text-[11px] font-medium mt-1 inline-flex flex-wrap items-center gap-0.5 leading-snug',
-                delta >= 0 ? 'text-emerald-600' : 'text-red-600',
+                'text-[11px] font-semibold mt-1 inline-flex flex-wrap items-center gap-0.5 leading-snug tabular-nums',
+                delta >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400',
               )}
             >
               {delta >= 0 ? <ArrowUpRight size={11} className="shrink-0" /> : <ArrowDownRight size={11} className="shrink-0" />}
@@ -55,7 +55,7 @@ function HeroKpi({
     return (
       <Link
         to={href}
-        className="block min-w-0 hover:ring-1 hover:ring-brand-500/30 rounded-2xl transition-shadow active:opacity-90"
+        className="block min-w-0 hover:ring-1 hover:ring-brand-500/30 rounded-xl transition-shadow active:opacity-90"
       >
         {inner}
       </Link>
@@ -102,7 +102,7 @@ export default function DashboardHero({
         </div>
       </div>
 
-      <div className="p-3 sm:p-5 grid grid-cols-1 min-[400px]:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
+      <div className="p-3 sm:p-5 grid grid-cols-1 min-[400px]:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
         <HeroKpi
           label="Total investments"
           value={fmtEur(snapshot.investmentsTotal)}

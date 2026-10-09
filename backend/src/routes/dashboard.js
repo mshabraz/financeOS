@@ -372,6 +372,7 @@ router.put('/manual-balances/:key', (req, res) => {
   db.prepare(
     "UPDATE manual_balances SET amount = ?, label = ?, icon = ?, updated_at = datetime('now') WHERE key = ?"
   ).run(parseFloat(amount), nextLabel, nextIcon, key);
+  db.flushSync();
 
   res.json(db.prepare('SELECT * FROM manual_balances WHERE key = ?').get(key));
 });
@@ -385,6 +386,7 @@ router.post('/manual-balances', (req, res) => {
     const result = db.prepare(
       'INSERT INTO manual_balances (key, label, icon, amount) VALUES (?, ?, ?, ?)'
     ).run(key, label, icon, parseFloat(amount));
+    db.flushSync();
     res.json(db.prepare('SELECT * FROM manual_balances WHERE id = ?').get(result.lastInsertRowid));
   } catch (e) {
     res.status(400).json({ error: e.message });
@@ -398,6 +400,7 @@ router.delete('/manual-balances/:key', (req, res) => {
     return res.status(400).json({ error: 'Cannot delete built-in balance slots' });
   }
   db.prepare('DELETE FROM manual_balances WHERE key = ?').run(key);
+  db.flushSync();
   res.json({ ok: true });
 });
 
@@ -574,6 +577,7 @@ router.put('/budgets', (req, res) => {
   db.prepare(
     'INSERT OR REPLACE INTO budgets (category_id, month, amount) VALUES (?, ?, ?)'
   ).run(parseInt(categoryId), month, parseFloat(amount));
+  db.flushSync();
 
   res.json({ ok: true });
 });

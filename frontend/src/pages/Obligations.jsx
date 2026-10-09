@@ -10,6 +10,8 @@ import {
   getObligationsCalendar,
 } from '../api/client';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
+import TableSkeleton from '../components/ui/TableSkeleton';
+import EmptyState from '../components/ui/EmptyState';
 import { fmtCurrency, privText } from '../utils/displayFormat';
 import { usePrivacy } from '../context/PrivacyContext';
 import { TABS } from '../components/obligations/obligationConstants';
@@ -17,6 +19,7 @@ import ObligationCard from '../components/obligations/ObligationCard';
 import ObligationFormModal from '../components/obligations/ObligationFormModal';
 import ObligationSettleModal from '../components/obligations/ObligationSettleModal';
 import { Link } from 'react-router-dom';
+import { useUrlQueryState } from '../hooks/useUrlQueryState';
 
 const fmt = (n) => fmtCurrency(n, 'EUR');
 
@@ -24,16 +27,14 @@ export default function Obligations() {
   usePrivacy();
   const qc = useQueryClient();
   const [searchParams] = useSearchParams();
-  const [tab, setTab] = useState(searchParams.get('tab') || 'upcoming');
-
-  useEffect(() => {
-    const t = searchParams.get('tab');
-    if (t && TABS.some((x) => x.id === t)) setTab(t);
-  }, [searchParams]);
+  const [tab, setTab] = useUrlQueryState('tab', 'upcoming', {
+    deserialize: (v) => (TABS.some((x) => x.id === v) ? v : 'upcoming'),
+    replace: false,
+  });
   const [showForm, setShowForm] = useState(false);
   const [editRow, setEditRow] = useState(null);
   const [settleRow, setSettleRow] = useState(null);
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useUrlQueryState('q', '', { replace: true });
 
   const filter = tab === 'payable' ? 'payable' : tab === 'receivable' ? 'receivable' : tab;
 
@@ -183,10 +184,10 @@ export default function Obligations() {
       )}
 
       {list.isLoading && tab !== 'calendar' ? (
-        <LoadingSpinner />
+        <TableSkeleton rows={4} />
       ) : tab === 'calendar' ? (
         <div className="space-y-3">
-          {calendar.isLoading && <LoadingSpinner />}
+          {calendar.isLoading && <TableSkeleton rows={3} />}
           {calendarDays.map(([date, items]) => (
             <div key={date} className="card p-4">
               <p className="text-xs font-semibold text-gray-500 mb-2 tabular-nums">{date}</p>
@@ -201,7 +202,12 @@ export default function Obligations() {
             </div>
           ))}
           {!calendarDays.length && !calendar.isLoading && (
-            <p className="text-center text-sm text-gray-400 py-8">No upcoming due dates in the next 60 days</p>
+            <div className="card p-4">
+              <EmptyState
+                title="No upcoming due dates"
+                description="No due dates found in the next 60 days."
+              />
+            </div>
           )}
         </div>
       ) : (
@@ -219,13 +225,18 @@ export default function Obligations() {
             </li>
           ))}
           {!rows.length && (
-            <div className="card p-8 text-center text-sm text-gray-400">
-              <Wallet size={32} className="mx-auto mb-2 opacity-40" />
-              {tab === 'upcoming' && monthLabel
-                ? `Nothing due in ${monthLabel}. Add rent or bills with a due date this month.`
-                : tab === 'payable'
-                  ? `Nothing to pay this month. Future months stay hidden until their month.`
-                  : 'Nothing here. Add a bill, subscription, or IOU.'}
+            <div className="card p-4">
+              <EmptyState
+                icon={Wallet}
+                title="Nothing here"
+                description={
+                  tab === 'upcoming' && monthLabel
+                    ? `Nothing due in ${monthLabel}. Add rent or bills with a due date this month.`
+                    : tab === 'payable'
+                      ? 'Nothing to pay this month. Future months stay hidden until their month.'
+                      : 'Nothing found. Add a bill, subscription, or IOU.'
+                }
+              />
             </div>
           )}
         </ul>

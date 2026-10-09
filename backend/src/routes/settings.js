@@ -56,6 +56,7 @@ router.put('/revolut-split', (req, res) => {
     const result = applyScope === 'from_date'
       ? backfillRevolutAmounts(db, { ratio, dateFrom: applyFromDate })
       : backfillRevolutAmounts(db, { ratio });
+    db.flushSync();
 
     res.json({
       ok: true,
@@ -84,6 +85,7 @@ router.put('/net-worth-currency', (req, res) => {
       enabled: req.body?.enabled,
       currency: req.body?.currency,
     });
+    db.flushSync();
     res.json({ ok: true, ...updated });
   } catch (err) {
     res.status(400).json({ error: err.message });

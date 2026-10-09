@@ -19,21 +19,22 @@ import StrategyTab from '../components/investments/tabs/StrategyTab';
 import InvestmentLedger from '../components/investments/ledger/InvestmentLedger';
 import { getImportHistory } from '../components/investments/investmentPageApi';
 import { usePrivacy } from '../context/PrivacyContext';
+import { useUrlQueryState } from '../hooks/useUrlQueryState';
+
+const VALID_TABS = ['overview', 'holdings', 'strategy', 'ledger', 'dividends', 'planner', 'history', 'import'];
 
 export default function Investments() {
   usePrivacy();
   const qc = useQueryClient();
   const [searchParams] = useSearchParams();
-  const initialTab = searchParams.get('tab');
   const plannerView = searchParams.get('planner');
-  const [tab, setTab] = useState(
-    ['overview', 'holdings', 'strategy', 'ledger', 'dividends', 'planner', 'history', 'import'].includes(initialTab)
-      ? initialTab
-      : 'overview',
-  );
-  const [brokerFilter, setBrokerFilter] = useState('');
-  const [perfPeriod, setPerfPeriod] = useState('1Y');
-  const [allocView, setAllocView] = useState('topHoldings');
+  const [tab, setTab] = useUrlQueryState('tab', 'overview', {
+    deserialize: (v) => (VALID_TABS.includes(v) ? v : 'overview'),
+    replace: false,
+  });
+  const [brokerFilter, setBrokerFilter] = useUrlQueryState('broker', '', { replace: false });
+  const [perfPeriod, setPerfPeriod] = useUrlQueryState('period', '1Y', { replace: false });
+  const [allocView, setAllocView] = useUrlQueryState('alloc', 'topHoldings', { replace: false });
 
   const holdings = useQuery({
     queryKey: ['invHoldings', brokerFilter],

@@ -41,6 +41,8 @@ router.post('/commit', upload.single('file'), reenterUserContext, (req, res) => 
     if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
 
     const result = commitImport(req.file.buffer, req.file.originalname);
+    const { getDb } = require('../db/database');
+    getDb().flushSync();
     res.json(result);
   } catch (err) {
     logger.error('[Route /import/commit]', err);

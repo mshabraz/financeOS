@@ -122,6 +122,7 @@ router.patch('/bulk', (req, res) => {
       }
     });
     doUpdate();
+    db.flushSync();
     res.json({ ok: true, updated: bankIds.length + revolutIds.length });
   } catch (err) {
     logger.error('[PATCH /transactions/bulk]', err);
@@ -151,6 +152,7 @@ function bulkDeleteTransactions(ids) {
     for (const id of revolutIds) deleteRev.run(id);
   });
   doDelete();
+  db.flushSync();
 
   return { ok: true, deleted: bankIds.length + revolutIds.length };
 }
@@ -304,6 +306,8 @@ router.patch('/:id', (req, res) => {
         );
       }
 
+      db.flushSync();
+
       const updated = db.prepare(
         `SELECT r.*, c.name AS category_name, c.icon AS category_icon, c.color AS category_color
          FROM revolut_transactions r
@@ -335,6 +339,8 @@ router.patch('/:id', (req, res) => {
       ).get(parsed.bankId);
       if (row) recordManualCategoryForBankRow(db, row, parseInt(categoryId, 10));
     }
+
+    db.flushSync();
 
     const updated = db.prepare(
       `SELECT t.*, c.name as category_name, c.icon as category_icon, c.color as category_color
@@ -431,6 +437,7 @@ router.post('/bulk-categorize/apply', (req, res) => {
       }
     });
     doUpdate();
+    db.flushSync();
 
     res.json({ ok: true, updated: bankIds.length + revolutIds.length });
   } catch (err) {

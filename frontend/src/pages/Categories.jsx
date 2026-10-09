@@ -7,6 +7,10 @@ import {
   applyCategoryRule,
 } from '../api/client';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
+import TableSkeleton from '../components/ui/TableSkeleton';
+import EmptyState from '../components/ui/EmptyState';
+import ConfirmDialog from '../components/ui/ConfirmDialog';
+import { useUrlQueryState } from '../hooks/useUrlQueryState';
 import clsx from 'clsx';
 
 export default function Categories() {
@@ -26,6 +30,7 @@ export default function Categories() {
   const [editCatType, setEditCatType] = useState('expense');
   const [editCatTier, setEditCatTier] = useState('variable');
   const [deleteConfirmId, setDeleteConfirmId] = useState(null);
+  const [ruleToDelete, setRuleToDelete] = useState(null);
 
   // Rule form
   const [rulePattern, setRulePat] = useState('');
@@ -35,8 +40,8 @@ export default function Categories() {
   const [ruleOverride, setRuleOverride] = useState(false);
 
   // Filter rules
-  const [ruleSearch, setRuleSearch] = useState('');
-  const [ruleTab, setRuleTab]       = useState('active'); // active | disabled | all
+  const [ruleSearch, setRuleSearch] = useUrlQueryState('rq', '', { replace: true });
+  const [ruleTab, setRuleTab]       = useUrlQueryState('rtab', 'active', { replace: false });
 
   // Inline status banner shown after applying a rule
   const [ruleResult, setRuleResult] = useState(null);
@@ -154,7 +159,7 @@ export default function Categories() {
       {/* ── Categories ── */}
       <div className="card p-5">
         <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4">Categories</h2>
-        {cats.isLoading ? <LoadingSpinner /> : (
+        {cats.isLoading ? <TableSkeleton rows={4} /> : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-4">
             {cats.data?.map((c) => (
               <div key={c.id}>
@@ -312,7 +317,7 @@ export default function Categories() {
           className="input mb-3 text-sm"
         />
 
-        {rules.isLoading ? <LoadingSpinner /> : (
+        {rules.isLoading ? <TableSkeleton rows={5} /> : (
           <div className="space-y-1.5 mb-4 max-h-96 overflow-y-auto pr-1">
             {visibleRules.map((r) => (
               <div
@@ -372,14 +377,17 @@ export default function Categories() {
                     {r.is_disabled ? <ToggleLeft size={18} /> : <ToggleRight size={18} />}
                   </button>
 
-                  <button onClick={() => delRule.mutate(r.id)} className="text-gray-400 hover:text-red-500">
+                  <button type="button" onClick={() => setRuleToDelete(r)} className="text-gray-400 hover:text-red-500">
                     <Trash2 size={13} />
                   </button>
                 </div>
               </div>
             ))}
             {!visibleRules.length && (
-              <p className="text-sm text-center text-gray-400 py-6">No rules match this filter</p>
+              <EmptyState
+                title="No rules match this filter"
+                description="Try selecting another tab or clearing your search."
+              />
             )}
           </div>
         )}
@@ -439,6 +447,18 @@ export default function Categories() {
           </p>
         </div>
       </div>
+
+      <ConfirmDialog
+        isOpen={!!ruleToDelete}
+        title="Delete Category Rule"
+        message={`Delete rule matching "${ruleToDelete?.pattern}"? This action cannot be undone.`}
+        confirmText="Delete"
+        onConfirm={() => {
+          if (ruleToDelete?.id) delRule.mutate(ruleToDelete.id);
+          setRuleToDelete(null);
+        }}
+        onCancel={() => setRuleToDelete(null)}
+      />
     </div>
   );
 }

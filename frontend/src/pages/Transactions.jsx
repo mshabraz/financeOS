@@ -13,6 +13,9 @@ import {
 import TransactionSourceBadges, { TransactionAmountDetail } from '../components/transactions/TransactionSourceBadges';
 import CategoryBadge from '../components/ui/CategoryBadge';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
+import TableSkeleton from '../components/ui/TableSkeleton';
+import EmptyState from '../components/ui/EmptyState';
+import ConfirmDialog from '../components/ui/ConfirmDialog';
 import QueryErrorPanel from '../components/ui/QueryErrorPanel';
 import PageHeader from '../components/ui/PageHeader';
 import MonthFilterSelect from '../components/ui/MonthFilterSelect';
@@ -24,6 +27,7 @@ import { getMonthRange } from '../utils/dateFilters';
 import { fmtCurrency, privText } from '../utils/displayFormat';
 import { usePrivacy } from '../context/PrivacyContext';
 import { invalidateDashboardData } from '../lib/queryKeys';
+import { useUrlQueryState } from '../hooks/useUrlQueryState';
 import clsx from 'clsx';
 
 const fmt = (n) => fmtCurrency(n, 'EUR', { abs: true });
@@ -282,18 +286,26 @@ export default function Transactions() {
     setSearchParams(next, { replace: true });
   };
 
-  const [page, setPage]         = useState(1);
-  const [search, setSearch]     = useState('');
-  const [category, setCategory] = useState('');
-  const [direction, setDir]     = useState('');
-  const [filterMonth, setFilterMonth] = useState('');
-  const [dateFrom, setFrom]     = useState('');
-  const [dateTo, setTo]         = useState('');
-  const [tagFilter, setTagFilter] = useState('');
-  const [sourceFilter, setSourceFilter] = useState('');
-  const [hasNotesOnly, setHasNotesOnly] = useState(false);
-  const [sortBy, setSortBy] = useState('date');
-  const [sortDir, setSortDir] = useState('desc');
+  const [page, setPage]         = useUrlQueryState('p', 1, {
+    serialize: String,
+    deserialize: (v) => Math.max(1, parseInt(v, 10) || 1),
+    replace: false,
+  });
+  const [search, setSearch]     = useUrlQueryState('q', '', { replace: true });
+  const [category, setCategory] = useUrlQueryState('cat', '', { replace: false });
+  const [direction, setDir]     = useUrlQueryState('dir', '', { replace: false });
+  const [filterMonth, setFilterMonth] = useUrlQueryState('month', '', { replace: false });
+  const [dateFrom, setFrom]     = useUrlQueryState('from', '', { replace: false });
+  const [dateTo, setTo]         = useUrlQueryState('to', '', { replace: false });
+  const [tagFilter, setTagFilter] = useUrlQueryState('tag', '', { replace: false });
+  const [sourceFilter, setSourceFilter] = useUrlQueryState('src', '', { replace: false });
+  const [hasNotesOnly, setHasNotesOnly] = useUrlQueryState('notes', false, {
+    serialize: (v) => (v ? '1' : ''),
+    deserialize: (v) => v === '1' || v === 'true',
+    replace: false,
+  });
+  const [sortBy, setSortBy]     = useUrlQueryState('sort', 'date', { replace: false });
+  const [sortDir, setSortDir]   = useUrlQueryState('order', 'desc', { replace: false });
   const [editId, setEditId]     = useState(null);
   const [editCat, setEditCat]   = useState('');
   const [tagEditId, setTagEditId] = useState(null);
@@ -305,14 +317,17 @@ export default function Transactions() {
   const [bulkApplying, setBulkApplying] = useState(false);
   const [bulkTagApplying, setBulkTagApplying] = useState(false);
   const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [bulkDeleteConfirmOpen, setBulkDeleteConfirmOpen] = useState(false);
   const [bulkModal, setBulkModal] = useState(null);
   const [bulkError, setBulkError] = useState('');
 
   const { data: categories } = useQuery({ queryKey: ['categories'], queryFn: getCategories });
   const { data: allTags }    = useQuery({ queryKey: ['tags'],       queryFn: getTags });
 
+  const txQueryKey = ['transactions', page, search, category, direction, dateFrom, dateTo, tagFilter, sourceFilter, hasNotesOnly, sortBy, sortDir];
+
   const { data, isLoading, isError, error, refetch } = useQuery({
-    queryKey: ['transactions', page, search, category, direction, dateFrom, dateTo, tagFilter, sourceFilter, hasNotesOnly, sortBy, sortDir],
+    queryKey: txQueryKey,
     queryFn: () => getTransactions({
       page, limit: 50, search,
       category: category || undefined,
@@ -335,8 +350,39 @@ export default function Transactions() {
   }, [selected, data]);
 
   const updateMut = useMutation({
-    mutationFn: ({ id, categoryId }) => updateTransaction(id, { categoryId: parseInt(categoryId) }),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['transactions'] }); setEditId(null); },
+    mutationFn: ({ id, categoryId }) => updateTransaction(id, { categoryId: parseInt(categoryId, 10) }),
+    onMutate: async ({ id, categoryId }) => {
+      await qc.cancelQueries({ queryKey: ['transactions'] });
+      const previousData = qc.getQueryData(txQueryKey);
+      const catObj = categories?.find((c) => c.id === parseInt(categoryId, 10));
+      if (previousData?.data) {
+        qc.setQueryData(txQueryKey, {
+          ...previousData,
+          data: previousData.data.map((tx) =>
+            txnKey(tx) === String(id)
+              ? {
+                  ...tx,
+                  category_id: parseInt(categoryId, 10),
+                  category_name: catObj?.name ?? tx.category_name,
+                  category_icon: catObj?.icon ?? tx.category_icon,
+                  category_color: catObj?.color ?? tx.category_color,
+                }
+              : tx
+          ),
+        });
+      }
+      return { previousData };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previousData) {
+        qc.setQueryData(txQueryKey, context.previousData);
+      }
+    },
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: ['transactions'] });
+      invalidateDashboardData(qc);
+      setEditId(null);
+    },
   });
 
   const assignTagMut = useMutation({
@@ -357,7 +403,27 @@ export default function Transactions() {
 
   const notesMut = useMutation({
     mutationFn: ({ id, notes }) => updateTransaction(id, { notes }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['transactions'] }),
+    onMutate: async ({ id, notes }) => {
+      await qc.cancelQueries({ queryKey: ['transactions'] });
+      const previousData = qc.getQueryData(txQueryKey);
+      if (previousData?.data) {
+        qc.setQueryData(txQueryKey, {
+          ...previousData,
+          data: previousData.data.map((tx) =>
+            txnKey(tx) === String(id) ? { ...tx, notes } : tx
+          ),
+        });
+      }
+      return { previousData };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previousData) {
+        qc.setQueryData(txQueryKey, context.previousData);
+      }
+    },
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: ['transactions'] });
+    },
   });
 
   const revolutPatchMut = useMutation({
@@ -418,14 +484,14 @@ export default function Transactions() {
     qc.invalidateQueries({ queryKey: ['tagAnalytics'] });
   };
 
-  const applyBulkDelete = async () => {
+  const requestBulkDelete = () => {
     if (!selected.size) return;
-    const n = selected.size;
-    const msg = n === 1
-      ? 'Delete 1 selected transaction permanently? This cannot be undone.'
-      : `Delete ${n} selected transactions permanently? This cannot be undone.`;
-    if (!window.confirm(msg)) return;
+    setBulkDeleteConfirmOpen(true);
+  };
 
+  const confirmBulkDelete = async () => {
+    setBulkDeleteConfirmOpen(false);
+    if (!selected.size) return;
     setBulkDeleting(true);
     setBulkError('');
     try {
@@ -634,7 +700,7 @@ export default function Transactions() {
           </button>
           <button
             type="button"
-            onClick={applyBulkDelete}
+            onClick={requestBulkDelete}
             disabled={bulkDeleting || bulkApplying || bulkTagApplying}
             className="inline-flex items-center gap-1 py-1.5 px-3 rounded-lg text-xs font-medium border border-red-200 dark:border-red-900/50 text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-950/30 hover:bg-red-100 dark:hover:bg-red-950/50 disabled:opacity-50"
           >
@@ -651,8 +717,18 @@ export default function Transactions() {
 
       {/* Mobile list */}
       <div className="md:hidden card overflow-hidden divide-y divide-gray-100 dark:divide-gray-800">
-        {isLoading ? <LoadingSpinner /> : !data?.data?.length ? (
-          <p className="p-6 text-sm text-gray-400 text-center">No transactions</p>
+        {isLoading ? (
+          <TableSkeleton rows={5} />
+        ) : !data?.data?.length ? (
+          <EmptyState
+            title="No transactions found"
+            description="No transactions match your current filters. Try resetting filters."
+            action={
+              <button type="button" onClick={resetFilters} className="btn-secondary text-xs">
+                Reset filters
+              </button>
+            }
+          />
         ) : data.data.map((tx) => {
           const rowId = txnKey(tx);
           return (
@@ -667,7 +743,7 @@ export default function Transactions() {
                       <p className="text-xs text-gray-400">{tx.date}</p>
                       <TransactionSourceBadges tx={tx} className="mt-1" />
                     </div>
-                    <p className={clsx('font-semibold whitespace-nowrap', tx.direction === 'K' ? 'text-green-600' : 'text-gray-900 dark:text-white')}>
+                    <p className={clsx('font-semibold whitespace-nowrap tabular-nums', tx.direction === 'K' ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-900 dark:text-white')}>
                       {tx.direction === 'K' ? '+' : '-'}{fmt(tx.amount)}
                     </p>
                   </div>
@@ -713,7 +789,19 @@ export default function Transactions() {
 
       {/* Desktop table */}
       <div className="hidden md:block card overflow-hidden">
-        {isLoading ? <LoadingSpinner /> : (
+        {isLoading ? (
+          <TableSkeleton rows={8} />
+        ) : !data?.data?.length ? (
+          <EmptyState
+            title="No transactions found"
+            description="No transactions match your current filters. Try resetting filters."
+            action={
+              <button type="button" onClick={resetFilters} className="btn-secondary text-xs">
+                Reset filters
+              </button>
+            }
+          />
+        ) : (
           <>
             <div className="table-scroll">
               <table className="w-full text-sm min-w-[920px]">
@@ -812,8 +900,8 @@ export default function Transactions() {
                         </td>
 
                         {/* Amount */}
-                        <td className={clsx('px-4 py-2.5 text-right font-semibold whitespace-nowrap',
-                          tx.direction === 'K' ? 'text-green-600 dark:text-green-400' : 'text-gray-900 dark:text-white')}>
+                        <td className={clsx('px-4 py-2.5 text-right font-semibold whitespace-nowrap tabular-nums',
+                          tx.direction === 'K' ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-900 dark:text-white')}>
                           {tx.direction === 'K' ? '+' : '-'}{fmt(tx.amount)}
                         </td>
 
@@ -932,6 +1020,20 @@ export default function Transactions() {
       </div>
       </>
       )}
+
+      {/* Confirm bulk delete modal */}
+      <ConfirmDialog
+        isOpen={bulkDeleteConfirmOpen}
+        title="Delete Transactions"
+        message={
+          selected.size === 1
+            ? 'Delete 1 selected transaction permanently? This cannot be undone.'
+            : `Delete ${selected.size} selected transactions permanently? This cannot be undone.`
+        }
+        confirmText="Delete"
+        onConfirm={confirmBulkDelete}
+        onCancel={() => setBulkDeleteConfirmOpen(false)}
+      />
     </div>
   );
 }

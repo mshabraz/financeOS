@@ -38,6 +38,23 @@ function createWrapper(raw, dbPath) {
     }, PERSIST_DEBOUNCE_MS);
   }
 
+  function flushSync() {
+    if (_persistTimer) {
+      clearTimeout(_persistTimer);
+      _persistTimer = null;
+    }
+    try {
+      const data = raw.export();
+      fs.mkdirSync(path.dirname(dbPath), { recursive: true });
+      const tmp = `${dbPath}.tmp`;
+      fs.writeFileSync(tmp, Buffer.from(data));
+      fs.renameSync(tmp, dbPath);
+    } catch (err) {
+      console.error(`[DB] flushSync failed (${dbPath}):`, err.message);
+      throw err;
+    }
+  }
+
   function normalize(args) {
     if (!args || args.length === 0) return null;
     if (args.length === 1 && Array.isArray(args[0])) {
@@ -145,7 +162,7 @@ function createWrapper(raw, dbPath) {
     };
   }
 
-  return { _raw: raw, exec, pragma, prepare, transaction, dbPath };
+  return { _raw: raw, exec, pragma, prepare, transaction, dbPath, flushSync };
 }
 
 function openUserDatabase(userId) {
@@ -216,8 +233,32 @@ async function initDb() {
   const { runLegacyMigration } = require('./legacyMigration');
   runLegacyMigration();
 
+  registerShutdownHooks();
+
   console.log('[DB] Per-user databases ready');
   return true;
+}
+
+let _shutdownHooksRegistered = false;
+function registerShutdownHooks() {
+  if (_shutdownHooksRegistered) return;
+  _shutdownHooksRegistered = true;
+  ['SIGINT', 'SIGTERM'].forEach((sig) => {
+    process.once(sig, () => {
+      console.log(`[DB] Received ${sig}, flushing all databases to disk...`);
+      flushAllSync();
+    });
+  });
+}
+
+function flushAllSync() {
+  for (const [userId, wrapper] of userCache.entries()) {
+    try {
+      wrapper.flushSync();
+    } catch (e) {
+      console.error(`[DB] Failed to flush user database (${userId}):`, e.message);
+    }
+  }
 }
 
 function getDb() {
@@ -279,4 +320,5 @@ module.exports = {
   listCachedUserIds,
   forEachRegisteredUser,
   migrateAllUserDatabases,
+  flushAllSync,
 };

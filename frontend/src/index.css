@@ -7,10 +7,22 @@
 @layer base {
   :root {
     --radius: 0.5rem;
+    --surface-subtle: #f8fafc;
+    --surface-panel: #ffffff;
+    --surface-card: #ffffff;
+    --surface-border: #e2e8f0;
+  }
+
+  .dark {
+    --surface-subtle: #0f172a;
+    --surface-panel: #1e293b;
+    --surface-card: #0f172a;
+    --surface-border: #1e293b;
   }
 
   html {
     -webkit-tap-highlight-color: transparent;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
   }
 
   body {
@@ -35,9 +47,19 @@
   }
 }
 
+@layer utilities {
+  .tabular-nums {
+    font-variant-numeric: tabular-nums lining-nums;
+  }
+}
+
 @layer components {
   .card {
-    @apply bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm;
+    @apply bg-white dark:bg-gray-900 rounded-xl border border-gray-200/80 dark:border-gray-800/80 shadow-card transition-shadow;
+  }
+
+  .card-subtle {
+    @apply bg-gray-50/70 dark:bg-gray-800/40 rounded-lg border border-gray-200/60 dark:border-gray-700/40;
   }
 
   .btn-primary {

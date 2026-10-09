@@ -8,6 +8,8 @@ import {
   getManualBalances, updateManualBalance, addManualBalance, deleteManualBalance,
 } from '../api/client';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
+import StatCardSkeleton from '../components/ui/StatCardSkeleton';
+import ConfirmDialog from '../components/ui/ConfirmDialog';
 import QueryErrorPanel from '../components/ui/QueryErrorPanel';
 import { usePrivacy } from '../context/PrivacyContext';
 import {
@@ -20,6 +22,7 @@ import DashboardWealthPortfolio from '../components/dashboard/DashboardWealthPor
 import DashboardAttention from '../components/dashboard/DashboardAttention';
 import DashboardAssets from '../components/dashboard/DashboardAssets';
 import DashboardAllocationTracker from '../components/dashboard/DashboardAllocationTracker';
+import { useUrlQueryState } from '../hooks/useUrlQueryState';
 
 const now = new Date();
 const currentMonth = format(now, 'yyyy-MM');
@@ -28,10 +31,11 @@ export default function Dashboard() {
   usePrivacy();
   const qc = useQueryClient();
 
-  const [periodType, setPeriodType] = useState('month');
-  const [periodValue, setPeriodValue] = useState(currentPeriodValue('month'));
+  const [periodType, setPeriodType] = useUrlQueryState('ptype', 'month', { replace: false });
+  const [periodValue, setPeriodValue] = useUrlQueryState('pval', currentPeriodValue('month'), { replace: false });
   const [addingAsset, setAddingAsset] = useState(false);
   const [newAssetForm, setNewAssetForm] = useState({ key: '', label: '', icon: '💵', amount: '' });
+  const [assetToDelete, setAssetToDelete] = useState(null);
 
   const periodOptions = useMemo(() => buildPeriodOptions(periodType), [periodType]);
   const prevPeriod = prevPeriodValue(periodType, periodValue);
@@ -64,8 +68,36 @@ export default function Dashboard() {
 
   const updateMut = useMutation({
     mutationFn: ({ key, amount, label }) => updateManualBalance(key, amount, label),
-    onSuccess: invalidateAssets,
+    onMutate: async ({ key, amount, label }) => {
+      await qc.cancelQueries({ queryKey: ['manualBalances'] });
+      await qc.cancelQueries({ queryKey: ['assets'] });
+
+      const prevManuals = qc.getQueryData(['manualBalances']);
+      const prevAssets = qc.getQueryData(['assets']);
+
+      if (prevManuals && Array.isArray(prevManuals)) {
+        qc.setQueryData(['manualBalances'], prevManuals.map((m) =>
+          m.key === key ? { ...m, amount: parseFloat(amount), ...(label ? { label } : {}) } : m
+        ));
+      }
+      if (prevAssets?.manuals) {
+        qc.setQueryData(['assets'], {
+          ...prevAssets,
+          manuals: prevAssets.manuals.map((m) =>
+            m.key === key ? { ...m, amount: parseFloat(amount), ...(label ? { label } : {}) } : m
+          ),
+        });
+      }
+
+      return { prevManuals, prevAssets };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.prevManuals) qc.setQueryData(['manualBalances'], context.prevManuals);
+      if (context?.prevAssets) qc.setQueryData(['assets'], context.prevAssets);
+    },
+    onSettled: invalidateAssets,
   });
+
   const addMut = useMutation({
     mutationFn: (data) => addManualBalance(data),
     onSuccess: () => {
@@ -74,9 +106,33 @@ export default function Dashboard() {
       setNewAssetForm({ key: '', label: '', icon: '💵', amount: '' });
     },
   });
+
   const deleteMut = useMutation({
     mutationFn: (key) => deleteManualBalance(key),
-    onSuccess: invalidateAssets,
+    onMutate: async (key) => {
+      await qc.cancelQueries({ queryKey: ['manualBalances'] });
+      await qc.cancelQueries({ queryKey: ['assets'] });
+
+      const prevManuals = qc.getQueryData(['manualBalances']);
+      const prevAssets = qc.getQueryData(['assets']);
+
+      if (prevManuals && Array.isArray(prevManuals)) {
+        qc.setQueryData(['manualBalances'], prevManuals.filter((m) => m.key !== key));
+      }
+      if (prevAssets?.manuals) {
+        qc.setQueryData(['assets'], {
+          ...prevAssets,
+          manuals: prevAssets.manuals.filter((m) => m.key !== key),
+        });
+      }
+
+      return { prevManuals, prevAssets };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.prevManuals) qc.setQueryData(['manualBalances'], context.prevManuals);
+      if (context?.prevAssets) qc.setQueryData(['assets'], context.prevAssets);
+    },
+    onSettled: invalidateAssets,
   });
 
   const handlePeriodTypeChange = (type) => {
@@ -215,9 +271,7 @@ export default function Dashboard() {
       </header>
 
       {heroLoading ? (
-        <div className="card p-16 flex justify-center">
-          <LoadingSpinner />
-        </div>
+        <StatCardSkeleton count={4} />
       ) : (
         <DashboardHero
           snapshot={snapshot}
@@ -250,8 +304,21 @@ export default function Dashboard() {
         onUpdate={(key, amount, label) => updateMut.mutate({ key, amount, label })}
         onAdd={handleAddAsset}
         onDelete={(key) => {
-          if (window.confirm('Remove this asset from net worth?')) deleteMut.mutate(key);
+          const item = (manuals.data ?? assets.data?.manuals ?? []).find((m) => m.key === key) || { key, label: key };
+          setAssetToDelete(item);
         }}
+      />
+
+      <ConfirmDialog
+        isOpen={!!assetToDelete}
+        title="Remove asset"
+        message={`Remove "${assetToDelete?.label || 'this asset'}" from net worth? This action cannot be undone.`}
+        confirmText="Remove"
+        onConfirm={() => {
+          if (assetToDelete?.key) deleteMut.mutate(assetToDelete.key);
+          setAssetToDelete(null);
+        }}
+        onCancel={() => setAssetToDelete(null)}
       />
     </div>
   );

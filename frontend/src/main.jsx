@@ -2,6 +2,8 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { persistQueryClient } from '@tanstack/react-query-persist-client';
+import { createIDBPersister } from './lib/idbPersister';
 import './index.css';
 
 import { AuthProvider, useAuth } from './context/AuthContext';
@@ -25,8 +27,36 @@ import ErrorBoundary from './components/ui/ErrorBoundary';
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 30_000,
+      staleTime: 1000 * 60 * 5, // 5 minutes fresh
+      gcTime: 1000 * 60 * 60 * 24, // 24 hours retention
+      refetchOnWindowFocus: false,
       retry: 1,
+    },
+  },
+});
+
+persistQueryClient({
+  queryClient,
+  persister: createIDBPersister(),
+  maxAge: 1000 * 60 * 60 * 24, // 24 hours
+  dehydrateOptions: {
+    shouldDehydrateQuery: (query) => {
+      if (query.state.status !== 'success') return false;
+      const key = query.queryKey;
+      const root = key[0];
+
+      // Exclude transient auth or live status checks
+      if (root === 'authStatus' || root === 'session' || root === 'invPriceSync') {
+        return false;
+      }
+
+      // Avoid hoarding unbounded paginated transaction queries in cache
+      if (root === 'transactions') {
+        const page = key[1];
+        return page === 1 || page === undefined;
+      }
+
+      return true;
     },
   },
 });

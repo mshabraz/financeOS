@@ -19,6 +19,7 @@ import DatePicker from '../components/ui/DatePicker';
 import { getMonthRange } from '../utils/dateFilters';
 import { fmtEur, privText } from '../utils/displayFormat';
 import { usePrivacy } from '../context/PrivacyContext';
+import { useUrlQueryState } from '../hooks/useUrlQueryState';
 
 const fmt = fmtEur;
 
@@ -62,13 +63,13 @@ export default function Analytics() {
   const focusSavings = searchParams.get('focus') === 'savings-rate';
 
   // Period selection
-  const [presetId,    setPresetId]    = useState('month');
-  const [filterMonth, setFilterMonth] = useState(format(today, 'yyyy-MM'));
-  const [customFrom,  setCustomFrom]  = useState('');
-  const [customTo,    setCustomTo]    = useState(todayStr);
+  const [presetId,    setPresetId]    = useUrlQueryState('preset', 'month', { replace: false });
+  const [filterMonth, setFilterMonth] = useUrlQueryState('month', format(today, 'yyyy-MM'), { replace: false });
+  const [customFrom,  setCustomFrom]  = useUrlQueryState('from', '', { replace: false });
+  const [customTo,    setCustomTo]    = useUrlQueryState('to', todayStr, { replace: false });
 
   // Budget section (always month-based)
-  const [budgetMonth, setBudgetMonth] = useState(currentMonth);
+  const [budgetMonth, setBudgetMonth] = useUrlQueryState('bmonth', currentMonth, { replace: false });
   const [budgetCat,   setBudgetCat]   = useState('');
   const [budgetAmt,   setBudgetAmt]   = useState('');
 

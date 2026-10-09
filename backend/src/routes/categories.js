@@ -23,6 +23,7 @@ router.post('/', (req, res) => {
     const result = db
       .prepare('INSERT INTO categories (name, icon, color, type, expense_tier) VALUES (?, ?, ?, ?, ?)')
       .run(name, icon, color, type, defaultTierForCategory({ name, type }));
+    db.flushSync();
 
     res.json(db.prepare('SELECT * FROM categories WHERE id = ?').get(result.lastInsertRowid));
   } catch (err) {
@@ -68,6 +69,7 @@ router.patch('/:id', (req, res) => {
 
   vals.push(id);
   db.prepare(`UPDATE categories SET ${fields.join(', ')} WHERE id = ?`).run(...vals);
+  db.flushSync();
 
   res.json(db.prepare('SELECT * FROM categories WHERE id = ?').get(id));
 });
@@ -79,6 +81,7 @@ router.delete('/:id', (req, res) => {
   db.prepare('UPDATE transactions SET category_id = ? WHERE category_id = ?').run(def?.id, req.params.id);
   db.prepare('UPDATE revolut_transactions SET category_id = ? WHERE category_id = ?').run(def?.id, req.params.id);
   db.prepare('DELETE FROM categories WHERE id = ? AND is_default = 0').run(req.params.id);
+  db.flushSync();
   res.json({ ok: true });
 });
 
@@ -124,6 +127,7 @@ router.post('/rules', (req, res) => {
     if (applyNow) {
       applied = applyRuleToExisting(result.lastInsertRowid, { overrideManual });
     }
+    db.flushSync();
 
     const rule = db.prepare('SELECT * FROM category_rules WHERE id = ?').get(result.lastInsertRowid);
     res.json({ rule, applied });
@@ -141,6 +145,7 @@ router.post('/rules/apply-all', (req, res) => {
     const { reapplyManualCategoryLocks } = require('../services/manualCategoryLocks');
     const result = applyAllRulesToExisting({ overrideManual });
     const manualRestored = reapplyManualCategoryLocks(db);
+    db.flushSync();
     res.json({ ...result, manualRestored });
   } catch (err) {
     logger.error('[POST /categories/rules/apply-all]', err);
@@ -154,8 +159,10 @@ router.post('/rules/apply-all', (req, res) => {
 // Body: { overrideManual?: boolean }
 router.post('/rules/:id/apply', (req, res) => {
   try {
+    const db = getDb();
     const { overrideManual = false } = req.body || {};
     const result = applyRuleToExisting(parseInt(req.params.id), { overrideManual });
+    db.flushSync();
     res.json(result);
   } catch (err) {
     logger.error('[POST /categories/rules/:id/apply]', err);
@@ -176,6 +183,7 @@ router.patch('/rules/:id', (req, res) => {
   vals.push(req.params.id);
   db.prepare(`UPDATE category_rules SET ${fields.join(', ')} WHERE id = ?`).run(...vals);
   invalidateCache();
+  db.flushSync();
   res.json(db.prepare('SELECT * FROM category_rules WHERE id = ?').get(req.params.id));
 });
 
@@ -184,6 +192,7 @@ router.delete('/rules/:id', (req, res) => {
   const db = getDb();
   db.prepare('DELETE FROM category_rules WHERE id = ?').run(req.params.id);
   invalidateCache();
+  db.flushSync();
   res.json({ ok: true });
 });
 
