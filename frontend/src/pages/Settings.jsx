@@ -149,8 +149,10 @@ function BankConnectionsPanel({ showToast }) {
   });
 
   const syncMut = useMutation({
-    mutationFn: ({ connectionId, fullBackfill }) =>
-      syncOpenBanking(connectionId, { fullBackfill }),
+    mutationFn: (vars) => {
+      const { connectionId, fullBackfill } = vars || {};
+      return syncOpenBanking(connectionId, { fullBackfill });
+    },
     onSuccess: (data, vars) => {
       qc.invalidateQueries({ queryKey: ['openBankingConnections'] });
       invalidateDashboardData(qc);
@@ -294,7 +296,7 @@ function BankConnectionsPanel({ showToast }) {
                     type="button"
                     className="btn-secondary text-sm"
                     disabled={syncMut.isPending}
-                    onClick={() => syncMut.mutate(undefined)}
+                    onClick={() => syncMut.mutate({})}
                   >
                     Sync all
                   </button>
@@ -318,6 +320,8 @@ export default function Settings() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [toast, setToast] = useState(null);
   const [splitPct, setSplitPct] = useState(50);
+  const [applyScope, setApplyScope] = useState('from_date');
+  const [applyFromDate, setApplyFromDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [fxEnabled, setFxEnabled] = useState(true);
   const [fxCurrency, setFxCurrency] = useState('PKR');
   const [currentPw, setCurrentPw] = useState('');
@@ -377,13 +381,23 @@ export default function Settings() {
   });
 
   const saveRevolutSplit = useMutation({
-    mutationFn: () => updateRevolutSplitSetting(splitPct / 100),
+    mutationFn: () => updateRevolutSplitSetting({
+      ratio: splitPct / 100,
+      applyScope,
+      ...(applyScope === 'from_date' ? { applyFromDate } : {}),
+    }),
     onSuccess: (r) => {
       qc.invalidateQueries({ queryKey: ['revolutSplit'] });
       ['transactions', 'summary', 'trend', 'monthlyTrend', 'bycat', 'assets', 'manualBalances'].forEach((k) =>
         qc.invalidateQueries({ queryKey: [k] })
       );
-      showToast(`Revolut split saved (${r.rowsUpdated ?? 0} rows recalculated)`, 'success');
+      const scopeNote = r.applyScope === 'from_date'
+        ? `from ${r.applyFromDate}`
+        : 'all expenses';
+      showToast(
+        `Revolut split saved (${Math.round((r.ratio ?? 0) * 100)}% · ${scopeNote} · ${r.rowsUpdated ?? 0} rows)`,
+        'success',
+      );
     },
     onError: (e) => showToast(e.message, 'error'),
   });
@@ -441,7 +455,8 @@ export default function Settings() {
           <div className="flex-1">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Revolut household split</h2>
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-              Share of joint Revolut expenses counted toward your analytics (default 50%). Saving recalculates all Revolut rows.
+              Share of joint Revolut expenses counted toward your analytics (default 50%).
+              New imports use this setting. Existing rows keep their previous share unless you recalculate them below.
             </p>
             <div className="mt-3 flex flex-wrap items-end gap-3">
               <label className="text-sm">
@@ -455,10 +470,59 @@ export default function Settings() {
                   onChange={(e) => setSplitPct(Number(e.target.value))}
                 />
               </label>
+            </div>
+            <fieldset className="mt-4 space-y-2">
+              <legend className="text-xs text-gray-500 mb-1">Apply recalculation</legend>
+              <label className="flex items-start gap-2 text-sm cursor-pointer">
+                <input
+                  type="radio"
+                  name="revolutApplyScope"
+                  className="mt-1"
+                  checked={applyScope === 'from_date'}
+                  onChange={() => setApplyScope('from_date')}
+                />
+                <span>
+                  <span className="font-medium text-gray-800 dark:text-gray-200">From date onward</span>
+                  <span className="block text-xs text-gray-500">
+                    Only transactions on/after this date get the new share. Older ones keep their previous split.
+                  </span>
+                </span>
+              </label>
+              {applyScope === 'from_date' && (
+                <label className="text-sm block ml-6">
+                  <span className="text-xs text-gray-500">Apply from</span>
+                  <input
+                    type="date"
+                    className="input w-44 mt-1 block"
+                    value={applyFromDate}
+                    onChange={(e) => setApplyFromDate(e.target.value)}
+                  />
+                </label>
+              )}
+              <label className="flex items-start gap-2 text-sm cursor-pointer">
+                <input
+                  type="radio"
+                  name="revolutApplyScope"
+                  className="mt-1"
+                  checked={applyScope === 'all'}
+                  onChange={() => setApplyScope('all')}
+                />
+                <span>
+                  <span className="font-medium text-gray-800 dark:text-gray-200">All expenses</span>
+                  <span className="block text-xs text-gray-500">
+                    Rewrite every Revolut expense to the new share (overwrites historical splits).
+                  </span>
+                </span>
+              </label>
+            </fieldset>
+            <div className="mt-4">
               <button
                 type="button"
                 className="btn-primary text-sm"
-                disabled={saveRevolutSplit.isPending}
+                disabled={
+                  saveRevolutSplit.isPending
+                  || (applyScope === 'from_date' && !/^\d{4}-\d{2}-\d{2}$/.test(applyFromDate))
+                }
                 onClick={() => saveRevolutSplit.mutate()}
               >
                 {saveRevolutSplit.isPending ? 'Saving…' : 'Save & recalculate'}

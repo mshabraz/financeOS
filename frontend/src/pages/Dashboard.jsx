@@ -1,11 +1,11 @@
 import { useState, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import clsx from 'clsx';
 import {
-  getDashboardSummary, getByCategory, getMonthlyTrend,
-  getAssets, getBudgets, getInvestmentAnalytics,
-  getSharedEvents, getObligationsSummary, getObligations,
+  getDashboardSummary, getMonthlyTrend,
+  getAssets, getBudgets, getSharedEvents,
+  getManualBalances, updateManualBalance, addManualBalance, deleteManualBalance,
 } from '../api/client';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 import QueryErrorPanel from '../components/ui/QueryErrorPanel';
@@ -16,22 +16,24 @@ import {
 } from '../components/dashboard/dashboardUtils';
 import { buildDashboardSnapshot } from '../components/dashboard/dashboardSnapshot';
 import DashboardHero from '../components/dashboard/DashboardHero';
-import DashboardSpending from '../components/dashboard/DashboardSpending';
 import DashboardWealthPortfolio from '../components/dashboard/DashboardWealthPortfolio';
 import DashboardAttention from '../components/dashboard/DashboardAttention';
-import DashboardObligations from '../components/dashboard/DashboardObligations';
+import DashboardAssets from '../components/dashboard/DashboardAssets';
+import DashboardAllocationTracker from '../components/dashboard/DashboardAllocationTracker';
 
 const now = new Date();
 const currentMonth = format(now, 'yyyy-MM');
 
 export default function Dashboard() {
   usePrivacy();
+  const qc = useQueryClient();
 
   const [periodType, setPeriodType] = useState('month');
   const [periodValue, setPeriodValue] = useState(currentPeriodValue('month'));
+  const [addingAsset, setAddingAsset] = useState(false);
+  const [newAssetForm, setNewAssetForm] = useState({ key: '', label: '', icon: '💵', amount: '' });
 
   const periodOptions = useMemo(() => buildPeriodOptions(periodType), [periodType]);
-  const periodLabel = periodOptions.find((o) => o.value === periodValue)?.label ?? periodValue;
   const prevPeriod = prevPeriodValue(periodType, periodValue);
 
   const summary = useQuery({
@@ -44,10 +46,7 @@ export default function Dashboard() {
     enabled: !!prevPeriod,
   });
   const assets = useQuery({ queryKey: ['assets'], queryFn: getAssets, staleTime: 60_000 });
-  const byCategory = useQuery({
-    queryKey: ['bycat', periodType, periodValue],
-    queryFn: () => getByCategory({ periodType, periodValue, type: 'expense' }),
-  });
+  const manuals = useQuery({ queryKey: ['manualBalances'], queryFn: getManualBalances, staleTime: 60_000 });
   const monthlyTrend = useQuery({
     queryKey: ['monthlyTrend'],
     queryFn: () => getMonthlyTrend({ months: 12 }),
@@ -56,16 +55,28 @@ export default function Dashboard() {
     queryKey: ['budgets', currentMonth],
     queryFn: () => getBudgets(currentMonth),
   });
-  const invAnalytics = useQuery({
-    queryKey: ['invAnalytics', 'dash'],
-    queryFn: () => getInvestmentAnalytics({ period: '3M' }),
-    staleTime: 120_000,
-  });
   const sharedEvents = useQuery({ queryKey: ['sharedEvents'], queryFn: getSharedEvents });
-  const obligationsSummary = useQuery({ queryKey: ['obligationsSummary'], queryFn: getObligationsSummary });
-  const obligationsMonth = useQuery({
-    queryKey: ['obligations', 'upcoming'],
-    queryFn: () => getObligations({ filter: 'upcoming' }),
+
+  const invalidateAssets = () => {
+    qc.invalidateQueries({ queryKey: ['assets'] });
+    qc.invalidateQueries({ queryKey: ['manualBalances'] });
+  };
+
+  const updateMut = useMutation({
+    mutationFn: ({ key, amount, label }) => updateManualBalance(key, amount, label),
+    onSuccess: invalidateAssets,
+  });
+  const addMut = useMutation({
+    mutationFn: (data) => addManualBalance(data),
+    onSuccess: () => {
+      invalidateAssets();
+      setAddingAsset(false);
+      setNewAssetForm({ key: '', label: '', icon: '💵', amount: '' });
+    },
+  });
+  const deleteMut = useMutation({
+    mutationFn: (key) => deleteManualBalance(key),
+    onSuccess: invalidateAssets,
   });
 
   const handlePeriodTypeChange = (type) => {
@@ -107,10 +118,10 @@ export default function Dashboard() {
         monthlyTrend: monthlyTrend.data,
         budgets: budgets.data,
         portfolio,
-        analytics: invAnalytics.data,
+        analytics: null,
         goalsProgress: null,
       }),
-    [s, prevSummary.data, monthlyTrend.data, budgets.data, portfolio, invAnalytics.data],
+    [s, prevSummary.data, monthlyTrend.data, budgets.data, portfolio],
   );
 
   const attention = useMemo(() => {
@@ -118,14 +129,35 @@ export default function Dashboard() {
       portfolio,
       budgets: budgets.data,
       sharedEvents: sharedEvents.data,
-      obligationsSummary: obligationsSummary.data,
+      obligationsSummary: null,
     });
-    const insightItems = insightsToAttentionItems(insights);
+    const insightItems = insightsToAttentionItems(insights).filter(
+      (i) => !/portfolio|diversif|holding/i.test(`${i.title || ''} ${i.body || ''}`),
+    );
     return [...actionItems, ...insightItems];
-  }, [portfolio, budgets.data, sharedEvents.data, obligationsSummary.data, insights]);
+  }, [portfolio, budgets.data, sharedEvents.data, insights]);
 
   const loadError = summary.error || assets.error;
   const heroLoading = summary.isLoading || assets.isLoading;
+
+  const handleAddAsset = () => {
+    const label = newAssetForm.label.trim();
+    if (!label) return;
+    const key =
+      newAssetForm.key.trim() ||
+      label
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '_')
+        .replace(/^_|_$/g, '')
+        .slice(0, 40) ||
+      `asset_${Date.now()}`;
+    addMut.mutate({
+      key,
+      label,
+      icon: newAssetForm.icon || '💵',
+      amount: parseFloat(newAssetForm.amount) || 0,
+    });
+  };
 
   if (loadError) {
     return (
@@ -149,7 +181,7 @@ export default function Dashboard() {
         <div>
           <h1 className="page-title">Dashboard</h1>
           <p className="page-subtitle">
-            Net worth, spending, and what needs your attention
+            Net worth and cash flow at a glance
           </p>
         </div>
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
@@ -201,23 +233,25 @@ export default function Dashboard() {
       <DashboardWealthPortfolio
         assets={assets.data}
         portfolio={portfolio}
-        analytics={invAnalytics.data}
         snapshot={snapshot}
         isLoading={assets.isLoading}
       />
 
-      <DashboardSpending
-        periodLabel={periodLabel}
-        trendData={trendData}
-        trendLoading={monthlyTrend.isLoading}
-        categories={byCategory.data}
-        categoriesLoading={byCategory.isLoading}
-        hidePeriodTotal
-      />
+      <DashboardAllocationTracker />
 
-      <DashboardObligations
-        summary={obligationsSummary.data}
-        upcoming={obligationsMonth.data}
+      <DashboardAssets
+        assets={assets.data}
+        manuals={manuals.data ?? assets.data?.manuals}
+        isLoading={assets.isLoading || manuals.isLoading}
+        addingAsset={addingAsset}
+        setAddingAsset={setAddingAsset}
+        newAssetForm={newAssetForm}
+        setNewAssetForm={setNewAssetForm}
+        onUpdate={(key, amount, label) => updateMut.mutate({ key, amount, label })}
+        onAdd={handleAddAsset}
+        onDelete={(key) => {
+          if (window.confirm('Remove this asset from net worth?')) deleteMut.mutate(key);
+        }}
       />
     </div>
   );

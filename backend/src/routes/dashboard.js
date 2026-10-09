@@ -347,21 +347,31 @@ router.get('/manual-balances', (req, res) => {
 
 router.put('/manual-balances/:key', (req, res) => {
   const db = getDb();
-  const { amount } = req.body;
+  const { amount, label, icon } = req.body;
   const { key } = req.params;
 
   if (amount == null || isNaN(parseFloat(amount))) {
     return res.status(400).json({ error: 'amount is required' });
   }
 
-  const existing = db.prepare('SELECT id FROM manual_balances WHERE key = ?').get(key);
+  const existing = db.prepare('SELECT * FROM manual_balances WHERE key = ?').get(key);
   if (!existing) {
     return res.status(404).json({ error: `Balance key '${key}' not found` });
   }
 
+  const protectedKeys = ['pension', 'paypal', 'investments', 'investment_cash'];
+  const nextLabel =
+    label != null && String(label).trim() && !protectedKeys.includes(key)
+      ? String(label).trim()
+      : existing.label;
+  const nextIcon =
+    icon != null && String(icon).trim() && !protectedKeys.includes(key)
+      ? String(icon).trim()
+      : existing.icon;
+
   db.prepare(
-    "UPDATE manual_balances SET amount = ?, updated_at = datetime('now') WHERE key = ?"
-  ).run(parseFloat(amount), key);
+    "UPDATE manual_balances SET amount = ?, label = ?, icon = ?, updated_at = datetime('now') WHERE key = ?"
+  ).run(parseFloat(amount), nextLabel, nextIcon, key);
 
   res.json(db.prepare('SELECT * FROM manual_balances WHERE key = ?').get(key));
 });

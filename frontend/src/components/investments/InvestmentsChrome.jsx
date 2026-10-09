@@ -4,6 +4,7 @@ import { BROKER_LABELS, BROKER_COLORS } from './constants';
 const TABS = [
   { id: 'overview', label: 'Overview' },
   { id: 'holdings', label: 'Holdings' },
+  { id: 'strategy', label: 'Strategy' },
   { id: 'planner', label: 'Wealth Planner' },
   { id: 'ledger', label: 'Activity' },
   { id: 'dividends', label: 'Dividends' },

@@ -25,17 +25,45 @@ router.get('/revolut-split', (_req, res) => {
   res.json({ ratio: getRevolutExpenseSplitRatio(db) });
 });
 
-// PUT /api/settings/revolut-split  body: { ratio: 0.5 }
+// PUT /api/settings/revolut-split
+// body: { ratio: 0.5, applyScope?: 'from_date'|'all', applyFromDate?: 'YYYY-MM-DD' }
 router.put('/revolut-split', (req, res) => {
   try {
     const ratio = Number(req.body?.ratio);
     if (!Number.isFinite(ratio) || ratio <= 0 || ratio > 1) {
       return res.status(400).json({ error: 'ratio must be a number between 0 and 1 (exclusive of 0)' });
     }
+
+    const applyScope = String(req.body?.applyScope || 'from_date').trim().toLowerCase();
+    if (applyScope !== 'from_date' && applyScope !== 'all') {
+      return res.status(400).json({ error: "applyScope must be 'from_date' or 'all'" });
+    }
+
+    let applyFromDate = null;
+    if (applyScope === 'from_date') {
+      const raw = String(req.body?.applyFromDate || '').trim().slice(0, 10);
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+        return res.status(400).json({
+          error: 'applyFromDate (YYYY-MM-DD) is required when applyScope is from_date',
+        });
+      }
+      applyFromDate = raw;
+    }
+
     const db = getDb();
     setAppSetting(db, 'revolut_expense_split_ratio', ratio);
-    const updated = backfillRevolutAmounts(db);
-    res.json({ ok: true, ratio, rowsUpdated: updated });
+
+    const result = applyScope === 'from_date'
+      ? backfillRevolutAmounts(db, { ratio, dateFrom: applyFromDate })
+      : backfillRevolutAmounts(db, { ratio });
+
+    res.json({
+      ok: true,
+      ratio,
+      applyScope,
+      applyFromDate,
+      rowsUpdated: result.rowsUpdated,
+    });
   } catch (err) {
     logger.error('[PUT /settings/revolut-split]', err);
     res.status(500).json({ error: err.message });

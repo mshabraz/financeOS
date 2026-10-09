@@ -133,7 +133,7 @@ function revolutRuleFieldValue(row, matchField) {
   return '';
 }
 
-function applyRuleToExisting(ruleId, { overrideManual = false } = {}) {
+function applyRuleToExisting(ruleId, { overrideManual = false, onlyUncategorized = false } = {}) {
   const db   = getDb();
   const rule = db.prepare('SELECT * FROM category_rules WHERE id = ?').get(ruleId);
   if (!rule) return { matched: 0, updated: 0, bankUpdated: 0, revolutUpdated: 0 };
@@ -150,6 +150,8 @@ function applyRuleToExisting(ruleId, { overrideManual = false } = {}) {
       return { matched: 0, updated: 0, error: 'Invalid regex' };
     }
   }
+
+  const defaultId = getDefaultCategory().id;
 
   const bankCandidates = db.prepare(
     `SELECT id, fingerprint, transfer_ref, merchant, beneficiary, details, category_id, category_source
@@ -174,6 +176,15 @@ function applyRuleToExisting(ruleId, { overrideManual = false } = {}) {
   let revolutUpdated = 0;
   const { keysFromBankRow, keysFromRevolutRow, hasManualCategoryLock } = getManualLockHelpers();
 
+  function isUncategorizedRow(tx) {
+    if (tx.category_source === 'manual' || tx.category_source === 'rule') return false;
+    return (
+      tx.category_source === 'auto'
+      || tx.category_id == null
+      || (defaultId != null && tx.category_id === defaultId)
+    );
+  }
+
   const run = db.transaction(() => {
     for (const tx of bankCandidates) {
       const raw = tx[rule.match_field] || '';
@@ -182,6 +193,7 @@ function applyRuleToExisting(ruleId, { overrideManual = false } = {}) {
       if (tx.category_id === rule.category_id) continue;
       if (hasManualCategoryLock(db, keysFromBankRow(tx))) continue;
       if (tx.category_source === 'manual' && !overrideManual) continue;
+      if (onlyUncategorized && !isUncategorizedRow(tx)) continue;
       updateBank.run(rule.category_id, tx.id);
       bankUpdated += 1;
     }
@@ -199,6 +211,7 @@ function applyRuleToExisting(ruleId, { overrideManual = false } = {}) {
       if (tx.category_id === rule.category_id) continue;
       if (hasManualCategoryLock(db, keysFromRevolutRow(tx))) continue;
       if (tx.category_source === 'manual' && !overrideManual) continue;
+      if (onlyUncategorized && !isUncategorizedRow(tx)) continue;
       updateRevolut.run(rule.category_id, tx.id);
       revolutUpdated += 1;
     }

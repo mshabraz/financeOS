@@ -55,8 +55,9 @@ export const getNetworkInfo  = () => api.get('/network/info');
 
 // --- App settings ---
 export const getRevolutSplitSetting = () => api.get('/settings/revolut-split');
-export const updateRevolutSplitSetting = (ratio) =>
-  api.put('/settings/revolut-split', { ratio });
+/** @param {{ ratio: number, applyScope?: 'from_date'|'all', applyFromDate?: string }} body */
+export const updateRevolutSplitSetting = (body) =>
+  api.put('/settings/revolut-split', typeof body === 'number' ? { ratio: body } : body);
 export const getNetWorthCurrencySetting = () => api.get('/settings/net-worth-currency');
 export const updateNetWorthCurrencySetting = (body) =>
   api.put('/settings/net-worth-currency', body);
@@ -157,8 +158,11 @@ export const getRecurring = (params = {}) =>
 export const getBankBalance   = () => api.get('/dashboard/bank-balance');
 export const getAssets        = () => api.get('/dashboard/assets');
 export const getManualBalances = ()        => api.get('/dashboard/manual-balances');
-export const updateManualBalance = (key, amount) =>
-  api.put(`/dashboard/manual-balances/${key}`, { amount });
+export const updateManualBalance = (key, amount, label) =>
+  api.put(`/dashboard/manual-balances/${key}`, {
+    amount,
+    ...(label != null && label !== '' ? { label } : {}),
+  });
 export const addManualBalance = (data) => api.post('/dashboard/manual-balances', data);
 export const deleteManualBalance = (key) => api.delete(`/dashboard/manual-balances/${key}`);
 export const getBudgets       = (month)  => api.get('/dashboard/budgets', { params: { month } });
@@ -272,6 +276,27 @@ export const updateInvestmentPlannerScenario = (id, body) =>
   api.put(`/investments/planner/scenarios/${id}`, body);
 export const deleteInvestmentPlannerScenario = (id) =>
   api.delete(`/investments/planner/scenarios/${id}`);
+
+// --- Allocation strategy / rebalancing ---
+export const listAllocationStrategies = () => api.get('/investments/allocation/strategies');
+export const getAllocationStrategy = (id) => api.get(`/investments/allocation/strategies/${id}`);
+export const createAllocationStrategy = (body) => api.post('/investments/allocation/strategies', body);
+export const updateAllocationStrategy = (id, body) =>
+  api.put(`/investments/allocation/strategies/${id}`, body);
+export const deleteAllocationStrategy = (id) =>
+  api.delete(`/investments/allocation/strategies/${id}`);
+export const replaceAllocationCategories = (id, categories) =>
+  api.put(`/investments/allocation/strategies/${id}/categories`, { categories });
+export const replaceAllocationTargets = (id, targets) =>
+  api.put(`/investments/allocation/strategies/${id}/targets`, { targets });
+export const replaceAllocationMappings = (id, mappings) =>
+  api.put(`/investments/allocation/strategies/${id}/mappings`, { mappings });
+export const getActiveAllocationCompute = (params = {}) =>
+  api.get('/investments/allocation/active/compute', { params });
+export const getAllocationHoldingsForMapping = (broker) =>
+  api.get('/investments/allocation/holdings-for-mapping', { params: broker ? { broker } : {} });
+export const suggestAllocationFromAssetClasses = (id, broker) =>
+  api.get(`/investments/allocation/strategies/${id}/suggest`, { params: broker ? { broker } : {} });
 
 // --- Wealth goals (tracking) ---
 export const getWealthGoals = (params) => api.get('/wealth-goals', { params });

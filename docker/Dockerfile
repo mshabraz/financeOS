@@ -1,17 +1,19 @@
-# FinanceOS — local LAN deployment (single container)
-FROM node:20-alpine AS frontend-build
+# FinanceOS — homeserver Docker build (Phase B)
+# Node 22 required by undici@8 (open banking client)
+FROM node:22-alpine AS frontend-build
 WORKDIR /app/frontend
 COPY frontend/package*.json ./
-RUN npm ci
+RUN npm install --legacy-peer-deps
 COPY frontend/ ./
 RUN npm run build
 
-FROM node:20-alpine AS backend
+FROM node:22-alpine AS backend
 WORKDIR /app
 RUN apk add --no-cache tini
 COPY backend/package*.json ./backend/
 RUN cd backend && npm ci --omit=dev
 COPY backend/ ./backend/
+COPY scripts/ ./scripts/
 COPY --from=frontend-build /app/frontend/dist ./frontend/dist
 
 ENV NODE_ENV=production

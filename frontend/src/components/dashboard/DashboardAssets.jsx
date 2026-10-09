@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { Plus, Check, X, Pencil, Trash2, ChevronDown, ChevronUp, Wallet } from 'lucide-react';
-import clsx from 'clsx';
+import { Plus, Check, X, Pencil, Trash2, Wallet } from 'lucide-react';
 import LoadingSpinner from '../ui/LoadingSpinner';
 import { fmtEur, fmtCurrency, privText, fmtPct } from '../../utils/displayFormat';
 import { usePrivacy } from '../../context/PrivacyContext';
+
+const BUILT_IN = new Set(['pension', 'investments', 'investment_cash', 'paypal']);
 
 function formatPortfolioTime(iso) {
   if (!iso) return 'Never';
@@ -18,15 +19,23 @@ function AssetRow({ row, onSave, onDelete, isBuiltIn, portfolio }) {
   usePrivacy();
   const [editing, setEditing] = useState(false);
   const [val, setVal] = useState('');
+  const [label, setLabel] = useState('');
   const isComputedInvestments = row.key === 'investments' && portfolio;
 
   const startEdit = () => {
     if (isComputedInvestments) return;
     setVal(String(row.amount ?? 0));
+    setLabel(row.label || '');
     setEditing(true);
   };
   const cancel = () => setEditing(false);
-  const save = () => { onSave(parseFloat(val) || 0); setEditing(false); };
+  const save = () => {
+    onSave({
+      amount: parseFloat(val) || 0,
+      label: isBuiltIn ? undefined : label.trim() || row.label,
+    });
+    setEditing(false);
+  };
 
   const displayCcy = portfolio?.currency || 'EUR';
   const fmtCcy = (n) => fmtCurrency(n, displayCcy);
@@ -37,7 +46,18 @@ function AssetRow({ row, onSave, onDelete, isBuiltIn, portfolio }) {
         <div className="flex items-center gap-2.5 min-w-0">
           <span className="text-xl">{row.icon}</span>
           <div className="min-w-0">
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-300 truncate block">{privText(row.label)}</span>
+            {editing && !isBuiltIn ? (
+              <input
+                type="text"
+                value={label}
+                onChange={(e) => setLabel(e.target.value)}
+                className="input py-1 text-sm w-full max-w-[180px]"
+              />
+            ) : (
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-300 truncate block">
+                {privText(row.label)}
+              </span>
+            )}
             {isComputedInvestments && (
               <p className="text-[10px] text-gray-400">Live portfolio · EUR</p>
             )}
@@ -51,7 +71,10 @@ function AssetRow({ row, onSave, onDelete, isBuiltIn, portfolio }) {
                 type="number"
                 value={val}
                 onChange={(e) => setVal(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') save(); if (e.key === 'Escape') cancel(); }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') save();
+                  if (e.key === 'Escape') cancel();
+                }}
                 className="input w-28 py-1 text-sm text-right"
                 autoFocus
               />
@@ -109,110 +132,103 @@ export default function DashboardAssets({
   newAssetForm,
   setNewAssetForm,
 }) {
-  const [open, setOpen] = useState(false);
-
   return (
-    <section className="rounded-2xl border border-gray-200/80 dark:border-gray-700/80 overflow-hidden">
-      <button
-        type="button"
-        className="w-full flex items-center justify-between gap-3 px-4 py-3 bg-gray-50/80 dark:bg-gray-800/40 text-left"
-        onClick={() => setOpen((o) => !o)}
-      >
-        <div className="flex items-center gap-2 min-w-0">
-          <Wallet size={16} className="text-gray-400 shrink-0" />
+    <section className="card p-4 sm:p-5">
+      <div className="flex items-start justify-between gap-3 mb-4">
+        <div className="flex items-start gap-2.5 min-w-0">
+          <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-600 shrink-0">
+            <Wallet size={18} />
+          </div>
           <div className="min-w-0">
-            <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">Edit manual balances</p>
-            <p className="text-xs text-gray-500">Pension, property, and custom assets · investments are live</p>
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Manual assets</h3>
+            <p className="text-xs text-gray-500">
+              Add cash on hand, property, or other values — they count toward net worth
+            </p>
           </div>
         </div>
-        {open ? <ChevronUp size={18} className="text-gray-400" /> : <ChevronDown size={18} className="text-gray-400" />}
-      </button>
-      {open && (
-        <div className="p-4 border-t border-gray-100 dark:border-gray-800">
-          {isLoading ? (
-            <LoadingSpinner />
-          ) : (
-            <>
-              <div className="flex justify-end mb-2">
-                <button type="button" onClick={() => setAddingAsset((v) => !v)} className="btn-ghost text-xs gap-1">
-                  <Plus size={12} /> Add asset
+        <button type="button" onClick={() => setAddingAsset((v) => !v)} className="btn-secondary text-xs gap-1 shrink-0">
+          <Plus size={12} /> Add asset
+        </button>
+      </div>
+
+      {isLoading ? (
+        <LoadingSpinner />
+      ) : (
+        <>
+          <div className="flex justify-between py-2 border-b border-gray-100 dark:border-gray-800 text-sm">
+            <span className="text-gray-600">
+              Bank
+              {assets?.bankBalanceSource === 'open_banking' && (
+                <span className="text-[10px] text-gray-400 block">Live from bank</span>
+              )}
+            </span>
+            <span className="font-semibold tabular-nums">{fmtEur(assets?.bankBalance)}</span>
+          </div>
+          {assets?.revolutClosingBalance != null && (
+            <div className="flex justify-between py-2 border-b border-gray-100 dark:border-gray-800 text-sm gap-2">
+              <span className="text-gray-600">
+                Revolut
+                {assets?.revolutBalanceSource === 'open_banking' && (
+                  <span className="text-[10px] text-gray-400 block">Live from bank</span>
+                )}
+              </span>
+              <span className="font-semibold tabular-nums text-purple-600">
+                {fmtEur(assets.revolutClosingBalance)}
+              </span>
+            </div>
+          )}
+          {(assets?.manuals ?? manuals)?.map((row) => (
+            <AssetRow
+              key={row.key}
+              row={row}
+              portfolio={row.key === 'investments' ? (assets?.investmentPortfolio ?? row.portfolio) : null}
+              isBuiltIn={BUILT_IN.has(row.key)}
+              onSave={(payload) => onUpdate(row.key, payload.amount, payload.label)}
+              onDelete={() => onDelete(row.key)}
+            />
+          ))}
+          {addingAsset && (
+            <div className="mt-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg space-y-2">
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="💵"
+                  value={newAssetForm.icon}
+                  onChange={(e) => setNewAssetForm((f) => ({ ...f, icon: e.target.value }))}
+                  className="input w-14 text-center"
+                  title="Icon"
+                />
+                <input
+                  type="text"
+                  placeholder="Name (e.g. Cash on hand)"
+                  value={newAssetForm.label}
+                  onChange={(e) => setNewAssetForm((f) => ({ ...f, label: e.target.value }))}
+                  className="input flex-1"
+                />
+                <input
+                  type="number"
+                  placeholder="€"
+                  value={newAssetForm.amount}
+                  onChange={(e) => setNewAssetForm((f) => ({ ...f, amount: e.target.value }))}
+                  className="input w-28"
+                />
+              </div>
+              <div className="flex justify-end gap-2">
+                <button type="button" onClick={() => setAddingAsset(false)} className="btn-secondary text-xs">
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={onAdd}
+                  disabled={!newAssetForm.label.trim()}
+                  className="btn-primary text-xs gap-1"
+                >
+                  <Check size={14} /> Save
                 </button>
               </div>
-              <div className="flex justify-between py-2 border-b border-gray-100 dark:border-gray-800 text-sm">
-                <span className="text-gray-600">
-                  Bank
-                  {assets?.bankBalanceSource === 'open_banking' && (
-                    <span className="text-[10px] text-gray-400 block">Live from bank</span>
-                  )}
-                </span>
-                <span className="font-semibold tabular-nums">{fmtEur(assets?.bankBalance)}</span>
-              </div>
-              {assets?.revolutClosingBalance != null && (
-                <div className="flex justify-between py-2 border-b border-gray-100 dark:border-gray-800 text-sm gap-2">
-                  <span className="text-gray-600">
-                    Revolut
-                    {assets?.revolutBalanceSource === 'open_banking' && (
-                      <span className="text-[10px] text-gray-400 block">Live from bank</span>
-                    )}
-                  </span>
-                  <span className="font-semibold tabular-nums text-purple-600">{fmtEur(assets.revolutClosingBalance)}</span>
-                </div>
-              )}
-              {(assets?.manuals ?? manuals)?.map((row) => (
-                <AssetRow
-                  key={row.key}
-                  row={row}
-                  portfolio={row.key === 'investments' ? (assets?.investmentPortfolio ?? row.portfolio) : null}
-                  isBuiltIn={['pension', 'investments'].includes(row.key)}
-                  onSave={(amount) => onUpdate(row.key, amount)}
-                  onDelete={() => onDelete(row.key)}
-                />
-              ))}
-              {addingAsset && (
-                <div className="mt-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg space-y-2">
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      placeholder="Icon"
-                      value={newAssetForm.icon}
-                      onChange={(e) => setNewAssetForm((f) => ({ ...f, icon: e.target.value }))}
-                      className="input w-14 text-center"
-                    />
-                    <input
-                      type="text"
-                      placeholder="Label"
-                      value={newAssetForm.label}
-                      onChange={(e) => setNewAssetForm((f) => ({ ...f, label: e.target.value }))}
-                      className="input flex-1"
-                    />
-                  </div>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      placeholder="key"
-                      value={newAssetForm.key}
-                      onChange={(e) => setNewAssetForm((f) => ({ ...f, key: e.target.value.replace(/\s/g, '_') }))}
-                      className="input flex-1 font-mono text-xs"
-                    />
-                    <input
-                      type="number"
-                      placeholder="€"
-                      value={newAssetForm.amount}
-                      onChange={(e) => setNewAssetForm((f) => ({ ...f, amount: e.target.value }))}
-                      className="input w-24"
-                    />
-                    <button type="button" onClick={onAdd} disabled={!newAssetForm.key || !newAssetForm.label} className="btn-primary">
-                      <Check size={14} />
-                    </button>
-                    <button type="button" onClick={() => setAddingAsset(false)} className="btn-secondary">
-                      <X size={14} />
-                    </button>
-                  </div>
-                </div>
-              )}
-            </>
+            </div>
           )}
-        </div>
+        </>
       )}
     </section>
   );

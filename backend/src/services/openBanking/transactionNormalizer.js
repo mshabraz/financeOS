@@ -2,7 +2,7 @@
  * Map Enable Banking transaction objects to FinanceOS bank import rows.
  */
 
-const { normalizeMerchantName } = require('../csvParser');
+const { normalizeMerchantName, parseSebCardRemittance } = require('../csvParser');
 const { canonicalBankFingerprint } = require('../bankDedup');
 const { shouldImportObTransaction } = require('./obTransactionFilter');
 
@@ -57,8 +57,23 @@ function normalizeTransaction(tx, accountIban) {
     tx.bank_transaction_code?.description,
     tx.note,
   ].filter(Boolean);
-  const details = detailsParts.join(' — ') || reference || beneficiary || 'Open banking transaction';
-  const merchant = normalizeMerchantName(beneficiary || details);
+  let details = detailsParts.join(' — ') || reference || beneficiary || 'Open banking transaction';
+
+  // Prefer a real counterparty name; otherwise strip SEB card PAN + purchase date from remittance.
+  const cardParsed =
+    parseSebCardRemittance(reference) ||
+    parseSebCardRemittance(details) ||
+    parseSebCardRemittance(beneficiary);
+  let merchant;
+  if (beneficiary && !parseSebCardRemittance(beneficiary)) {
+    merchant = normalizeMerchantName(beneficiary);
+  } else if (cardParsed) {
+    merchant = cardParsed.merchant;
+    details = cardParsed.details;
+  } else {
+    merchant = normalizeMerchantName(beneficiary || details);
+  }
+
   const transferRef =
     tx.entry_reference ||
     tx.transaction_id ||

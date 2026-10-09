@@ -1288,7 +1288,94 @@ const MIGRATION_V42 = {
   },
 };
 
-const ALL_MIGRATIONS = [...migrations.filter(m => m.version === 1), MIGRATION_V2, MIGRATION_V3, MIGRATION_V4, MIGRATION_V5, MIGRATION_V6, MIGRATION_V7, MIGRATION_V8, MIGRATION_V9, MIGRATION_V10, MIGRATION_V11, MIGRATION_V12, MIGRATION_V13, MIGRATION_V14, MIGRATION_V15, MIGRATION_V16, MIGRATION_V17, MIGRATION_V18, MIGRATION_V19, MIGRATION_V20, MIGRATION_V21, MIGRATION_V22, MIGRATION_V23, MIGRATION_V24, MIGRATION_V25, MIGRATION_V26, MIGRATION_V27, MIGRATION_V28, MIGRATION_V29, MIGRATION_V30, MIGRATION_V31, MIGRATION_V32, MIGRATION_V33, MIGRATION_V34, MIGRATION_V35, MIGRATION_V36, MIGRATION_V37, MIGRATION_V38, MIGRATION_V39, MIGRATION_V40, MIGRATION_V41, MIGRATION_V42];
+// ── Migration v43: strip SEB card PAN + purchase date from merchant/details ─────
+const MIGRATION_V43 = {
+  version: 43,
+  up: (db) => {
+    const { parseSebCardRemittance } = require('../services/csvParser');
+    const rows = db
+      .prepare(
+        `SELECT id, merchant, details FROM transactions
+         WHERE merchant LIKE '%******%' OR details LIKE '%******%'
+            OR merchant LIKE '''%******%' OR details LIKE '''%******%'`,
+      )
+      .all();
+    const upd = db.prepare(
+      `UPDATE transactions SET merchant = ?, details = ?, updated_at = datetime('now') WHERE id = ?`,
+    );
+    let n = 0;
+    const run = db.transaction(() => {
+      for (const row of rows) {
+        const parsed =
+          parseSebCardRemittance(row.merchant) || parseSebCardRemittance(row.details);
+        if (!parsed) continue;
+        const nextMerchant = parsed.merchant;
+        const nextDetails = parseSebCardRemittance(row.details)?.details || parsed.details;
+        if (nextMerchant === row.merchant && nextDetails === row.details) continue;
+        upd.run(nextMerchant, nextDetails, row.id);
+        n += 1;
+      }
+    });
+    run();
+    console.log(`[DB] v43 cleaned SEB card remittance on ${n} transactions`);
+  },
+};
+
+// ── Migration v44: configurable asset allocation strategies ───────────────────
+const MIGRATION_V44 = {
+  version: 44,
+  up: (db) => {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS allocation_strategies (
+        id                    INTEGER PRIMARY KEY AUTOINCREMENT,
+        name                  TEXT    NOT NULL,
+        is_active             INTEGER NOT NULL DEFAULT 0,
+        monthly_contribution  REAL,
+        include_broker_cash   INTEGER NOT NULL DEFAULT 0,
+        cash_category_id      INTEGER,
+        notes                 TEXT,
+        created_at            TEXT    NOT NULL DEFAULT (datetime('now')),
+        updated_at            TEXT    NOT NULL DEFAULT (datetime('now'))
+      );
+
+      CREATE TABLE IF NOT EXISTS allocation_categories (
+        id           INTEGER PRIMARY KEY AUTOINCREMENT,
+        strategy_id  INTEGER NOT NULL REFERENCES allocation_strategies(id) ON DELETE CASCADE,
+        name         TEXT    NOT NULL,
+        color        TEXT    NOT NULL DEFAULT '#0ea5e9',
+        sort_order   INTEGER NOT NULL DEFAULT 0,
+        created_at   TEXT    NOT NULL DEFAULT (datetime('now')),
+        updated_at   TEXT    NOT NULL DEFAULT (datetime('now'))
+      );
+
+      CREATE TABLE IF NOT EXISTS allocation_targets (
+        id           INTEGER PRIMARY KEY AUTOINCREMENT,
+        strategy_id  INTEGER NOT NULL REFERENCES allocation_strategies(id) ON DELETE CASCADE,
+        category_id  INTEGER NOT NULL REFERENCES allocation_categories(id) ON DELETE CASCADE,
+        target_pct   REAL    NOT NULL DEFAULT 0,
+        UNIQUE(strategy_id, category_id)
+      );
+
+      CREATE TABLE IF NOT EXISTS allocation_holding_maps (
+        id           INTEGER PRIMARY KEY AUTOINCREMENT,
+        strategy_id  INTEGER NOT NULL REFERENCES allocation_strategies(id) ON DELETE CASCADE,
+        holding_key  TEXT    NOT NULL,
+        broker       TEXT    NOT NULL,
+        ticker       TEXT    NOT NULL,
+        currency     TEXT    NOT NULL DEFAULT 'EUR',
+        category_id  INTEGER NOT NULL REFERENCES allocation_categories(id) ON DELETE CASCADE,
+        UNIQUE(strategy_id, holding_key)
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_alloc_cat_strategy ON allocation_categories(strategy_id, sort_order);
+      CREATE INDEX IF NOT EXISTS idx_alloc_tgt_strategy ON allocation_targets(strategy_id);
+      CREATE INDEX IF NOT EXISTS idx_alloc_map_strategy ON allocation_holding_maps(strategy_id);
+      CREATE INDEX IF NOT EXISTS idx_alloc_strat_active ON allocation_strategies(is_active);
+    `);
+  },
+};
+
+const ALL_MIGRATIONS = [...migrations.filter(m => m.version === 1), MIGRATION_V2, MIGRATION_V3, MIGRATION_V4, MIGRATION_V5, MIGRATION_V6, MIGRATION_V7, MIGRATION_V8, MIGRATION_V9, MIGRATION_V10, MIGRATION_V11, MIGRATION_V12, MIGRATION_V13, MIGRATION_V14, MIGRATION_V15, MIGRATION_V16, MIGRATION_V17, MIGRATION_V18, MIGRATION_V19, MIGRATION_V20, MIGRATION_V21, MIGRATION_V22, MIGRATION_V23, MIGRATION_V24, MIGRATION_V25, MIGRATION_V26, MIGRATION_V27, MIGRATION_V28, MIGRATION_V29, MIGRATION_V30, MIGRATION_V31, MIGRATION_V32, MIGRATION_V33, MIGRATION_V34, MIGRATION_V35, MIGRATION_V36, MIGRATION_V37, MIGRATION_V38, MIGRATION_V39, MIGRATION_V40, MIGRATION_V41, MIGRATION_V42, MIGRATION_V43, MIGRATION_V44];
 
 function runMigrations(db) {
   db.exec(`CREATE TABLE IF NOT EXISTS schema_migrations (

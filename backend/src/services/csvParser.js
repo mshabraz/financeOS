@@ -263,21 +263,37 @@ function parseAmount(raw) {
 }
 
 /**
+ * SEB / Estonian card remittance: optional quote, masked PAN, purchase date, then merchant.
+ * Examples:
+ *   '516737******1639 30.04.26  BRISA AREAS...
+ *   516737******1639 18.08.26 MUSTAMAE ELAMUSSPA...
+ */
+const SEB_CARD_REMIT_RE = /^'?([\d*]{10,})\s+\d{2}\.\d{2}\.\d{2}\s+(.+)$/i;
+
+/**
+ * @returns {{ merchant: string, details: string } | null}
+ */
+function parseSebCardRemittance(raw) {
+  if (!raw) return null;
+  const s = String(raw).replace(/\s+/g, ' ').trim();
+  if (!s.includes('*')) return null;
+  const match = s.match(SEB_CARD_REMIT_RE);
+  if (!match) return null;
+  const rest = match[2].trim();
+  if (!rest) return null;
+  return {
+    merchant: normalizeMerchantName(rest),
+    details: rest,
+  };
+}
+
+/**
  * Extract and normalize the merchant name.
  * Card transactions (type 'K') embed merchant name in the Details field.
- * Pattern: '516737******1639 DD.MM.YY  MERCHANT_NAME  CITY
  */
 function extractMerchant(beneficiary, details, txType) {
-  // Card transaction: extract from details
-  if (details.startsWith("'") && details.includes('*')) {
-    // Strip leading quote, card number mask, and date
-    // Format: '516737******1639 30.04.26  BRISA AREAS...
-    const cardPattern = /^'[\d*]+\s+\d{2}\.\d{2}\.\d{2}\s+(.+)$/;
-    const match = details.match(cardPattern);
-    if (match) {
-      return normalizeMerchantName(match[1]);
-    }
-  }
+  const fromDetails = parseSebCardRemittance(details);
+  if (fromDetails) return fromDetails.merchant;
 
   // Bank transfer: use beneficiary
   if (beneficiary) return normalizeMerchantName(beneficiary);
@@ -308,4 +324,11 @@ function normalizeMerchantName(raw) {
   return name;
 }
 
-module.exports = { parseCSV, parseDate, parseAmount, normalizeMerchantName };
+module.exports = {
+  parseCSV,
+  parseDate,
+  parseAmount,
+  normalizeMerchantName,
+  parseSebCardRemittance,
+  extractMerchant,
+};

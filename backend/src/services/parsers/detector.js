@@ -6,7 +6,7 @@
  *
  * Supported brokers:
  *   - 'lightyear'      LightYear.io stock/ETF broker (comma-delimited)
- *   - 'swedbank_fund'  Swedbank mutual fund investment account (semicolon-delimited, LHV-format)
+ *   - 'swedbank_fund'  Swedbank mutual fund investment account (semicolon-delimited)
  *
  * The detection is intentionally conservative — returns highest-confidence match
  * and falls back to 'unknown' if nothing fits.
@@ -47,6 +47,25 @@ function detectBroker(buffer) {
     notes.push('Detected comma delimiter', 'Found Ticker + ISIN headers');
     if (hasLYRefs) notes.push('Found LightYear reference prefixes (OR-, DD-, DT-, WL-)');
     return { broker: 'lightyear', brokerName: 'LightYear', confidence: conf, notes };
+  }
+
+  // ── Swedbank investment account statement (newer fund export) ────────────
+  // Fingerprints: semicolon-delimited, starts with transaction/settlement/price/qty
+  if (header.includes('"Transaction ref."') && header.includes('"Settlement date"') && header.includes('"Quantity or face amount"') && header.includes(';')) {
+    notes.push('Detected semicolon delimiter', 'Found "Transaction ref." + "Settlement date" + "Quantity or face amount" headers');
+
+    const hasFundStatementPatterns =
+      sample.includes('Opening balance') ||
+      sample.includes('Closing balance') ||
+      sample.includes('APMT +') ||
+      sample.includes('APMT -') ||
+      /SE\d{10}/.test(sample) ||
+      sample.includes('SWEDBANK ROBUR');
+
+    if (hasFundStatementPatterns) {
+      notes.push('Found Swedbank fund account statement patterns (Opening balance / APMT / ISIN)');
+      return { broker: 'swedbank_fund', brokerName: 'Swedbank Investment', confidence: 0.99, notes };
+    }
   }
 
   // ── Swedbank/LHV-format with investment fund patterns ────────────────────

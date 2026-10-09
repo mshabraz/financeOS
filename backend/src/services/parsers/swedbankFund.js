@@ -53,6 +53,16 @@ const FUND_NAMES = {
   SWRMEDC:  'Swedbank Robur Healthcare C',
 };
 
+const ISIN_TO_TICKER = {
+  SE0014261756: 'SWRGHDC',
+  SE0015192331: 'SWRAEUC',
+  SE0016074985: 'SWBRUSAC',
+  SE0015811965: 'SWRAGLC',
+  SE0014261814: 'SWRTECC',
+  SE0015949203: 'SWBACASC',
+  SE0014261780: 'SWRMEDC',
+};
+
 // List of all known fund tickers for quick membership test
 const KNOWN_TICKERS = new Set(Object.keys(FUND_NAMES));
 
@@ -93,6 +103,61 @@ function parseDate(raw) {
   if (!m) return null;
   const [, dd, mm, yyyy] = m;
   return { date: `${yyyy}-${mm}-${dd}`, datetime: `${yyyy}-${mm}-${dd}T00:00:00` };
+}
+
+function parseFlexibleDecimal(raw) {
+  const s = String(raw || '').trim();
+  if (!s) return null;
+  if (s.includes(',') && s.includes('.')) return parseEuropeanDecimal(s);
+  if (s.includes(',')) return parseEuropeanDecimal(s);
+  const n = parseFloat(s);
+  return Number.isFinite(n) ? n : null;
+}
+
+function normalizeFundName(name) {
+  const s = String(name || '').trim();
+  return s || null;
+}
+
+function parseStatementFundIdentity(fields) {
+  const first = String(fields[0] || '').trim();
+  const m = first.match(/^(.*)\s+(SE\d{10})$/i);
+  if (!m) return null;
+  const fundName = normalizeFundName(m[1]);
+  const isin = m[2].toUpperCase();
+  const ticker = ISIN_TO_TICKER[isin] || null;
+  return {
+    ticker,
+    isin,
+    fundName: fundName || (ticker ? FUND_NAMES[ticker] : null),
+  };
+}
+
+function parseStatementFundHeader(fields) {
+  const balanceLabel = String(fields[14] || '').trim();
+  if (balanceLabel !== 'Opening balance') return null;
+  const identity = parseStatementFundIdentity(fields);
+  if (!identity) return null;
+
+  return {
+    ...identity,
+    openingBalance: fields[15] ? parseFlexibleDecimal(fields[15]) : null,
+  };
+}
+
+function parseStatementClosingBalance(fields, context) {
+  const balanceLabel = String(fields[14] || '').trim();
+  if (balanceLabel !== 'Closing balance') return null;
+  const qty = fields[15] != null ? parseFlexibleDecimal(fields[15]) : null;
+  if (qty == null) return null;
+  return {
+    ticker: context?.ticker || null,
+    isin: context?.isin || null,
+    fundName: context?.fundName || null,
+    currency: 'EUR',
+    openingBalance: context?.openingBalance ?? null,
+    closingBalance: qty,
+  };
 }
 
 /**
@@ -199,6 +264,64 @@ function classifyTransaction(rawType, direction, details) {
     : TX_TYPES.TRANSFER;
 }
 
+function classifyStatementTransaction(rawType) {
+  const t = String(rawType || '').trim().toUpperCase();
+  if (t === 'APMT +' || t === 'APMT+') return TX_TYPES.BUY;
+  if (t === 'APMT -' || t === 'APMT-') return TX_TYPES.SELL;
+  return null;
+}
+
+function parseStatementRow(fields, context) {
+  if (fields.length < 16) return { valid: false, reason: 'Too few fields' };
+  const reference = String(fields[0] || '').trim();
+  const rawType = String(fields[1] || '').trim();
+  const rawDate = String(fields[2] || '').trim();
+  const rawAmount = String(fields[11] || '').trim();
+  const currency = String(fields[12] || '').trim() || 'EUR';
+  const rawPrice = String(fields[13] || '').trim();
+  const rawQuantity = String(fields[15] || '').trim();
+
+  if (!reference && !rawType && !rawDate) {
+    return { valid: false, skipped: true, reason: 'Empty balance/footer row' };
+  }
+
+  const type = classifyStatementTransaction(rawType);
+  if (!type) return { valid: false, skipped: true, reason: `Type ${rawType} not importable` };
+
+  if (!context?.isin && !context?.ticker && !context?.fundName) {
+    return { valid: false, reason: 'Missing fund context before transaction row' };
+  }
+
+  const dt = parseDate(rawDate);
+  if (!dt) return { valid: false, reason: `Bad date: ${rawDate}` };
+
+  const netAmount = parseFlexibleDecimal(rawAmount);
+  const pricePerShare = parseFlexibleDecimal(rawPrice);
+  const quantity = parseFlexibleDecimal(rawQuantity);
+
+  return normalizedTx({
+    broker: BROKER,
+    fingerprint: makeFingerprint(BROKER, reference, dt.datetime, netAmount, type, context.ticker || context.isin),
+    date: dt.date,
+    datetime: dt.datetime,
+    settlementDate: dt.date,
+    type,
+    currency,
+    netAmount: Math.abs(netAmount),
+    ticker: context.ticker || context.isin,
+    isin: context.isin || null,
+    fundName: context.fundName || (context.ticker ? FUND_NAMES[context.ticker] : null),
+    fundOrderId: reference,
+    quantity,
+    pricePerShare,
+    grossAmount: Math.abs(netAmount),
+    brokerAccountId: null,
+    reference,
+    rawDetails: context.fundName || context.ticker || context.isin || null,
+    rawType,
+  });
+}
+
 function parseRow(fields) {
   if (fields.length < 10) return { valid: false, reason: 'Too few fields' };
 
@@ -261,6 +384,13 @@ function parse(buffer) {
   const errors   = [];
   let skipped    = 0;
   const warnings = [];
+  let statementContext = null;
+  const positionSnapshots = [];
+
+  const isStatementFormat = (() => {
+    const firstNonEmpty = lines.map((l) => l.trim()).find(Boolean) || '';
+    return firstNonEmpty.includes('"Transaction ref."') && firstNonEmpty.includes('"Settlement date"');
+  })();
 
   for (const line of lines) {
     const trimmed = line.trim();
@@ -268,7 +398,22 @@ function parse(buffer) {
     const fields = parseCSVLine(trimmed);
     if (!header) { header = fields; continue; }
 
-    const result = parseRow(fields);
+    if (isStatementFormat) {
+      const fundHeader = parseStatementFundHeader(fields);
+      if (fundHeader) {
+        statementContext = fundHeader;
+        continue;
+      }
+
+      const closing = parseStatementClosingBalance(fields, statementContext);
+      if (closing) {
+        positionSnapshots.push(closing);
+        skipped++;
+        continue;
+      }
+    }
+
+    const result = isStatementFormat ? parseStatementRow(fields, statementContext) : parseRow(fields);
     if (result.skipped) { skipped++; continue; }
     if (!result.valid)  { errors.push({ reason: result.reason, raw: fields }); continue; }
     transactions.push(result);
@@ -280,6 +425,9 @@ function parse(buffer) {
   // Extract account ID from first data row
   const accountId = transactions[0]?.brokerAccountId ?? null;
   if (accountId) warnings.push(`Detected account: ${accountId}`);
+  if (positionSnapshots.length) {
+    warnings.push(`Captured ${positionSnapshots.length} fund closing balance(s) for position sync`);
+  }
 
   return {
     broker:        BROKER,
@@ -287,6 +435,7 @@ function parse(buffer) {
     parserVersion: PARSER_VERSION,
     accountId,
     transactions,
+    positionSnapshots,
     errors,
     skipped,
     warnings,
@@ -302,4 +451,4 @@ function parse(buffer) {
   };
 }
 
-module.exports = { parse, BROKER, PARSER_VERSION, FUND_NAMES };
+module.exports = { parse, BROKER, PARSER_VERSION, FUND_NAMES, ISIN_TO_TICKER };

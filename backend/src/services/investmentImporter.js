@@ -10,7 +10,47 @@ const {
   isDuplicateInvestmentTx,
   refKey,
 } = require('./investmentDedup');
+const { setManualQuantity } = require('./investmentSecurities');
+const { ISIN_TO_TICKER } = require('./parsers/swedbankFund');
 const logger = require('./logger');
+
+function backfillSwedbankIsins(db) {
+  let updated = 0;
+  const stmt = db.prepare(
+    `UPDATE investment_transactions
+        SET isin = ?
+      WHERE broker = 'swedbank_fund'
+        AND ticker = ?
+        AND (isin IS NULL OR TRIM(isin) = '')`
+  );
+  for (const [isin, ticker] of Object.entries(ISIN_TO_TICKER)) {
+    const r = stmt.run(isin, ticker);
+    updated += r.changes || 0;
+  }
+  return updated;
+}
+
+function applyPositionSnapshots(db, broker, snapshots = []) {
+  let updated = 0;
+  for (const snap of snapshots) {
+    if (!snap?.ticker || snap.closingBalance == null || !(snap.closingBalance > 0)) continue;
+    setManualQuantity(db, {
+      broker,
+      ticker: snap.ticker,
+      currency: snap.currency || 'EUR',
+      quantity: snap.closingBalance,
+    });
+    if (snap.isin) {
+      db.prepare(
+        `UPDATE holding_security_bindings
+            SET isin = COALESCE(isin, ?)
+          WHERE broker = ? AND ticker = ? AND currency = ?`
+      ).run(snap.isin, broker, String(snap.ticker).toUpperCase(), (snap.currency || 'EUR').toUpperCase());
+    }
+    updated += 1;
+  }
+  return updated;
+}
 
 function commitInvestmentImport(buffer, filename) {
   const detection = detectBroker(buffer);
@@ -30,6 +70,7 @@ function commitInvestmentImport(buffer, filename) {
   let importedCount = 0;
   let duplicateCount = 0;
   const errorCount = parsed.errors.filter((e) => !e.skipped).length;
+  const warnings = [...(parsed.warnings ?? [])];
 
   const historyId = db
     .prepare(
@@ -48,7 +89,7 @@ function commitInvestmentImport(buffer, filename) {
       errorCount,
       parsed.summary.dateFrom,
       parsed.summary.dateTo,
-      JSON.stringify(parsed.warnings ?? [])
+      JSON.stringify(warnings)
     ).lastInsertRowid;
 
   const insert = db.prepare(`
@@ -63,6 +104,8 @@ function commitInvestmentImport(buffer, filename) {
   `);
 
   const dedupSets = loadInvestmentDedupSets(db);
+  let positionQtyUpdated = 0;
+  let isinsBackfilled = 0;
 
   const doImport = db.transaction(() => {
     for (const tx of parsed.transactions) {
@@ -80,12 +123,22 @@ function commitInvestmentImport(buffer, filename) {
         duplicateCount++;
       }
     }
+
+    if (parsed.broker === 'swedbank_fund') {
+      isinsBackfilled = backfillSwedbankIsins(db);
+      positionQtyUpdated = applyPositionSnapshots(db, parsed.broker, parsed.positionSnapshots || []);
+    }
   });
 
   doImport();
 
-  db.prepare('UPDATE investment_file_history SET imported_count = ?, duplicate_count = ? WHERE id = ?')
-    .run(importedCount, duplicateCount, historyId);
+  if (isinsBackfilled > 0) warnings.push(`Backfilled ISIN on ${isinsBackfilled} Swedbank transaction(s)`);
+  if (positionQtyUpdated > 0) {
+    warnings.push(`Synced share quantity for ${positionQtyUpdated} fund position(s) from statement closing balance`);
+  }
+
+  db.prepare('UPDATE investment_file_history SET imported_count = ?, duplicate_count = ?, warnings = ? WHERE id = ?')
+    .run(importedCount, duplicateCount, JSON.stringify(warnings), historyId);
 
   setImmediate(() => {
     runPriceSync().catch((e) => logger.warn(`[investmentImporter] price sync: ${e.message}`));
@@ -101,8 +154,14 @@ function commitInvestmentImport(buffer, filename) {
     errorCount,
     skippedCount: parsed.skipped,
     summary: parsed.summary,
-    warnings: parsed.warnings ?? [],
+    warnings,
+    positionQtyUpdated,
+    isinsBackfilled,
   };
 }
 
-module.exports = { commitInvestmentImport };
+module.exports = {
+  commitInvestmentImport,
+  backfillSwedbankIsins,
+  applyPositionSnapshots,
+};

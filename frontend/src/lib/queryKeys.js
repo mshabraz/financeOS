@@ -13,6 +13,8 @@ export const DASHBOARD_QUERY_ROOTS = [
   'recurring',
   'budgets',
   'invAnalytics',
+  'allocationCompute',
+  'allocationStrategies',
   'wealthGoals',
   'wealthGoalProgress',
   'obligationsSummary',

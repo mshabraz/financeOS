@@ -108,8 +108,40 @@ function fieldsFromRow(row, splitRatioOverride) {
   });
 }
 
-function backfillRevolutAmounts(db) {
-  const rows = db.prepare('SELECT id, amount, revolut_type, description, split_ratio FROM revolut_transactions').all();
+/**
+ * Recompute stored amount fields for Revolut rows.
+ * @param {object} db
+ * @param {object} [opts]
+ * @param {number} [opts.ratio]     When set, force this expense split onto matching rows.
+ *                                  When omitted, preserve each row's existing split_ratio.
+ * @param {string} [opts.dateFrom]  YYYY-MM-DD — only update rows with date >= dateFrom.
+ * @returns {{ rowsUpdated: number, dateFrom: string|null, ratio: number|null }}
+ */
+function backfillRevolutAmounts(db, { ratio, dateFrom } = {}) {
+  const forceRatio =
+    ratio != null && Number.isFinite(Number(ratio)) ? Number(ratio) : null;
+  const from =
+    dateFrom != null && String(dateFrom).trim()
+      ? String(dateFrom).trim().slice(0, 10)
+      : null;
+
+  let rows;
+  if (from) {
+    rows = db
+      .prepare(
+        `SELECT id, amount, revolut_type, description, split_ratio
+           FROM revolut_transactions
+          WHERE date >= ?`
+      )
+      .all(from);
+  } else {
+    rows = db
+      .prepare(
+        'SELECT id, amount, revolut_type, description, split_ratio FROM revolut_transactions'
+      )
+      .all();
+  }
+
   const update = db.prepare(`
     UPDATE revolut_transactions
     SET effective_amount = @effective_amount,
@@ -120,7 +152,7 @@ function backfillRevolutAmounts(db) {
   `);
   const run = db.transaction(() => {
     for (const row of rows) {
-      const f = fieldsFromRow(row);
+      const f = forceRatio != null ? fieldsFromRow(row, forceRatio) : fieldsFromRow(row);
       update.run({
         id: row.id,
         effective_amount: f.effective_amount,
@@ -131,7 +163,11 @@ function backfillRevolutAmounts(db) {
     }
   });
   run();
-  return rows.length;
+  return {
+    rowsUpdated: rows.length,
+    dateFrom: from,
+    ratio: forceRatio,
+  };
 }
 
 function getRevolutExpenseSplitRatio(db) {

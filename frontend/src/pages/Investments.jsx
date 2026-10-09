@@ -15,6 +15,7 @@ import HoldingsTab from '../components/investments/tabs/HoldingsTab';
 import DividendsTab from '../components/investments/tabs/DividendsTab';
 import HistoryTab from '../components/investments/tabs/HistoryTab';
 import ImportTab from '../components/investments/tabs/ImportTab';
+import StrategyTab from '../components/investments/tabs/StrategyTab';
 import InvestmentLedger from '../components/investments/ledger/InvestmentLedger';
 import { getImportHistory } from '../components/investments/investmentPageApi';
 import { usePrivacy } from '../context/PrivacyContext';
@@ -26,7 +27,7 @@ export default function Investments() {
   const initialTab = searchParams.get('tab');
   const plannerView = searchParams.get('planner');
   const [tab, setTab] = useState(
-    ['overview', 'holdings', 'ledger', 'dividends', 'planner', 'history', 'import'].includes(initialTab)
+    ['overview', 'holdings', 'strategy', 'ledger', 'dividends', 'planner', 'history', 'import'].includes(initialTab)
       ? initialTab
       : 'overview',
   );
@@ -168,6 +169,8 @@ export default function Investments() {
           onOpenLedger={() => setTab('ledger')}
         />
       )}
+
+      {tab === 'strategy' && <StrategyTab brokerFilter={brokerFilter} />}
 
       {tab === 'ledger' && <InvestmentLedger brokerFilter={brokerFilter} />}
 
