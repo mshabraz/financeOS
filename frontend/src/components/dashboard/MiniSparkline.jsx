@@ -1,10 +1,12 @@
 import { Area, AreaChart, ResponsiveContainer } from 'recharts';
 
 export default function MiniSparkline({ data, dataKey = 'v', positive, height = 36 }) {
-  const rows = (data ?? []).map((d, i) => ({
-    i,
-    v: typeof d === 'number' ? d : d[dataKey],
-  }));
+  const rows = (data ?? [])
+    .filter((d) => d != null)
+    .map((d, i) => ({
+      i,
+      v: typeof d === 'number' ? (Number.isFinite(d) ? d : 0) : Number(d?.[dataKey] ?? 0),
+    }));
   if (rows.length < 2) return <div className="h-9 w-20 rounded bg-gray-100 dark:bg-gray-800/60" />;
 
   const color = positive == null ? '#6366f1' : positive ? '#10b981' : '#ef4444';

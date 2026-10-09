@@ -37,9 +37,11 @@ export function buildPeriodOptions(type) {
 }
 
 export function prevMonthValue(monthKey) {
-  if (!monthKey || monthKey.length < 7) return null;
+  if (!monthKey || !/^\d{4}-(0[1-9]|1[0-2])$/.test(monthKey)) return null;
   const [y, m] = monthKey.split('-').map(Number);
+  if (!Number.isFinite(y) || !Number.isFinite(m)) return null;
   const d = new Date(y, m - 2, 1);
+  if (Number.isNaN(d.getTime())) return null;
   return format(d, 'yyyy-MM');
 }
 
@@ -47,15 +49,18 @@ export function prevPeriodValue(periodType, periodValue) {
   if (!periodValue) return null;
   if (periodType === 'month') return prevMonthValue(periodValue);
   if (periodType === 'quarter') {
-    const [yStr, qStr] = periodValue.split('-Q');
-    const y = Number(yStr);
-    const q = Number(qStr);
+    const match = String(periodValue).match(/^(\d{4})-Q([1-4])$/);
+    if (!match) return null;
+    const y = Number(match[1]);
+    const q = Number(match[2]);
     if (!y || !q) return null;
     if (q === 1) return `${y - 1}-Q4`;
     return `${y}-Q${q - 1}`;
   }
   if (periodType === 'year') {
-    const y = Number(periodValue);
+    const match = String(periodValue).match(/^(\d{4})$/);
+    if (!match) return null;
+    const y = Number(match[1]);
     return Number.isFinite(y) ? String(y - 1) : null;
   }
   return null;

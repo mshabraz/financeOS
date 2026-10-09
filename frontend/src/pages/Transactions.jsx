@@ -350,16 +350,22 @@ export default function Transactions() {
   }, [selected, data]);
 
   const updateMut = useMutation({
-    mutationFn: ({ id, categoryId }) => updateTransaction(id, { categoryId: parseInt(categoryId, 10) }),
+    mutationFn: ({ id, categoryId }) => {
+      const parsedCat = parseInt(categoryId, 10);
+      if (Number.isNaN(parsedCat)) {
+        throw new Error('Invalid category selected');
+      }
+      return updateTransaction(id, { categoryId: parsedCat });
+    },
     onMutate: async ({ id, categoryId }) => {
       await qc.cancelQueries({ queryKey: ['transactions'] });
       const previousData = qc.getQueryData(txQueryKey);
-      const catObj = categories?.find((c) => c.id === parseInt(categoryId, 10));
+      const catObj = categories?.find((c) => String(c.id) === String(categoryId));
       if (previousData?.data) {
         qc.setQueryData(txQueryKey, {
           ...previousData,
           data: previousData.data.map((tx) =>
-            txnKey(tx) === String(id)
+            String(txnKey(tx)) === String(id)
               ? {
                   ...tx,
                   category_id: parseInt(categoryId, 10),
@@ -410,7 +416,7 @@ export default function Transactions() {
         qc.setQueryData(txQueryKey, {
           ...previousData,
           data: previousData.data.map((tx) =>
-            txnKey(tx) === String(id) ? { ...tx, notes } : tx
+            String(txnKey(tx)) === String(id) ? { ...tx, notes } : tx
           ),
         });
       }
@@ -750,16 +756,53 @@ export default function Transactions() {
                 </button>
                 <div className="mt-2 flex flex-wrap gap-2 items-center">
                   {editId === rowId ? (
-                    <>
-                      <select value={editCat} onChange={(e) => setEditCat(e.target.value)} className="input flex-1 min-w-0 text-sm">
-                        {categories?.map((c) => <option key={c.id} value={c.id}>{c.icon} {c.name}</option>)}
+                    <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                      <select
+                        value={editCat || (tx.category_id != null ? String(tx.category_id) : '')}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setEditCat(val);
+                          if (val) {
+                            updateMut.mutate({ id: rowId, categoryId: val });
+                          }
+                        }}
+                        className="input flex-1 min-w-0 text-sm"
+                        autoFocus
+                      >
+                        <option value="">Select category...</option>
+                        {categories?.map((c) => (
+                          <option key={c.id} value={c.id}>{c.icon} {c.name}</option>
+                        ))}
                       </select>
-                      <button type="button" onClick={() => updateMut.mutate({ id: rowId, categoryId: editCat })} className="btn-primary px-3"><Check size={16}/></button>
-                      <button type="button" onClick={() => setEditId(null)} className="btn-secondary px-3"><X size={16}/></button>
-                    </>
+                      {editCat && editCat !== String(tx.category_id) && (
+                        <button
+                          type="button"
+                          onClick={() => updateMut.mutate({ id: rowId, categoryId: editCat })}
+                          className="btn-primary px-3 py-1.5 text-xs"
+                        >
+                          <Check size={14} />
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => setEditId(null)}
+                        className="btn-secondary px-3 py-1.5 text-xs"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
                   ) : (
-                    <button type="button" onClick={() => { setEditId(rowId); setEditCat(tx.category_id ?? ''); }}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditId(rowId);
+                        setEditCat(tx.category_id != null ? String(tx.category_id) : '');
+                      }}
+                      className="inline-flex items-center gap-1"
+                      title="Click to change category"
+                    >
                       <CategoryBadge icon={tx.category_icon} name={tx.category_name} color={tx.category_color} />
+                      <ChevronDown size={11} className="text-gray-400" />
                     </button>
                   )}
                   {tx.tags?.map((tag) => (
@@ -908,22 +951,73 @@ export default function Transactions() {
                         {/* Category */}
                         <td className="px-4 py-2.5">
                           {editId === rowId ? (
-                            <div className="flex items-center gap-1">
-                              <select value={editCat} onChange={(e) => setEditCat(e.target.value)} className="input py-1 text-xs" autoFocus>
-                                {categories?.map((c) => <option key={c.id} value={c.id}>{c.icon} {c.name}</option>)}
+                            <div className="flex items-center gap-1.5">
+                              <select
+                                value={editCat || (tx.category_id != null ? String(tx.category_id) : '')}
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  setEditCat(val);
+                                  if (val) {
+                                    updateMut.mutate({ id: rowId, categoryId: val });
+                                  }
+                                }}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Escape') setEditId(null);
+                                }}
+                                className="input py-1 text-xs min-w-[140px]"
+                                autoFocus
+                              >
+                                <option value="">Select category...</option>
+                                {categories?.map((c) => (
+                                  <option key={c.id} value={c.id}>
+                                    {c.icon} {c.name}
+                                  </option>
+                                ))}
                               </select>
-                              <button type="button" onClick={() => updateMut.mutate({ id: rowId, categoryId: editCat })} className="p-1 rounded text-green-600 hover:bg-green-50"><Check size={13}/></button>
-                              <button type="button" onClick={() => setEditId(null)} className="p-1 rounded text-gray-400 hover:bg-gray-100"><X size={13}/></button>
+                              {editCat && editCat !== String(tx.category_id) && (
+                                <button
+                                  type="button"
+                                  onClick={() => updateMut.mutate({ id: rowId, categoryId: editCat })}
+                                  className="p-1 rounded text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20"
+                                  title="Save category"
+                                >
+                                  <Check size={14} />
+                                </button>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => setEditId(null)}
+                                className="p-1 rounded text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
+                                title="Cancel"
+                              >
+                                <X size={14} />
+                              </button>
                               {(tx.merchant || tx.details) && (
-                                <button type="button" onClick={() => { setEditId(null); setBulkModal(tx.merchant || tx.details); }}
-                                  className="p-1 rounded text-brand-500 hover:bg-brand-50" title="Apply to similar">
-                                  <Layers size={13} />
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setEditId(null);
+                                    setBulkModal(tx.merchant || tx.details);
+                                  }}
+                                  className="p-1 rounded text-brand-500 hover:bg-brand-50 dark:hover:bg-brand-900/20"
+                                  title="Apply to similar transactions"
+                                >
+                                  <Layers size={14} />
                                 </button>
                               )}
                             </div>
                           ) : (
-                            <button type="button" onClick={() => { setEditId(rowId); setEditCat(tx.category_id ?? ''); }} className="text-left">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditId(rowId);
+                                setEditCat(tx.category_id != null ? String(tx.category_id) : '');
+                              }}
+                              className="text-left group/cat inline-flex items-center gap-1"
+                              title="Click to change category"
+                            >
                               <CategoryBadge icon={tx.category_icon} name={tx.category_name} color={tx.category_color} />
+                              <ChevronDown size={11} className="text-gray-300 dark:text-gray-600 group-hover/cat:text-gray-500 transition-colors" />
                             </button>
                           )}
                         </td>
@@ -975,7 +1069,7 @@ export default function Transactions() {
                         {/* Edit */}
                         <td className="px-4 py-2.5">
                           {editId !== rowId && (
-                            <button type="button" onClick={() => { setEditId(rowId); setEditCat(tx.category_id ?? ''); }}
+                            <button type="button" onClick={() => { setEditId(rowId); setEditCat(tx.category_id != null ? String(tx.category_id) : ''); }}
                               className="text-xs text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 whitespace-nowrap">
                               Edit
                             </button>

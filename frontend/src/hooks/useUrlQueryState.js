@@ -64,3 +64,26 @@ export function useUrlQueryState(key, defaultValue, options = {}) {
 
   return [value, setValue];
 }
+
+/**
+ * Hook to atomically update multiple URL query parameters at once without race conditions.
+ */
+export function useUrlQueryBatch() {
+  const [, setSearchParams] = useSearchParams();
+  return useCallback(
+    (updates, opts = { replace: false }) => {
+      setSearchParams((prev) => {
+        const next = new URLSearchParams(prev);
+        Object.entries(updates).forEach(([k, v]) => {
+          if (v === '' || v === null || v === undefined) {
+            next.delete(k);
+          } else {
+            next.set(k, String(v));
+          }
+        });
+        return next;
+      }, opts);
+    },
+    [setSearchParams]
+  );
+}

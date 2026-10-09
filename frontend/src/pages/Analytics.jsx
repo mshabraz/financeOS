@@ -63,8 +63,8 @@ export default function Analytics() {
   const focusSavings = searchParams.get('focus') === 'savings-rate';
 
   // Period selection
-  const [presetId,    setPresetId]    = useUrlQueryState('preset', 'month', { replace: false });
-  const [filterMonth, setFilterMonth] = useUrlQueryState('month', format(today, 'yyyy-MM'), { replace: false });
+  const [presetId]    = useUrlQueryState('preset', 'month', { replace: false });
+  const [filterMonth] = useUrlQueryState('month', '', { replace: false });
   const [customFrom,  setCustomFrom]  = useUrlQueryState('from', '', { replace: false });
   const [customTo,    setCustomTo]    = useUrlQueryState('to', todayStr, { replace: false });
 
@@ -73,8 +73,44 @@ export default function Analytics() {
   const [budgetCat,   setBudgetCat]   = useState('');
   const [budgetAmt,   setBudgetAmt]   = useState('');
 
+  const selectPreset = (id) => {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.delete('month');
+      if (id === 'month') {
+        next.delete('preset');
+      } else {
+        next.set('preset', id);
+      }
+      if (id !== 'custom') {
+        next.delete('from');
+        next.delete('to');
+      }
+      return next;
+    }, { replace: false });
+  };
+
+  const onMonthFilterChange = (v) => {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (v) {
+        next.set('month', v);
+        next.delete('preset');
+        next.delete('from');
+        next.delete('to');
+      } else {
+        next.delete('month');
+      }
+      return next;
+    }, { replace: false });
+  };
+
   // Derive the active date range
   const { dateFrom, dateTo, label: periodLabel } = useMemo(() => {
+    if (filterMonth) {
+      const { dateFrom: f, dateTo: t } = getMonthRange(filterMonth);
+      return { dateFrom: f, dateTo: t, label: filterMonth };
+    }
     if (presetId === 'custom') {
       return {
         dateFrom: customFrom || null,
@@ -84,28 +120,14 @@ export default function Analytics() {
     }
     const p = PRESETS.find((p) => p.id === presetId) || PRESETS[0];
     return { dateFrom: p.dateFrom, dateTo: p.dateTo, label: p.label };
-  }, [presetId, customFrom, customTo]);
+  }, [filterMonth, presetId, customFrom, customTo]);
 
   const rangeParams = useMemo(() => {
-    if (filterMonth) {
-      const { dateFrom: f, dateTo: t } = getMonthRange(filterMonth);
-      return { dateFrom: f, dateTo: t };
-    }
     return {
       ...(dateFrom ? { dateFrom } : {}),
       ...(dateTo   ? { dateTo   } : {}),
     };
-  }, [filterMonth, dateFrom, dateTo]);
-
-  const onMonthFilterChange = (v) => {
-    setFilterMonth(v);
-    if (v) {
-      setPresetId('custom');
-      const { dateFrom: f, dateTo: t } = getMonthRange(v);
-      setCustomFrom(f);
-      setCustomTo(t);
-    }
-  };
+  }, [dateFrom, dateTo]);
 
   // Queries
   const trend    = useQuery({
@@ -224,10 +246,11 @@ export default function Analytics() {
             {PRESETS.map((p) => (
               <button
                 key={p.id}
-                onClick={() => { setFilterMonth(''); setPresetId(p.id); }}
+                type="button"
+                onClick={() => selectPreset(p.id)}
                 className={clsx(
                   'px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors',
-                  presetId === p.id
+                  !filterMonth && presetId === p.id
                     ? 'bg-brand-600 border-brand-600 text-white'
                     : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-brand-400 hover:text-brand-600'
                 )}

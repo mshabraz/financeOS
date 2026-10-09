@@ -19,23 +19,28 @@ function resolvePeriod(periodType, periodValue) {
   }
 
   if (periodType === 'month') {
-    const [y, m] = (periodValue || '').split('-');
-    if (!y || !m) return { dateFrom: null, dateTo: null };
+    const match = (periodValue || '').match(/^(\d{4})-(\d{1,2})$/);
+    if (!match) return { dateFrom: null, dateTo: null };
+    const y = match[1];
+    const m = match[2].padStart(2, '0');
+    const lastDay = new Date(parseInt(y, 10), parseInt(m, 10), 0).getDate();
     const from = `${y}-${m}-01`;
-    const to = new Date(parseInt(y), parseInt(m), 0).toISOString().slice(0, 10);
+    const to = `${y}-${m}-${String(lastDay).padStart(2, '0')}`;
     return { dateFrom: from, dateTo: to };
   }
 
   if (periodType === 'quarter') {
-    const match = (periodValue || '').match(/^(\d{4})-Q(\d)$/);
+    const match = (periodValue || '').match(/^(\d{4})-Q([1-4])$/);
     if (!match) return { dateFrom: null, dateTo: null };
-    const y = parseInt(match[1]);
-    const q = parseInt(match[2]);
-    const startMonth = (q - 1) * 3 + 1;
-    const endMonth = startMonth + 2;
-    const from = `${y}-${String(startMonth).padStart(2, '0')}-01`;
-    const to = new Date(y, endMonth, 0).toISOString().slice(0, 10);
-    return { dateFrom: from, dateTo: to };
+    const y = match[1];
+    const q = parseInt(match[2], 10);
+    const ranges = {
+      1: { from: `${y}-01-01`, to: `${y}-03-31` },
+      2: { from: `${y}-04-01`, to: `${y}-06-30` },
+      3: { from: `${y}-07-01`, to: `${y}-09-30` },
+      4: { from: `${y}-10-01`, to: `${y}-12-31` },
+    };
+    return ranges[q] || { dateFrom: null, dateTo: null };
   }
 
   if (periodType === 'year') {
@@ -69,10 +74,17 @@ router.get('/summary', (req, res) => {
      WHERE 1=1 ${filter}`
   ).get();
 
-  const netBalance = (totals.totalIncome || 0) - (totals.totalExpenses || 0);
+  const totalIncome = totals?.totalIncome ?? 0;
+  const totalExpenses = totals?.totalExpenses ?? 0;
+  const totalSavings = totals?.totalSavings ?? 0;
+  const transactionCount = totals?.transactionCount ?? 0;
+  const netBalance = totalIncome - totalExpenses;
 
   res.json({
-    ...totals,
+    totalIncome,
+    totalExpenses,
+    totalSavings,
+    transactionCount,
     netBalance,
     periodType,
     periodValue: periodValue ?? 'all',

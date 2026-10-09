@@ -23,9 +23,10 @@ export function buildDashboardSnapshot({
     netWorth > 0 && amount != null ? (amount / netWorth) * 100 : null;
 
   const expenseDelta =
-    summary && prevSummary?.totalExpenses != null
-      ? ((summary.totalExpenses - prevSummary.totalExpenses)
-        / Math.abs(prevSummary.totalExpenses || 1)) * 100
+    summary?.totalExpenses != null &&
+    prevSummary?.totalExpenses != null &&
+    prevSummary.totalExpenses > 0
+      ? ((summary.totalExpenses - prevSummary.totalExpenses) / prevSummary.totalExpenses) * 100
       : null;
 
   const netFlow = (summary?.totalIncome ?? 0) - (summary?.totalExpenses ?? 0);

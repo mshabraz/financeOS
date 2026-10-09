@@ -1,4 +1,5 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import clsx from 'clsx';
@@ -22,7 +23,6 @@ import DashboardWealthPortfolio from '../components/dashboard/DashboardWealthPor
 import DashboardAttention from '../components/dashboard/DashboardAttention';
 import DashboardAssets from '../components/dashboard/DashboardAssets';
 import DashboardAllocationTracker from '../components/dashboard/DashboardAllocationTracker';
-import { useUrlQueryState } from '../hooks/useUrlQueryState';
 
 const now = new Date();
 const currentMonth = format(now, 'yyyy-MM');
@@ -30,9 +30,54 @@ const currentMonth = format(now, 'yyyy-MM');
 export default function Dashboard() {
   usePrivacy();
   const qc = useQueryClient();
+  const [searchParams, setSearchParams] = useSearchParams();
 
-  const [periodType, setPeriodType] = useUrlQueryState('ptype', 'month', { replace: false });
-  const [periodValue, setPeriodValue] = useUrlQueryState('pval', currentPeriodValue('month'), { replace: false });
+  const periodType = useMemo(() => {
+    const raw = searchParams.get('ptype');
+    return ['month', 'quarter', 'year'].includes(raw) ? raw : 'month';
+  }, [searchParams]);
+
+  const periodValue = useMemo(() => {
+    const raw = searchParams.get('pval');
+    if (periodType === 'month') {
+      return /^\d{4}-(0[1-9]|1[0-2])$/.test(raw) ? raw : currentPeriodValue('month');
+    }
+    if (periodType === 'quarter') {
+      return /^\d{4}-Q[1-4]$/.test(raw) ? raw : currentPeriodValue('quarter');
+    }
+    if (periodType === 'year') {
+      return /^\d{4}$/.test(raw) ? raw : currentPeriodValue('year');
+    }
+    return currentPeriodValue('month');
+  }, [searchParams, periodType]);
+
+  const setPeriod = useCallback(
+    (nextType, nextValue) => {
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          const t = nextType || periodType;
+          const v = nextValue || currentPeriodValue(t);
+
+          if (t === 'month') {
+            next.delete('ptype');
+          } else {
+            next.set('ptype', t);
+          }
+
+          if (t === 'month' && v === currentPeriodValue('month')) {
+            next.delete('pval');
+          } else {
+            next.set('pval', v);
+          }
+          return next;
+        },
+        { replace: false }
+      );
+    },
+    [periodType, setSearchParams]
+  );
+
   const [addingAsset, setAddingAsset] = useState(false);
   const [newAssetForm, setNewAssetForm] = useState({ key: '', label: '', icon: '💵', amount: '' });
   const [assetToDelete, setAssetToDelete] = useState(null);
@@ -134,11 +179,6 @@ export default function Dashboard() {
     },
     onSettled: invalidateAssets,
   });
-
-  const handlePeriodTypeChange = (type) => {
-    setPeriodType(type);
-    setPeriodValue(currentPeriodValue(type));
-  };
 
   const trendData = useMemo(
     () =>
@@ -246,7 +286,7 @@ export default function Dashboard() {
               <button
                 key={t}
                 type="button"
-                onClick={() => handlePeriodTypeChange(t)}
+                onClick={() => setPeriod(t, currentPeriodValue(t))}
                 className={clsx(
                   'px-3 py-1.5 rounded-md font-medium capitalize transition-colors',
                   periodType === t
@@ -260,7 +300,7 @@ export default function Dashboard() {
           </div>
           <select
             value={periodValue ?? ''}
-            onChange={(e) => setPeriodValue(e.target.value)}
+            onChange={(e) => setPeriod(periodType, e.target.value)}
             className="input text-sm w-full sm:w-44"
           >
             {periodOptions.map((o) => (
