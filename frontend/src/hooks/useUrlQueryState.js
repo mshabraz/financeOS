@@ -1,9 +1,23 @@
 import { useSearchParams } from 'react-router-dom';
 import { useCallback, useMemo } from 'react';
 
+// Pending URLSearchParams shared across synchronous setter calls in the same event tick/task
+let pendingParams = null;
+let pendingReplace = true;
+let microtaskScheduled = false;
+
+function getActiveSearchParams(fallback) {
+  if (pendingParams) return pendingParams;
+  if (typeof window !== 'undefined' && window.location && typeof window.location.search === 'string') {
+    return new URLSearchParams(window.location.search);
+  }
+  return new URLSearchParams(fallback);
+}
+
 /**
  * Custom hook to synchronize component state with URL search parameters.
- * Survives page reloads, supports browser back/forward buttons, and strips default values.
+ * Survives page reloads, supports browser back/forward buttons, strips default values,
+ * and batches synchronous updates cleanly without race conditions.
  *
  * @template T
  * @param {string} key - Query parameter name
@@ -37,29 +51,48 @@ export function useUrlQueryState(key, defaultValue, options = {}) {
   const setValue = useCallback(
     (updater, callOpts = {}) => {
       const shouldReplace = callOpts.replace ?? defaultReplace;
-      setSearchParams(
-        (prev) => {
-          const next = new URLSearchParams(prev);
-          const nextVal = typeof updater === 'function' ? updater(value) : updater;
+      const current = getActiveSearchParams(searchParams);
 
-          const isDefault =
-            nextVal === defaultValue ||
-            nextVal === '' ||
-            nextVal === null ||
-            nextVal === undefined ||
-            (Array.isArray(nextVal) && nextVal.length === 0);
+      const nextVal = typeof updater === 'function' ? updater(value) : updater;
 
-          if (isDefault) {
-            next.delete(key);
-          } else {
-            next.set(key, serialize(nextVal));
+      const isDefault =
+        nextVal === defaultValue ||
+        nextVal === '' ||
+        nextVal === null ||
+        nextVal === undefined ||
+        (Array.isArray(nextVal) && nextVal.length === 0);
+
+      if (isDefault) {
+        current.delete(key);
+      } else {
+        current.set(key, serialize(nextVal));
+      }
+
+      pendingParams = current;
+      if (!shouldReplace) {
+        pendingReplace = false;
+      }
+
+      if (!microtaskScheduled) {
+        microtaskScheduled = true;
+        const scheduleFn =
+          typeof queueMicrotask === 'function'
+            ? queueMicrotask
+            : (cb) => Promise.resolve().then(cb);
+
+        scheduleFn(() => {
+          const toApply = pendingParams;
+          const replace = pendingReplace;
+          pendingParams = null;
+          pendingReplace = true;
+          microtaskScheduled = false;
+          if (toApply) {
+            setSearchParams(toApply, { replace });
           }
-          return next;
-        },
-        { replace: shouldReplace }
-      );
+        });
+      }
     },
-    [key, defaultValue, value, serialize, setSearchParams, defaultReplace]
+    [key, defaultValue, value, serialize, setSearchParams, defaultReplace, searchParams]
   );
 
   return [value, setValue];
@@ -69,21 +102,49 @@ export function useUrlQueryState(key, defaultValue, options = {}) {
  * Hook to atomically update multiple URL query parameters at once without race conditions.
  */
 export function useUrlQueryBatch() {
-  const [, setSearchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   return useCallback(
     (updates, opts = { replace: false }) => {
-      setSearchParams((prev) => {
-        const next = new URLSearchParams(prev);
-        Object.entries(updates).forEach(([k, v]) => {
-          if (v === '' || v === null || v === undefined) {
-            next.delete(k);
-          } else {
-            next.set(k, String(v));
+      const current = getActiveSearchParams(searchParams);
+      Object.entries(updates).forEach(([k, v]) => {
+        const isDefault =
+          v === '' ||
+          v === null ||
+          v === undefined ||
+          (k === 'p' && (v === 1 || v === '1')) ||
+          (k === 'notes' && !v);
+
+        if (isDefault) {
+          current.delete(k);
+        } else {
+          current.set(k, String(v));
+        }
+      });
+
+      pendingParams = current;
+      if (!opts.replace) {
+        pendingReplace = false;
+      }
+
+      if (!microtaskScheduled) {
+        microtaskScheduled = true;
+        const scheduleFn =
+          typeof queueMicrotask === 'function'
+            ? queueMicrotask
+            : (cb) => Promise.resolve().then(cb);
+
+        scheduleFn(() => {
+          const toApply = pendingParams;
+          const replace = pendingReplace;
+          pendingParams = null;
+          pendingReplace = true;
+          microtaskScheduled = false;
+          if (toApply) {
+            setSearchParams(toApply, { replace });
           }
         });
-        return next;
-      }, opts);
+      }
     },
-    [setSearchParams]
+    [searchParams, setSearchParams]
   );
 }

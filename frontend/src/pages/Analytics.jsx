@@ -58,7 +58,7 @@ const monthOptions = Array.from({ length: 24 }, (_, i) =>
 export default function Analytics() {
   usePrivacy();
   const qc = useQueryClient();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const savingsSectionRef = useRef(null);
   const focusSavings = searchParams.get('focus') === 'savings-rate';
 

@@ -24,10 +24,10 @@ import TransactionImportPanel from '../components/transactions/TransactionImport
 import DuplicateReviewPanel from '../components/transactions/DuplicateReviewPanel';
 import UserNoteField from '../components/transactions/UserNoteField';
 import { getMonthRange } from '../utils/dateFilters';
-import { fmtCurrency, privText } from '../utils/displayFormat';
 import { usePrivacy } from '../context/PrivacyContext';
 import { invalidateDashboardData } from '../lib/queryKeys';
-import { useUrlQueryState } from '../hooks/useUrlQueryState';
+import { useUrlQueryState, useUrlQueryBatch } from '../hooks/useUrlQueryState';
+import { fmtCurrency, privText } from '../utils/displayFormat';
 import clsx from 'clsx';
 
 const fmt = (n) => fmtCurrency(n, 'EUR', { abs: true });
@@ -286,12 +286,28 @@ export default function Transactions() {
     setSearchParams(next, { replace: true });
   };
 
+  const updateQueryBatch = useUrlQueryBatch();
   const [page, setPage]         = useUrlQueryState('p', 1, {
     serialize: String,
     deserialize: (v) => Math.max(1, parseInt(v, 10) || 1),
     replace: false,
   });
   const [search, setSearch]     = useUrlQueryState('q', '', { replace: true });
+  const [searchInput, setSearchInput] = useState(search);
+
+  useEffect(() => {
+    setSearchInput(search);
+  }, [search]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (searchInput !== search) {
+        setSearch(searchInput);
+        setPage(1);
+      }
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [searchInput, search, setSearch, setPage]);
   const [category, setCategory] = useUrlQueryState('cat', '', { replace: false });
   const [direction, setDir]     = useUrlQueryState('dir', '', { replace: false });
   const [filterMonth, setFilterMonth] = useUrlQueryState('month', '', { replace: false });
@@ -522,21 +538,36 @@ export default function Transactions() {
   };
 
   const onMonthChange = (v) => {
-    setFilterMonth(v);
     if (v) {
       const { dateFrom: f, dateTo: t } = getMonthRange(v);
-      setFrom(f);
-      setTo(t);
+      updateQueryBatch({ month: v, from: f, to: t, p: 1 });
     } else {
-      setFrom('');
-      setTo('');
+      updateQueryBatch({ month: '', from: '', to: '', p: 1 });
     }
-    setPage(1);
+  };
+
+  const onDateFromChange = (v) => {
+    updateQueryBatch({ from: v, month: '', p: 1 });
+  };
+
+  const onDateToChange = (v) => {
+    updateQueryBatch({ to: v, month: '', p: 1 });
   };
 
   const resetFilters = () => {
-    setSearch(''); setCategory(''); setDir(''); setFilterMonth('');
-    setFrom(''); setTo(''); setTagFilter(''); setSourceFilter(''); setHasNotesOnly(false); setPage(1);
+    setSearchInput('');
+    updateQueryBatch({
+      q: '',
+      cat: '',
+      dir: '',
+      month: '',
+      from: '',
+      to: '',
+      tag: '',
+      src: '',
+      notes: '',
+      p: 1,
+    });
   };
 
   const selectedSplit = useMemo(() => splitSelectedIds(selected), [selected]);
@@ -618,7 +649,7 @@ export default function Transactions() {
           <div className="relative col-span-2">
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input type="text" placeholder="Search merchant, details, your notes…"
-              value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+              value={searchInput} onChange={(e) => setSearchInput(e.target.value)}
               className="input pl-8" />
           </div>
           <select value={category} onChange={(e) => { setCategory(e.target.value); setPage(1); }} className="input">
@@ -638,13 +669,13 @@ export default function Transactions() {
           <MonthFilterSelect value={filterMonth} onChange={onMonthChange} className="input col-span-2 sm:col-span-1" />
           <DatePicker
             value={dateFrom}
-            onChange={(v) => { setFilterMonth(''); setFrom(v); setPage(1); }}
+            onChange={onDateFromChange}
             placeholder="From"
             className="col-span-1"
           />
           <DatePicker
             value={dateTo}
-            onChange={(v) => { setFilterMonth(''); setTo(v); setPage(1); }}
+            onChange={onDateToChange}
             placeholder="To"
             className="col-span-1"
           />
@@ -664,7 +695,7 @@ export default function Transactions() {
             />
             Has my note
           </label>
-          {(search || category || direction || sourceFilter || filterMonth || dateFrom || dateTo || tagFilter || hasNotesOnly) && (
+          {(searchInput || category || direction || sourceFilter || filterMonth || dateFrom || dateTo || tagFilter || hasNotesOnly) && (
             <button onClick={resetFilters} className="btn-ghost text-xs text-gray-400">Clear filters</button>
           )}
         </div>
