@@ -12,7 +12,17 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuLabel,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
 } from '../components/ui/DropdownMenu';
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from '../components/ui/Select';
 import {
   Dialog,
   DialogContent,
@@ -125,14 +135,20 @@ function BulkCategorizeModal({ merchant, onClose, onApplied }) {
             </div>
           </div>
         )}
-        <select value={catId} onChange={(e) => setCatId(e.target.value)} className="input w-full">
-          <option value="">Select new category...</option>
-          {categories?.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.icon} {c.name}
-            </option>
-          ))}
-        </select>
+        <Select value={catId || 'none'} onValueChange={(val) => setCatId(val === 'none' ? '' : val)}>
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder="Select new category..." />
+          </SelectTrigger>
+          <SelectContent className="max-h-60">
+            <SelectItem value="none">Select new category...</SelectItem>
+            {categories?.map((c) => (
+              <SelectItem key={c.id} value={String(c.id)}>
+                <span className="mr-2">{c.icon}</span>
+                <span>{c.name}</span>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         <p className="text-xs text-gray-400">
           To make this categorization apply to future imports, create a rule on the Categories page.
         </p>
@@ -176,6 +192,45 @@ function TagChip({ tag, onRemove }) {
         </button>
       )}
     </span>
+  );
+}
+
+function RowTagDropdown({ tx, allTags, onAssignTag, align = 'start' }) {
+  const unassigned = allTags?.filter((t) => !tx.tags?.find((tt) => tt.id === t.id)) || [];
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          className="inline-flex items-center justify-center p-1 rounded-md text-gray-400 hover:text-brand-600 dark:hover:text-brand-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors focus:outline-none"
+          title="Add tag"
+          aria-label="Add tag"
+        >
+          <Tag size={12} />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align={align} className="w-48 max-h-60 overflow-y-auto">
+        <DropdownMenuLabel className="text-xs">Add tag</DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        {unassigned.length === 0 ? (
+          <div className="px-2 py-2 text-xs text-gray-400 text-center">All tags assigned</div>
+        ) : (
+          unassigned.map((t) => (
+            <DropdownMenuItem
+              key={t.id}
+              onClick={() => onAssignTag(t.id)}
+              className="flex items-center gap-2 cursor-pointer text-xs"
+            >
+              <span
+                className="w-2 h-2 rounded-full shrink-0"
+                style={{ backgroundColor: t.color || '#3b82f6' }}
+              />
+              <span className="truncate">{t.name}</span>
+            </DropdownMenuItem>
+          ))
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 
@@ -387,10 +442,6 @@ export default function Transactions() {
   });
   const [sortBy, setSortBy]     = useUrlQueryState('sort', 'date', { replace: false });
   const [sortDir, setSortDir]   = useUrlQueryState('order', 'desc', { replace: false });
-  const [editId, setEditId]     = useState(null);
-  const [editCat, setEditCat]   = useState('');
-  const [tagEditId, setTagEditId] = useState(null);
-  const [newTagId, setNewTagId] = useState('');
   const [expandedId, setExpandedId] = useState(null); // ← expanded row
   const [selected, setSelected] = useState(new Set());
   const [bulkApplying, setBulkApplying] = useState(false);
@@ -466,7 +517,6 @@ export default function Transactions() {
     onSettled: () => {
       qc.invalidateQueries({ queryKey: ['transactions'] });
       invalidateDashboardData(qc);
-      setEditId(null);
     },
   });
 
@@ -721,21 +771,41 @@ export default function Transactions() {
               value={searchInput} onChange={(e) => setSearchInput(e.target.value)}
               className="input pl-8" />
           </div>
-          <select value={category} onChange={(e) => { setCategory(e.target.value); setPage(1); }} className="input">
-            <option value="">All categories</option>
-            {categories?.map((c) => <option key={c.id} value={c.id}>{c.icon} {c.name}</option>)}
-          </select>
-          <select value={direction} onChange={(e) => { setDir(e.target.value); setPage(1); }} className="input">
-            <option value="">All</option>
-            <option value="D">Expenses</option>
-            <option value="K">Income</option>
-          </select>
-          <select value={sourceFilter} onChange={(e) => { setSourceFilter(e.target.value); setPage(1); }} className="input">
-            <option value="">All sources</option>
-            <option value="bank">Bank only</option>
-            <option value="revolut">Revolut only</option>
-          </select>
-          <MonthFilterSelect value={filterMonth} onChange={onMonthChange} className="input col-span-2 sm:col-span-1" />
+          <Select value={category || 'all'} onValueChange={(val) => { setCategory(val === 'all' ? '' : val); setPage(1); }}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="All categories" />
+            </SelectTrigger>
+            <SelectContent className="max-h-72">
+              <SelectItem value="all">All categories</SelectItem>
+              {categories?.map((c) => (
+                <SelectItem key={c.id} value={String(c.id)}>
+                  <span className="mr-2">{c.icon}</span>
+                  <span>{c.name}</span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={direction || 'all'} onValueChange={(val) => { setDir(val === 'all' ? '' : val); setPage(1); }}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="All directions" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All directions</SelectItem>
+              <SelectItem value="D">Expenses</SelectItem>
+              <SelectItem value="K">Income</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={sourceFilter || 'all'} onValueChange={(val) => { setSourceFilter(val === 'all' ? '' : val); setPage(1); }}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="All sources" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All sources</SelectItem>
+              <SelectItem value="bank">Bank only</SelectItem>
+              <SelectItem value="revolut">Revolut only</SelectItem>
+            </SelectContent>
+          </Select>
+          <MonthFilterSelect value={filterMonth} onChange={onMonthChange} className="col-span-2 sm:col-span-1" />
           <DatePicker
             value={dateFrom}
             onChange={onDateFromChange}
@@ -750,11 +820,28 @@ export default function Transactions() {
           />
         </div>
         <div className="flex gap-2 items-center flex-wrap">
-          <Tag size={13} className="text-gray-400" />
-          <select value={tagFilter} onChange={(e) => { setTagFilter(e.target.value); setPage(1); }} className="input w-44 text-xs">
-            <option value="">Filter by tag...</option>
-            {allTags?.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
-          </select>
+          <Select value={tagFilter || 'all'} onValueChange={(val) => { setTagFilter(val === 'all' ? '' : val); setPage(1); }}>
+            <SelectTrigger className="w-48 text-xs min-h-[36px] h-9">
+              <div className="flex items-center gap-1.5 truncate">
+                <Tag size={13} className="text-gray-400 shrink-0" />
+                <SelectValue placeholder="Filter by tag..." />
+              </div>
+            </SelectTrigger>
+            <SelectContent className="max-h-60">
+              <SelectItem value="all">All tags</SelectItem>
+              {allTags?.map((t) => (
+                <SelectItem key={t.id} value={String(t.id)}>
+                  <div className="flex items-center gap-2">
+                    <span
+                      className="w-2 h-2 rounded-full shrink-0"
+                      style={{ backgroundColor: t.color || '#3b82f6' }}
+                    />
+                    <span className="truncate">{t.name}</span>
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <label className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400 cursor-pointer touch-manipulation">
             <input
               type="checkbox"
@@ -983,6 +1070,11 @@ export default function Transactions() {
                   {tx.tags?.map((tag) => (
                     <TagChip key={tag.id} tag={tag} onRemove={() => removeTagMut.mutate({ txId: rowId, tagId: tag.id, source: tx.source })} />
                   ))}
+                  <RowTagDropdown
+                    tx={tx}
+                    allTags={allTags}
+                    onAssignTag={(tagId) => assignTagMut.mutate({ txId: rowId, tagId, source: tx.source })}
+                  />
                 </div>
                 <div className="mt-2">
                   <UserNoteField
@@ -1177,25 +1269,11 @@ export default function Transactions() {
                                 onRemove={() => removeTagMut.mutate({ txId: rowId, tagId: tag.id, source: tx.source })}
                               />
                             ))}
-                            {tagEditId === rowId ? (
-                              <div className="flex items-center gap-1">
-                                <select value={newTagId} onChange={(e) => setNewTagId(e.target.value)}
-                                  className="input py-0.5 text-xs w-28" autoFocus>
-                                  <option value="">Tag...</option>
-                                  {allTags?.filter((t) => !tx.tags?.find((tt) => tt.id === t.id)).map((t) => (
-                                    <option key={t.id} value={t.id}>{t.name}</option>
-                                  ))}
-                                </select>
-                                <button type="button" onClick={() => { if (newTagId) assignTagMut.mutate({ txId: rowId, tagId: parseInt(newTagId), source: tx.source }); setTagEditId(null); setNewTagId(''); }}
-                                  className="p-0.5 rounded text-green-600"><Check size={12}/></button>
-                                <button type="button" onClick={() => setTagEditId(null)} className="p-0.5 rounded text-gray-400"><X size={12}/></button>
-                              </div>
-                            ) : (
-                              <button type="button" onClick={() => { setTagEditId(rowId); setNewTagId(''); }}
-                                className="text-gray-300 dark:text-gray-600 hover:text-brand-400 dark:hover:text-brand-400">
-                                <Tag size={12} />
-                              </button>
-                            )}
+                            <RowTagDropdown
+                              tx={tx}
+                              allTags={allTags}
+                              onAssignTag={(tagId) => assignTagMut.mutate({ txId: rowId, tagId, source: tx.source })}
+                            />
                           </div>
                         </td>
 
@@ -1236,10 +1314,31 @@ export default function Transactions() {
                                   <span>Categorize similar</span>
                                 </DropdownMenuItem>
                               )}
-                              <DropdownMenuItem onClick={() => setTagEditId(rowId)} className="flex items-center gap-2 cursor-pointer">
-                                <Tag size={14} />
-                                <span>Add tag</span>
-                              </DropdownMenuItem>
+                              <DropdownMenuSub>
+                                <DropdownMenuSubTrigger className="flex items-center gap-2 cursor-pointer text-xs">
+                                  <Tag size={14} />
+                                  <span>Add tag</span>
+                                </DropdownMenuSubTrigger>
+                                <DropdownMenuSubContent className="w-48 max-h-60 overflow-y-auto">
+                                  {allTags?.filter((t) => !tx.tags?.find((tt) => tt.id === t.id)).length === 0 ? (
+                                    <div className="px-2 py-2 text-xs text-gray-400 text-center">All tags assigned</div>
+                                  ) : (
+                                    allTags?.filter((t) => !tx.tags?.find((tt) => tt.id === t.id)).map((t) => (
+                                      <DropdownMenuItem
+                                        key={t.id}
+                                        onClick={() => assignTagMut.mutate({ txId: rowId, tagId: t.id, source: tx.source })}
+                                        className="flex items-center gap-2 cursor-pointer text-xs"
+                                      >
+                                        <span
+                                          className="w-2 h-2 rounded-full shrink-0"
+                                          style={{ backgroundColor: t.color || '#3b82f6' }}
+                                        />
+                                        <span className="truncate">{t.name}</span>
+                                      </DropdownMenuItem>
+                                    ))
+                                  )}
+                                </DropdownMenuSubContent>
+                              </DropdownMenuSub>
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </td>

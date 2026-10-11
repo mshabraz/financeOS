@@ -18,6 +18,13 @@ import TransactionSourceBadges, { TransactionAmountDetail } from './TransactionS
 import CategoryBadge from '../ui/CategoryBadge';
 import LoadingSpinner from '../ui/LoadingSpinner';
 import QueryErrorPanel from '../ui/QueryErrorPanel';
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from '../ui/Select';
 import { fmtCurrency, privText } from '../../utils/displayFormat';
 import { usePrivacy } from '../../context/PrivacyContext';
 
@@ -328,16 +335,17 @@ export default function DuplicateReviewPanel() {
               {m.label}
             </button>
           ))}
-          <select
-            value={minConfidence}
-            onChange={(e) => setMinConfidence(e.target.value)}
-            className="input text-sm min-h-[44px]"
-          >
-            <option value="very_high">Very high+</option>
-            <option value="high">High+</option>
-            <option value="medium">Medium+</option>
-            <option value="low">All levels</option>
-          </select>
+          <Select value={minConfidence} onValueChange={setMinConfidence}>
+            <SelectTrigger className="w-36 text-sm">
+              <SelectValue placeholder="Confidence" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="very_high">Very high+</SelectItem>
+              <SelectItem value="high">High+</SelectItem>
+              <SelectItem value="medium">Medium+</SelectItem>
+              <SelectItem value="low">All levels</SelectItem>
+            </SelectContent>
+          </Select>
           <input
             type="search"
             placeholder="Filter merchant…"
