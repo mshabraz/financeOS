@@ -32,6 +32,16 @@ import {
 import { Button } from '../components/ui/Button';
 import { Tabs, TabsList, TabsTrigger } from '../components/ui/Tabs';
 import {
+  ContextMenu,
+  ContextMenuTrigger,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuSub,
+  ContextMenuSubContent,
+  ContextMenuSubTrigger,
+} from '../components/ui/ContextMenu';
+import {
   getTransactions, updateTransaction, getCategories,
   exportTransactionsCSV, getTags, assignTag, removeTag, assignRevolutTag, removeRevolutTag,
   bulkCategorizePrev, bulkCategorizeApply, bulkUpdateCategory, bulkAssignTag, bulkDeleteTransactions,
@@ -1171,13 +1181,15 @@ export default function Transactions() {
                     return (
                     <Fragment key={rowId}>
                       {/* ── Main row ── */}
-                      <tr
-                        className={clsx(
-                          'hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors',
-                          selected.has(rowId) && 'bg-brand-50 dark:bg-brand-900/10',
-                          expandedId === rowId && 'border-b-0'
-                        )}
-                      >
+                      <ContextMenu>
+                        <ContextMenuTrigger asChild>
+                          <tr
+                            className={clsx(
+                              'hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors',
+                              selected.has(rowId) && 'bg-brand-50 dark:bg-brand-900/10',
+                              expandedId === rowId && 'border-b-0'
+                            )}
+                          >
                         <td className="px-4 py-2.5">
                           <input type="checkbox" checked={selected.has(rowId)} onChange={() => toggleSelect(rowId)} className="rounded" />
                         </td>
@@ -1355,6 +1367,108 @@ export default function Transactions() {
                           </DropdownMenu>
                         </td>
                       </tr>
+                    </ContextMenuTrigger>
+                    <ContextMenuContent className="w-56">
+                      <ContextMenuItem
+                        onClick={() => {
+                          const desc = tx.merchant || tx.beneficiary || tx.details || '';
+                          if (desc) {
+                            navigator.clipboard.writeText(desc);
+                            toast.success('Description copied to clipboard');
+                          }
+                        }}
+                        className="gap-2"
+                      >
+                        <Copy size={13} />
+                        <span>Copy description</span>
+                      </ContextMenuItem>
+                      <ContextMenuItem
+                        onClick={() => {
+                          const val = `${tx.direction === 'K' ? '+' : '-'}${fmt(tx.amount)}`;
+                          navigator.clipboard.writeText(val);
+                          toast.success('Amount copied to clipboard');
+                        }}
+                        className="gap-2"
+                      >
+                        <Copy size={13} />
+                        <span>Copy amount</span>
+                      </ContextMenuItem>
+                      <ContextMenuItem
+                        onClick={() => toggleSelect(rowId)}
+                        className="gap-2"
+                      >
+                        <span>{selected.has(rowId) ? 'Deselect row' : 'Select row'}</span>
+                      </ContextMenuItem>
+                      <ContextMenuSeparator />
+                      <ContextMenuItem onClick={() => toggleExpand(rowId)} className="gap-2">
+                        <ChevronDown size={13} className={clsx(expandedId === rowId && 'rotate-180')} />
+                        <span>{expandedId === rowId ? 'Hide details' : 'View details'}</span>
+                      </ContextMenuItem>
+                      <ContextMenuSub>
+                        <ContextMenuSubTrigger className="gap-2">
+                          <span>Set category</span>
+                        </ContextMenuSubTrigger>
+                        <ContextMenuSubContent className="w-52 max-h-72 overflow-y-auto">
+                          {categories?.map((c) => (
+                            <ContextMenuItem
+                              key={c.id}
+                              onClick={() => updateMut.mutate({ id: rowId, categoryId: String(c.id) })}
+                              className={clsx(
+                                'gap-2',
+                                Number(tx.category_id) === Number(c.id) && 'font-semibold text-brand-600 dark:text-brand-400 bg-brand-50/50 dark:bg-brand-900/20'
+                              )}
+                            >
+                              <span>{c.icon}</span>
+                              <span className="flex-1 truncate">{c.name}</span>
+                              {Number(tx.category_id) === Number(c.id) && <Check size={13} className="ml-auto" />}
+                            </ContextMenuItem>
+                          ))}
+                        </ContextMenuSubContent>
+                      </ContextMenuSub>
+                      <ContextMenuSub>
+                        <ContextMenuSubTrigger className="gap-2">
+                          <Tag size={13} />
+                          <span>Add tag</span>
+                        </ContextMenuSubTrigger>
+                        <ContextMenuSubContent className="w-48 max-h-60 overflow-y-auto">
+                          {allTags?.filter((t) => !tx.tags?.find((tt) => tt.id === t.id)).length === 0 ? (
+                            <div className="px-2 py-2 text-xs text-gray-400 text-center">All tags assigned</div>
+                          ) : (
+                            allTags?.filter((t) => !tx.tags?.find((tt) => tt.id === t.id)).map((t) => (
+                              <ContextMenuItem
+                                key={t.id}
+                                onClick={() => assignTagMut.mutate({ txId: rowId, tagId: t.id, source: tx.source })}
+                                className="gap-2"
+                              >
+                                <span
+                                  className="w-2 h-2 rounded-full shrink-0"
+                                  style={{ backgroundColor: t.color || '#3b82f6' }}
+                                />
+                                <span className="truncate">{t.name}</span>
+                              </ContextMenuItem>
+                            ))
+                          )}
+                        </ContextMenuSubContent>
+                      </ContextMenuSub>
+                      {(tx.merchant || tx.details) && (
+                        <ContextMenuItem onClick={() => setBulkModal(tx.merchant || tx.details)} className="gap-2 text-brand-600 dark:text-brand-400">
+                          <Layers size={13} />
+                          <span>Categorize similar...</span>
+                        </ContextMenuItem>
+                      )}
+                      <ContextMenuSeparator />
+                      <ContextMenuItem
+                        onClick={() => {
+                          setSelected(new Set([rowId]));
+                          setBulkDeleteConfirmOpen(true);
+                        }}
+                        className="gap-2 text-rose-600 dark:text-rose-400 focus:text-rose-600 dark:focus:text-rose-400 focus:bg-rose-50 dark:focus:bg-rose-950/40"
+                      >
+                        <Trash2 size={13} />
+                        <span>Delete transaction</span>
+                      </ContextMenuItem>
+                    </ContextMenuContent>
+                  </ContextMenu>
 
                       {/* ── Expanded detail row ── */}
                       {expandedId === rowId && (

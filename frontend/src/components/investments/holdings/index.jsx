@@ -2,9 +2,17 @@ import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import {
   TrendingUp, DollarSign, Wallet, AlertCircle, Search, RefreshCw,
-  Link2, Unlink, Loader2,
+  Link2, Unlink, Loader2, Copy,
 } from 'lucide-react';
 import clsx from 'clsx';
+import { toast } from 'sonner';
+import {
+  ContextMenu,
+  ContextMenuTrigger,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+} from '../../ui/ContextMenu';
 import {
   getInvestmentMarketHealth,
   searchInvestmentSecurities, bindInvestmentSecurity,
@@ -523,88 +531,148 @@ export function MarketHoldingsTable({ data, valuation, onBind, onUnbind, showEur
                   h.marketValueNative != null &&
                   h.marketValueEur != null;
                 return (
-                  <tr key={`${h.broker}-${h.ticker}-${i}`} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                    <td className="px-3 py-2.5">
-                      <span className="text-xs px-1.5 py-0.5 rounded font-medium text-white" style={{ background: BROKER_COLORS[h.broker] || '#94a3b8' }}>
-                        {BROKER_LABELS[h.broker] || h.broker}
-                      </span>
-                    </td>
-                    <td className="px-3 py-2.5 font-mono font-bold text-brand-600">{h.ticker}</td>
-                    <td className="px-3 py-2.5 max-w-[180px]">
-                      <SecurityDisplay
-                        row={h}
-                        primaryClassName="text-xs font-medium text-gray-700 dark:text-gray-300 truncate"
-                        secondaryClassName="text-[10px] text-gray-500 font-mono truncate"
-                      />
-                      {badge && (
-                        <div className="mt-0.5">
-                          <span className={clsx('inline-block text-[10px] px-1.5 py-0.5 rounded', badge.cls)}>
-                            {badge.text}
+                  <ContextMenu key={`${h.broker}-${h.ticker}-${i}`}>
+                    <ContextMenuTrigger asChild>
+                      <tr className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                        <td className="px-3 py-2.5">
+                          <span className="text-xs px-1.5 py-0.5 rounded font-medium text-white" style={{ background: BROKER_COLORS[h.broker] || '#94a3b8' }}>
+                            {BROKER_LABELS[h.broker] || h.broker}
                           </span>
-                          {badge.sub && (
-                            <p className="text-[10px] text-red-400 mt-0.5 line-clamp-2" title={badge.sub}>
-                              {badge.sub}
-                            </p>
+                        </td>
+                        <td className="px-3 py-2.5 font-mono font-bold text-brand-600">{h.ticker}</td>
+                        <td className="px-3 py-2.5 max-w-[180px]">
+                          <SecurityDisplay
+                            row={h}
+                            primaryClassName="text-xs font-medium text-gray-700 dark:text-gray-300 truncate"
+                            secondaryClassName="text-[10px] text-gray-500 font-mono truncate"
+                          />
+                          {badge && (
+                            <div className="mt-0.5">
+                              <span className={clsx('inline-block text-[10px] px-1.5 py-0.5 rounded', badge.cls)}>
+                                {badge.text}
+                              </span>
+                              {badge.sub && (
+                                <p className="text-[10px] text-red-400 mt-0.5 line-clamp-2" title={badge.sub}>
+                                  {badge.sub}
+                                </p>
+                              )}
+                            </div>
                           )}
-                        </div>
-                      )}
-                    </td>
-                    <td className="px-3 py-2.5">
-                      <ManualQtyCell holding={h} onSaved={onBind} />
-                    </td>
-                    <td className="px-3 py-2.5 text-xs">
-                      <ManualAvgCostCell holding={h} onSaved={onBind} />
-                    </td>
-                    <td className="px-3 py-2.5">
-                      {showEur && h.latestPriceEur != null ? (
-                        <div>
-                          <span>{fmt(h.latestPriceEur, 'EUR')}</span>
-                          {h.latestPriceNative != null && nativeCcy !== 'EUR' && (
-                            <span className="block text-[10px] text-gray-400">
-                              {fmt(h.latestPriceNative, nativeCcy)} / unit
-                            </span>
-                          )}
-                        </div>
-                      ) : h.latestPrice != null ? fmt(h.latestPrice, nativeCcy) : '—'}
-                    </td>
-                    <td className="px-3 py-2.5 font-medium">
-                      {showEur && h.marketValueEur != null ? (
-                        <div>
-                          <span>{fmt(h.marketValueEur, 'EUR')}</span>
-                          {showNative && (
-                            <span className="block text-[10px] text-gray-400">
-                              {fmt(h.marketValueNative, nativeCcy)}
-                            </span>
-                          )}
-                        </div>
-                      ) : h.totalCostBasis > 0 ? fmt(h.totalCostBasis, h.currency) : '—'}
-                    </td>
-                    <td className={clsx('px-3 py-2.5 font-medium',
-                      showEur && (h.unrealizedPnLEur ?? 0) > 0.01 ? 'text-green-600' : showEur && (h.unrealizedPnLEur ?? 0) < -0.01 ? 'text-red-500' : 'text-gray-400')}>
-                      {showEur && h.unrealizedPnLEur != null
-                        ? `${h.unrealizedPnLEur >= 0 ? '+' : ''}${fmt(h.unrealizedPnLEur, 'EUR')}`
-                        : '—'}
-                    </td>
-                    <td className="px-3 py-2.5 text-[10px] text-gray-400 whitespace-nowrap">
-                      {h.priceFetchedAt ? formatSyncTime(h.priceFetchedAt) : '—'}
-                    </td>
-                    <td className="px-3 py-2.5">
-                      {h.priceStatus === 'needs_binding' || h.priceStatus === 'error' ? (
-                        <button type="button" onClick={() => setBindTarget(h)} className="text-xs text-brand-600 hover:underline flex items-center gap-1">
-                          <Link2 size={12} /> {h.priceStatus === 'error' ? 'Re-link' : 'Link'}
-                        </button>
-                      ) : h.binding ? (
-                        <button
-                          type="button"
-                          onClick={() => onUnbind?.(h)}
-                          className="text-xs text-gray-400 hover:text-red-500 flex items-center gap-1"
-                          title="Clear binding"
+                        </td>
+                        <td className="px-3 py-2.5">
+                          <ManualQtyCell holding={h} onSaved={onBind} />
+                        </td>
+                        <td className="px-3 py-2.5 text-xs">
+                          <ManualAvgCostCell holding={h} onSaved={onBind} />
+                        </td>
+                        <td className="px-3 py-2.5">
+                          {showEur && h.latestPriceEur != null ? (
+                            <div>
+                              <span>{fmt(h.latestPriceEur, 'EUR')}</span>
+                              {h.latestPriceNative != null && nativeCcy !== 'EUR' && (
+                                <span className="block text-[10px] text-gray-400">
+                                  {fmt(h.latestPriceNative, nativeCcy)} / unit
+                                </span>
+                              )}
+                            </div>
+                          ) : h.latestPrice != null ? fmt(h.latestPrice, nativeCcy) : '—'}
+                        </td>
+                        <td className="px-3 py-2.5 font-medium">
+                          {showEur && h.marketValueEur != null ? (
+                            <div>
+                              <span>{fmt(h.marketValueEur, 'EUR')}</span>
+                              {showNative && (
+                                <span className="block text-[10px] text-gray-400">
+                                  {fmt(h.marketValueNative, nativeCcy)}
+                                </span>
+                              )}
+                            </div>
+                          ) : h.totalCostBasis > 0 ? fmt(h.totalCostBasis, h.currency) : '—'}
+                        </td>
+                        <td className={clsx('px-3 py-2.5 font-medium',
+                          showEur && (h.unrealizedPnLEur ?? 0) > 0.01 ? 'text-green-600' : showEur && (h.unrealizedPnLEur ?? 0) < -0.01 ? 'text-red-500' : 'text-gray-400')}>
+                          {showEur && h.unrealizedPnLEur != null
+                            ? `${h.unrealizedPnLEur >= 0 ? '+' : ''}${fmt(h.unrealizedPnLEur, 'EUR')}`
+                            : '—'}
+                        </td>
+                        <td className="px-3 py-2.5 text-[10px] text-gray-400 whitespace-nowrap">
+                          {h.priceFetchedAt ? formatSyncTime(h.priceFetchedAt) : '—'}
+                        </td>
+                        <td className="px-3 py-2.5">
+                          {h.priceStatus === 'needs_binding' || h.priceStatus === 'error' ? (
+                            <button type="button" onClick={() => setBindTarget(h)} className="text-xs text-brand-600 hover:underline flex items-center gap-1">
+                              <Link2 size={12} /> {h.priceStatus === 'error' ? 'Re-link' : 'Link'}
+                            </button>
+                          ) : h.binding ? (
+                            <button
+                              type="button"
+                              onClick={() => onUnbind?.(h)}
+                              className="text-xs text-gray-400 hover:text-red-500 flex items-center gap-1"
+                              title="Clear binding"
+                            >
+                              <Unlink size={12} />
+                            </button>
+                          ) : null}
+                        </td>
+                      </tr>
+                    </ContextMenuTrigger>
+                    <ContextMenuContent className="w-52">
+                      <ContextMenuItem
+                        onClick={() => {
+                          if (h.ticker) {
+                            navigator.clipboard.writeText(h.ticker);
+                            toast.success(`Ticker ${h.ticker} copied`);
+                          }
+                        }}
+                        className="gap-2"
+                      >
+                        <Copy size={13} />
+                        <span>Copy ticker ({h.ticker})</span>
+                      </ContextMenuItem>
+                      <ContextMenuItem
+                        onClick={() => {
+                          const name = h.name || h.fundName || h.securityName || h.ticker;
+                          if (name) {
+                            navigator.clipboard.writeText(name);
+                            toast.success('Security name copied');
+                          }
+                        }}
+                        className="gap-2"
+                      >
+                        <Copy size={13} />
+                        <span>Copy name</span>
+                      </ContextMenuItem>
+                      {h.isin && (
+                        <ContextMenuItem
+                          onClick={() => {
+                            navigator.clipboard.writeText(h.isin);
+                            toast.success(`ISIN ${h.isin} copied`);
+                          }}
+                          className="gap-2"
                         >
-                          <Unlink size={12} />
-                        </button>
-                      ) : null}
-                    </td>
-                  </tr>
+                          <Copy size={13} />
+                          <span>Copy ISIN ({h.isin})</span>
+                        </ContextMenuItem>
+                      )}
+                      <ContextMenuSeparator />
+                      <ContextMenuItem
+                        onClick={() => setBindTarget(h)}
+                        className="gap-2"
+                      >
+                        <Link2 size={13} />
+                        <span>{h.binding ? 'Edit market link' : 'Link market ticker'}</span>
+                      </ContextMenuItem>
+                      {h.binding && (
+                        <ContextMenuItem
+                          onClick={() => onUnbind?.(h)}
+                          className="gap-2 text-rose-600 dark:text-rose-400 focus:text-rose-600 dark:focus:text-rose-400 focus:bg-rose-50 dark:focus:bg-rose-950/40"
+                        >
+                          <Unlink size={13} />
+                          <span>Clear ticker link</span>
+                        </ContextMenuItem>
+                      )}
+                    </ContextMenuContent>
+                  </ContextMenu>
                 );
               })}
             </tbody>
