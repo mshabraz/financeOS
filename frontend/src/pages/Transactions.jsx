@@ -1409,23 +1409,28 @@ export default function Transactions() {
                       </ContextMenuItem>
                       <ContextMenuSub>
                         <ContextMenuSubTrigger className="gap-2">
+                          <FolderPlus size={13} />
                           <span>Set category</span>
                         </ContextMenuSubTrigger>
                         <ContextMenuSubContent className="w-52 max-h-72 overflow-y-auto">
-                          {categories?.map((c) => (
-                            <ContextMenuItem
-                              key={c.id}
-                              onClick={() => updateMut.mutate({ id: rowId, categoryId: String(c.id) })}
-                              className={clsx(
-                                'gap-2',
-                                Number(tx.category_id) === Number(c.id) && 'font-semibold text-brand-600 dark:text-brand-400 bg-brand-50/50 dark:bg-brand-900/20'
-                              )}
-                            >
-                              <span>{c.icon}</span>
-                              <span className="flex-1 truncate">{c.name}</span>
-                              {Number(tx.category_id) === Number(c.id) && <Check size={13} className="ml-auto" />}
-                            </ContextMenuItem>
-                          ))}
+                          {categories?.length === 0 ? (
+                            <div className="px-2 py-2 text-xs text-gray-400 text-center">No categories found</div>
+                          ) : (
+                            categories?.map((c) => (
+                              <ContextMenuItem
+                                key={c.id}
+                                onClick={() => updateMut.mutate({ id: rowId, categoryId: String(c.id) })}
+                                className={clsx(
+                                  'gap-2',
+                                  Number(tx.category_id) === Number(c.id) && 'font-semibold text-brand-600 dark:text-brand-400 bg-brand-50/50 dark:bg-brand-900/20'
+                                )}
+                              >
+                                <span>{c.icon}</span>
+                                <span className="flex-1 truncate">{c.name}</span>
+                                {Number(tx.category_id) === Number(c.id) && <Check size={13} className="ml-auto" />}
+                              </ContextMenuItem>
+                            ))
+                          )}
                         </ContextMenuSubContent>
                       </ContextMenuSub>
                       <ContextMenuSub>

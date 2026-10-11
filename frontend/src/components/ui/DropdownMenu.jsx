@@ -14,7 +14,9 @@ const DropdownMenuSubTrigger = React.forwardRef(({ className, inset, children, .
   <DropdownMenuPrimitive.SubTrigger
     ref={ref}
     className={cn(
-      'flex cursor-default select-none items-center rounded-md px-2 py-1.5 text-sm outline-none focus:bg-black/[0.05] dark:focus:bg-white/[0.08] data-[state=open]:bg-black/[0.05] dark:data-[state=open]:bg-white/[0.08]',
+      'flex cursor-pointer select-none items-center rounded-md px-2.5 py-1.5 text-xs sm:text-sm outline-none transition-colors',
+      'focus:bg-black/[0.05] dark:focus:bg-white/[0.08] focus:text-slate-900 dark:focus:text-white',
+      'data-[state=open]:bg-black/[0.05] dark:data-[state=open]:bg-white/[0.08] data-[state=open]:text-slate-900 dark:data-[state=open]:text-white',
       inset && 'pl-8',
       className
     )}
@@ -27,16 +29,18 @@ const DropdownMenuSubTrigger = React.forwardRef(({ className, inset, children, .
 DropdownMenuSubTrigger.displayName = DropdownMenuPrimitive.SubTrigger.displayName;
 
 const DropdownMenuSubContent = React.forwardRef(({ className, ...props }, ref) => (
-  <DropdownMenuPrimitive.SubContent
-    ref={ref}
-    className={cn(
-      'z-50 min-w-[8rem] overflow-hidden rounded-xl border border-black/[0.08] dark:border-white/[0.1] bg-white/90 dark:bg-slate-900/85 backdrop-blur-xl p-1 text-slate-900 dark:text-slate-100 shadow-xl dark:shadow-2xl',
-      'shadow-[0_10px_30px_-10px_rgba(0,0,0,0.1),inset_0_1px_0_0_rgba(255,255,255,0.9)] dark:shadow-[0_20px_40px_-12px_rgba(0,0,0,0.7),inset_0_1px_0_0_rgba(255,255,255,0.08)]',
-      'data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2',
-      className
-    )}
-    {...props}
-  />
+  <DropdownMenuPrimitive.Portal>
+    <DropdownMenuPrimitive.SubContent
+      ref={ref}
+      className={cn(
+        'z-[60] min-w-[8rem] overflow-hidden rounded-xl border border-black/[0.08] dark:border-white/[0.1] bg-white/95 dark:bg-slate-900/90 backdrop-blur-xl p-1 text-slate-900 dark:text-slate-100 shadow-xl dark:shadow-2xl',
+        'shadow-[0_10px_30px_-10px_rgba(0,0,0,0.1),inset_0_1px_0_0_rgba(255,255,255,0.9)] dark:shadow-[0_20px_40px_-12px_rgba(0,0,0,0.7),inset_0_1px_0_0_rgba(255,255,255,0.08)]',
+        'data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2',
+        className
+      )}
+      {...props}
+    />
+  </DropdownMenuPrimitive.Portal>
 ));
 DropdownMenuSubContent.displayName = DropdownMenuPrimitive.SubContent.displayName;
 
