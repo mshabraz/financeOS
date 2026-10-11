@@ -3,8 +3,22 @@ import { useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Search, Download, ChevronLeft, ChevronRight, Check, X,
-  Tag, Layers, AlertCircle, ChevronDown, ChevronRight as ChevronRt, Copy, Upload, Trash2, Shield, ArrowUpDown,
+  Tag, Layers, AlertCircle, ChevronDown, ChevronUp, ChevronRight as ChevronRt, Copy, Upload, Trash2, Shield, ArrowUpDown, MoreHorizontal,
 } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuLabel,
+} from '../components/ui/DropdownMenu';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '../components/ui/Dialog';
 import {
   getTransactions, updateTransaction, getCategories,
   exportTransactionsCSV, getTags, assignTag, removeTag, assignRevolutTag, removeRevolutTag,
@@ -59,35 +73,52 @@ function BulkCategorizeModal({ merchant, onClose, onApplied }) {
   };
 
   return (
-    <div className="modal-overlay">
-      <div className="modal-panel space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Apply category to similar</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X size={18} /></button>
-        </div>
+    <Dialog open={!!merchant} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="max-w-md p-6 space-y-4">
+        <DialogHeader>
+          <DialogTitle className="text-lg font-semibold text-gray-900 dark:text-white">
+            Apply category to similar
+          </DialogTitle>
+        </DialogHeader>
         <div className="bg-gray-50 dark:bg-gray-800 rounded-lg px-4 py-3">
-          <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Merchant: <span className="font-mono">{privText(merchant)}</span></p>
+          <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+            Merchant: <span className="font-mono">{privText(merchant)}</span>
+          </p>
         </div>
         <div className="flex gap-2">
-          {[['exact','Exact matches only'],['similar','Similar merchants']].map(([val, label]) => (
-            <button key={val} onClick={() => setMode(val)}
-              className={clsx('flex-1 py-2 rounded-lg text-sm font-medium border transition-colors',
-                mode === val ? 'bg-brand-600 border-brand-600 text-white' : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400'
+          {[['exact', 'Exact matches only'], ['similar', 'Similar merchants']].map(([val, label]) => (
+            <button
+              key={val}
+              type="button"
+              onClick={() => setMode(val)}
+              className={clsx(
+                'flex-1 py-2 rounded-lg text-sm font-medium border transition-colors',
+                mode === val
+                  ? 'bg-brand-600 border-brand-600 text-white'
+                  : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-gray-300'
               )}
-            >{label}</button>
+            >
+              {label}
+            </button>
           ))}
         </div>
-        {preview.isLoading ? <LoadingSpinner /> : (
+        {preview.isLoading ? (
+          <LoadingSpinner />
+        ) : (
           <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
             <div className="px-4 py-2.5 bg-gray-50 dark:bg-gray-800 flex items-center gap-2">
               <AlertCircle size={14} className="text-amber-500" />
-              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{preview.data?.count ?? 0} matching transactions</span>
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                {preview.data?.count ?? 0} matching transactions
+              </span>
             </div>
             <div className="divide-y divide-gray-100 dark:divide-gray-800 max-h-40 overflow-y-auto">
               {preview.data?.examples?.map((tx) => (
                 <div key={tx.id} className="flex justify-between px-4 py-2 text-sm">
                   <span className="text-gray-700 dark:text-gray-300 truncate">{privText(tx.merchant)}</span>
-                  <span className="text-gray-500 ml-4 whitespace-nowrap">{tx.date} · {fmt(tx.amount)}</span>
+                  <span className="text-gray-500 ml-4 whitespace-nowrap tabular-nums">
+                    {tx.date} · {fmt(tx.amount)}
+                  </span>
                 </div>
               ))}
             </div>
@@ -95,48 +126,81 @@ function BulkCategorizeModal({ merchant, onClose, onApplied }) {
         )}
         <select value={catId} onChange={(e) => setCatId(e.target.value)} className="input w-full">
           <option value="">Select new category...</option>
-          {categories?.map((c) => <option key={c.id} value={c.id}>{c.icon} {c.name}</option>)}
+          {categories?.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.icon} {c.name}
+            </option>
+          ))}
         </select>
         <p className="text-xs text-gray-400">
           To make this categorization apply to future imports, create a rule on the Categories page.
         </p>
         <div className="flex gap-3 pt-2">
-          <button onClick={onClose} className="btn-secondary flex-1">Cancel</button>
-          <button onClick={handleApply} disabled={!catId || applying || !preview.data?.count} className="btn-primary flex-1">
+          <button type="button" onClick={onClose} className="btn-secondary flex-1">
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={handleApply}
+            disabled={!catId || applying || !preview.data?.count}
+            className="btn-primary flex-1"
+          >
             {applying ? 'Applying...' : `Apply to ${preview.data?.count ?? 0} transactions`}
           </button>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
 // ── Tag chip ──────────────────────────────────────────────────────────────────
 function TagChip({ tag, onRemove }) {
   return (
-    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium"
-      style={{ background: `${tag.color}25`, color: tag.color }}>
-      {tag.name}
-      {onRemove && <button onClick={onRemove} className="hover:opacity-70 ml-0.5"><X size={9} /></button>}
+    <span
+      className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-xs font-medium border border-gray-200/60 dark:border-gray-800/60"
+      style={{
+        background: tag.color ? `${tag.color}15` : 'rgba(100, 116, 139, 0.1)',
+        borderColor: tag.color ? `${tag.color}35` : 'rgba(100, 116, 139, 0.2)',
+        color: tag.color || '#64748b',
+      }}
+    >
+      <span>{tag.name}</span>
+      {onRemove && (
+        <button
+          onClick={onRemove}
+          className="hover:opacity-75 p-0.5 rounded transition-opacity"
+          aria-label={`Remove tag ${tag.name}`}
+        >
+          <X size={10} />
+        </button>
+      )}
     </span>
   );
 }
 
 function SortHeader({ label, sortKey, activeSortBy, activeSortDir, onToggle, className = '' }) {
   const active = activeSortBy === sortKey;
-  const icon = active ? (activeSortDir === 'asc' ? '↑' : '↓') : '';
   return (
     <button
       type="button"
       onClick={() => onToggle(sortKey)}
       className={clsx(
-        'inline-flex items-center gap-1 text-xs font-medium text-gray-500 hover:text-gray-700 dark:hover:text-gray-200',
+        'inline-flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-gray-500 hover:text-gray-900 dark:hover:text-gray-100 transition-colors select-none group',
+        active && 'text-brand-600 dark:text-brand-400 font-semibold',
         className,
       )}
       title={`Sort by ${label}`}
     >
       <span>{label}</span>
-      {active ? <span className="text-[10px]">{icon}</span> : <ArrowUpDown size={11} />}
+      {active ? (
+        activeSortDir === 'asc' ? (
+          <ChevronUp size={12} className="text-brand-600 dark:text-brand-400" />
+        ) : (
+          <ChevronDown size={12} className="text-brand-600 dark:text-brand-400" />
+        )
+      ) : (
+        <ArrowUpDown size={11} className="text-gray-300 dark:text-gray-600 group-hover:text-gray-400 transition-colors" />
+      )}
     </button>
   );
 }
@@ -786,56 +850,48 @@ export default function Transactions() {
                   </div>
                 </button>
                 <div className="mt-2 flex flex-wrap gap-2 items-center">
-                  {editId === rowId ? (
-                    <div className="flex items-center gap-1.5 flex-1 min-w-0">
-                      <select
-                        value={editCat || (tx.category_id != null ? String(tx.category_id) : '')}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          setEditCat(val);
-                          if (val) {
-                            updateMut.mutate({ id: rowId, categoryId: val });
-                          }
-                        }}
-                        className="input flex-1 min-w-0 text-sm"
-                        autoFocus
-                      >
-                        <option value="">Select category...</option>
-                        {categories?.map((c) => (
-                          <option key={c.id} value={c.id}>{c.icon} {c.name}</option>
-                        ))}
-                      </select>
-                      {editCat && editCat !== String(tx.category_id) && (
-                        <button
-                          type="button"
-                          onClick={() => updateMut.mutate({ id: rowId, categoryId: editCat })}
-                          className="btn-primary px-3 py-1.5 text-xs"
-                        >
-                          <Check size={14} />
-                        </button>
-                      )}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
                       <button
                         type="button"
-                        onClick={() => setEditId(null)}
-                        className="btn-secondary px-3 py-1.5 text-xs"
+                        className="inline-flex items-center gap-1 focus:outline-none rounded-md"
+                        title="Click to change category"
                       >
-                        <X size={14} />
+                        <CategoryBadge icon={tx.category_icon} name={tx.category_name} color={tx.category_color} />
+                        <ChevronDown size={11} className="text-gray-400" />
                       </button>
-                    </div>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setEditId(rowId);
-                        setEditCat(tx.category_id != null ? String(tx.category_id) : '');
-                      }}
-                      className="inline-flex items-center gap-1"
-                      title="Click to change category"
-                    >
-                      <CategoryBadge icon={tx.category_icon} name={tx.category_name} color={tx.category_color} />
-                      <ChevronDown size={11} className="text-gray-400" />
-                    </button>
-                  )}
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" className="w-52 max-h-72 overflow-y-auto">
+                      <DropdownMenuLabel>Select category</DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      {categories?.map((c) => (
+                        <DropdownMenuItem
+                          key={c.id}
+                          onClick={() => updateMut.mutate({ id: rowId, categoryId: String(c.id) })}
+                          className={clsx(
+                            'flex items-center gap-2 cursor-pointer',
+                            Number(tx.category_id) === Number(c.id) && 'font-semibold text-brand-600 dark:text-brand-400 bg-brand-50/50 dark:bg-brand-900/20'
+                          )}
+                        >
+                          <span>{c.icon}</span>
+                          <span className="flex-1 truncate">{c.name}</span>
+                          {Number(tx.category_id) === Number(c.id) && <Check size={13} className="ml-auto" />}
+                        </DropdownMenuItem>
+                      ))}
+                      {(tx.merchant || tx.details) && (
+                        <>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            onClick={() => setBulkModal(tx.merchant || tx.details)}
+                            className="text-brand-600 dark:text-brand-400 flex items-center gap-2"
+                          >
+                            <Layers size={13} />
+                            <span>Apply to similar...</span>
+                          </DropdownMenuItem>
+                        </>
+                      )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                   {tx.tags?.map((tag) => (
                     <TagChip key={tag.id} tag={tag} onRemove={() => removeTagMut.mutate({ txId: rowId, tagId: tag.id, source: tx.source })} />
                   ))}
@@ -981,76 +1037,48 @@ export default function Transactions() {
 
                         {/* Category */}
                         <td className="px-4 py-2.5">
-                          {editId === rowId ? (
-                            <div className="flex items-center gap-1.5">
-                              <select
-                                value={editCat || (tx.category_id != null ? String(tx.category_id) : '')}
-                                onChange={(e) => {
-                                  const val = e.target.value;
-                                  setEditCat(val);
-                                  if (val) {
-                                    updateMut.mutate({ id: rowId, categoryId: val });
-                                  }
-                                }}
-                                onKeyDown={(e) => {
-                                  if (e.key === 'Escape') setEditId(null);
-                                }}
-                                className="input py-1 text-xs min-w-[140px]"
-                                autoFocus
-                              >
-                                <option value="">Select category...</option>
-                                {categories?.map((c) => (
-                                  <option key={c.id} value={c.id}>
-                                    {c.icon} {c.name}
-                                  </option>
-                                ))}
-                              </select>
-                              {editCat && editCat !== String(tx.category_id) && (
-                                <button
-                                  type="button"
-                                  onClick={() => updateMut.mutate({ id: rowId, categoryId: editCat })}
-                                  className="p-1 rounded text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20"
-                                  title="Save category"
-                                >
-                                  <Check size={14} />
-                                </button>
-                              )}
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
                               <button
                                 type="button"
-                                onClick={() => setEditId(null)}
-                                className="p-1 rounded text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
-                                title="Cancel"
+                                className="text-left group/cat inline-flex items-center gap-1.5 focus:outline-none rounded-md"
+                                title="Click to change category"
                               >
-                                <X size={14} />
+                                <CategoryBadge icon={tx.category_icon} name={tx.category_name} color={tx.category_color} />
+                                <ChevronDown size={11} className="text-gray-300 dark:text-gray-600 group-hover/cat:text-gray-500 transition-colors" />
                               </button>
-                              {(tx.merchant || tx.details) && (
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setEditId(null);
-                                    setBulkModal(tx.merchant || tx.details);
-                                  }}
-                                  className="p-1 rounded text-brand-500 hover:bg-brand-50 dark:hover:bg-brand-900/20"
-                                  title="Apply to similar transactions"
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="start" className="w-52 max-h-72 overflow-y-auto">
+                              <DropdownMenuLabel>Select category</DropdownMenuLabel>
+                              <DropdownMenuSeparator />
+                              {categories?.map((c) => (
+                                <DropdownMenuItem
+                                  key={c.id}
+                                  onClick={() => updateMut.mutate({ id: rowId, categoryId: String(c.id) })}
+                                  className={clsx(
+                                    'flex items-center gap-2 cursor-pointer',
+                                    Number(tx.category_id) === Number(c.id) && 'font-semibold text-brand-600 dark:text-brand-400 bg-brand-50/50 dark:bg-brand-900/20'
+                                  )}
                                 >
-                                  <Layers size={14} />
-                                </button>
+                                  <span>{c.icon}</span>
+                                  <span className="flex-1 truncate">{c.name}</span>
+                                  {Number(tx.category_id) === Number(c.id) && <Check size={13} className="ml-auto" />}
+                                </DropdownMenuItem>
+                              ))}
+                              {(tx.merchant || tx.details) && (
+                                <>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem
+                                    onClick={() => setBulkModal(tx.merchant || tx.details)}
+                                    className="text-brand-600 dark:text-brand-400 flex items-center gap-2"
+                                  >
+                                    <Layers size={13} />
+                                    <span>Apply to similar...</span>
+                                  </DropdownMenuItem>
+                                </>
                               )}
-                            </div>
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setEditId(rowId);
-                                setEditCat(tx.category_id != null ? String(tx.category_id) : '');
-                              }}
-                              className="text-left group/cat inline-flex items-center gap-1"
-                              title="Click to change category"
-                            >
-                              <CategoryBadge icon={tx.category_icon} name={tx.category_name} color={tx.category_color} />
-                              <ChevronDown size={11} className="text-gray-300 dark:text-gray-600 group-hover/cat:text-gray-500 transition-colors" />
-                            </button>
-                          )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </td>
 
                         {/* Tags */}
@@ -1097,14 +1125,35 @@ export default function Transactions() {
                           </button>
                         </td>
 
-                        {/* Edit */}
-                        <td className="px-4 py-2.5">
-                          {editId !== rowId && (
-                            <button type="button" onClick={() => { setEditId(rowId); setEditCat(tx.category_id != null ? String(tx.category_id) : ''); }}
-                              className="text-xs text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 whitespace-nowrap">
-                              Edit
-                            </button>
-                          )}
+                        {/* Row Actions */}
+                        <td className="px-3 py-2.5 text-right">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <button
+                                type="button"
+                                className="p-1.5 rounded-md text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors focus:outline-none focus:ring-1 focus:ring-brand-500"
+                                title="Row options"
+                              >
+                                <MoreHorizontal size={14} />
+                              </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-44">
+                              <DropdownMenuItem onClick={() => toggleExpand(rowId)} className="flex items-center gap-2 cursor-pointer">
+                                <ChevronDown size={14} className={clsx(expandedId === rowId && 'rotate-180')} />
+                                <span>{expandedId === rowId ? 'Hide details' : 'View details'}</span>
+                              </DropdownMenuItem>
+                              {(tx.merchant || tx.details) && (
+                                <DropdownMenuItem onClick={() => setBulkModal(tx.merchant || tx.details)} className="flex items-center gap-2 cursor-pointer">
+                                  <Layers size={14} />
+                                  <span>Categorize similar</span>
+                                </DropdownMenuItem>
+                              )}
+                              <DropdownMenuItem onClick={() => setTagEditId(rowId)} className="flex items-center gap-2 cursor-pointer">
+                                <Tag size={14} />
+                                <span>Add tag</span>
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </td>
                       </tr>
 
