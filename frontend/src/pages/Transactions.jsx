@@ -43,6 +43,7 @@ import EmptyState from '../components/ui/EmptyState';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
 import QueryErrorPanel from '../components/ui/QueryErrorPanel';
 import PageHeader from '../components/ui/PageHeader';
+import { toast } from '../components/ui/Sonner';
 import MonthFilterSelect from '../components/ui/MonthFilterSelect';
 import DatePicker from '../components/ui/DatePicker';
 import TransactionImportPanel from '../components/transactions/TransactionImportPanel';
@@ -572,10 +573,15 @@ export default function Transactions() {
   });
 
   const handleExport = async () => {
-    const res = await exportTransactionsCSV();
-    const url = URL.createObjectURL(res.data);
-    const a = document.createElement('a'); a.href = url; a.download = 'transactions.csv'; a.click();
-    URL.revokeObjectURL(url);
+    try {
+      const res = await exportTransactionsCSV();
+      const url = URL.createObjectURL(res.data);
+      const a = document.createElement('a'); a.href = url; a.download = 'transactions.csv'; a.click();
+      URL.revokeObjectURL(url);
+      toast.success('Exported transactions as CSV');
+    } catch {
+      toast.error('Failed to export transactions');
+    }
   };
 
   const toggleSelect = (id) => setSelected((prev) => {
@@ -596,9 +602,13 @@ export default function Transactions() {
       }
       qc.invalidateQueries({ queryKey: ['transactions'] });
       invalidateDashboardData(qc);
+      const catName = categories.find((c) => String(c.id) === String(categoryId))?.name || 'Category';
+      const count = result?.updated || selected.size;
+      toast.success(`Updated ${count} transaction${count === 1 ? '' : 's'} to ${catName}`);
       // Selection preserved so user can continue applying tags or other actions!
     } catch (err) {
       setBulkError(err.message || 'Failed to apply category');
+      toast.error(err.message || 'Failed to apply category');
     } finally {
       setBulkApplying(false);
     }
@@ -612,9 +622,12 @@ export default function Transactions() {
     try {
       await bulkAssignTag(parseInt(tagId, 10), bankIds, revolutIds);
       qc.invalidateQueries({ queryKey: ['transactions'] });
+      const tagName = tags.find((t) => String(t.id) === String(tagId))?.name || 'Tag';
+      toast.success(`Assigned #${tagName} to ${selected.size} transaction${selected.size === 1 ? '' : 's'}`);
       // Selection preserved so user can continue applying category or other actions!
     } catch (err) {
       setBulkError(err.message || 'Failed to assign tag');
+      toast.error(err.message || 'Failed to assign tag');
     } finally {
       setBulkTagApplying(false);
     }
@@ -643,7 +656,9 @@ export default function Transactions() {
       }
       invalidateAfterTxnDelete();
       setExpandedId(null);
+      const count = result?.deleted || selected.size;
       clearSel();
+      toast.success(`Deleted ${count} transaction${count === 1 ? '' : 's'}`);
     } catch (err) {
       const msg = err.message || 'Failed to delete transactions';
       setBulkError(

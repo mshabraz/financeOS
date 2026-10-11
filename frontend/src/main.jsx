@@ -23,6 +23,7 @@ import Obligations from './pages/Obligations';
 import Tasks from './pages/Tasks';
 import LoadingSpinner from './components/ui/LoadingSpinner';
 import ErrorBoundary from './components/ui/ErrorBoundary';
+import { Toaster } from './components/ui/Sonner';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -113,6 +114,7 @@ createRoot(document.getElementById('root')).render(
         <AuthProvider>
           <BrowserRouter>
             <AppRoutes />
+            <Toaster position="bottom-right" closeButton />
           </BrowserRouter>
         </AuthProvider>
       </PrivacyProvider>

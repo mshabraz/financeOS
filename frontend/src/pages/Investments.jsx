@@ -20,6 +20,7 @@ import InvestmentLedger from '../components/investments/ledger/InvestmentLedger'
 import { getImportHistory } from '../components/investments/investmentPageApi';
 import { usePrivacy } from '../context/PrivacyContext';
 import { useUrlQueryState } from '../hooks/useUrlQueryState';
+import { toast } from '../components/ui/Sonner';
 
 const VALID_TABS = ['overview', 'holdings', 'strategy', 'ledger', 'dividends', 'planner', 'history', 'import'];
 
@@ -64,19 +65,29 @@ export default function Investments() {
   });
   const syncMut = useMutation({
     mutationFn: triggerInvestmentPriceSync,
-    onSuccess: () => {
+    onSuccess: (data) => {
       ['invPriceSync', 'invValuations', 'invAnalytics', 'invBrokerCash', 'assets'].forEach((k) => {
         qc.invalidateQueries({ queryKey: [k] });
       });
+      toast.success(data?.message || 'Price sync triggered successfully');
+    },
+    onError: (err) => {
+      toast.error(err?.message || 'Failed to trigger price sync');
     },
   });
   const unbindMut = useMutation({
     mutationFn: (h) => clearInvestmentBinding({ broker: h.broker, ticker: h.ticker, currency: h.currency }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['invValuations'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['invValuations'] });
+      toast.success('Removed ticker price link');
+    },
   });
   const clearAutoMut = useMutation({
     mutationFn: clearAutoInvestmentBindings,
-    onSuccess: () => refreshValuation(),
+    onSuccess: () => {
+      refreshValuation();
+      toast.success('Cleared automatic ticker links');
+    },
   });
   const dividends = useQuery({
     queryKey: ['invDividends', brokerFilter],
