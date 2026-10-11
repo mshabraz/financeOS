@@ -8,6 +8,13 @@ import LoadingSpinner from '../components/ui/LoadingSpinner';
 import TableSkeleton from '../components/ui/TableSkeleton';
 import EmptyState from '../components/ui/EmptyState';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from '../components/ui/Select';
 import { fmtCurrency, privText } from '../utils/displayFormat';
 import { usePrivacy } from '../context/PrivacyContext';
 
@@ -116,18 +123,22 @@ export default function SharedExpenses() {
               <label className="text-xs font-medium text-gray-500 dark:text-gray-400 block mb-1">
                 Copy people from past event (optional)
               </label>
-              <select
-                className="input w-full"
-                value={importFromId}
-                onChange={(e) => setImportFromId(e.target.value)}
+              <Select
+                value={importFromId || 'none'}
+                onValueChange={(val) => setImportFromId(val === 'none' ? '' : val)}
               >
-                <option value="">Start with no people</option>
-                {eventList.map((e) => (
-                  <option key={e.id} value={e.id}>
-                    {privText(e.name)} ({e.participant_count} people)
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Start with no people" />
+                </SelectTrigger>
+                <SelectContent className="max-h-60">
+                  <SelectItem value="none">Start with no people</SelectItem>
+                  {eventList.map((e) => (
+                    <SelectItem key={e.id} value={String(e.id)}>
+                      {privText(e.name)} ({e.participant_count} people)
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           )}
           <div className="flex flex-col-reverse sm:flex-row gap-2">

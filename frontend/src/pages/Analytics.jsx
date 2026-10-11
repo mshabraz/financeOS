@@ -16,6 +16,13 @@ import LoadingSpinner from '../components/ui/LoadingSpinner';
 import QueryErrorPanel from '../components/ui/QueryErrorPanel';
 import MonthFilterSelect from '../components/ui/MonthFilterSelect';
 import DatePicker from '../components/ui/DatePicker';
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from '../components/ui/Select';
 import { getMonthRange } from '../utils/dateFilters';
 import { fmtEur, privText } from '../utils/displayFormat';
 import { usePrivacy } from '../context/PrivacyContext';
@@ -505,20 +512,36 @@ export default function Analytics() {
           <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
             Budget Tracking
           </h2>
-          {/* Budget always uses a month selector independent of the analysis period */}
-          <select value={budgetMonth} onChange={(e) => setBudgetMonth(e.target.value)} className="input text-xs py-1.5 w-36">
-            {monthOptions.map((m) => <option key={m} value={m}>{m}</option>)}
-          </select>
+          <Select value={budgetMonth} onValueChange={setBudgetMonth}>
+            <SelectTrigger className="w-36 h-9 min-h-[36px] text-xs">
+              <SelectValue placeholder="Month" />
+            </SelectTrigger>
+            <SelectContent className="max-h-60">
+              {monthOptions.map((m) => (
+                <SelectItem key={m} value={m} className="text-xs">
+                  {m}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         {/* Add / update budget form */}
         <div className="flex gap-2 mb-5 flex-wrap">
-          <select value={budgetCat} onChange={(e) => setBudgetCat(e.target.value)} className="input flex-1 min-w-[180px]">
-            <option value="">Select category...</option>
-            {cats.data?.filter((c) => c.type === 'expense').map((c) => (
-              <option key={c.id} value={c.id}>{c.icon} {c.name}</option>
-            ))}
-          </select>
+          <Select value={budgetCat || 'none'} onValueChange={(val) => setBudgetCat(val === 'none' ? '' : val)}>
+            <SelectTrigger className="flex-1 min-w-[180px]">
+              <SelectValue placeholder="Select category..." />
+            </SelectTrigger>
+            <SelectContent className="max-h-60">
+              <SelectItem value="none">Select category...</SelectItem>
+              {cats.data?.filter((c) => c.type === 'expense').map((c) => (
+                <SelectItem key={c.id} value={String(c.id)}>
+                  <span className="mr-2">{c.icon}</span>
+                  <span>{c.name}</span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <input
             type="number" placeholder="Budget €" value={budgetAmt}
             onChange={(e) => setBudgetAmt(e.target.value)}

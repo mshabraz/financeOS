@@ -20,6 +20,14 @@ import LoadingSpinner from '../components/ui/LoadingSpinner';
 import TableSkeleton from '../components/ui/TableSkeleton';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
 import SettlementSharePanel from '../components/shared/SettlementSharePanel';
+import DatePicker from '../components/ui/DatePicker';
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from '../components/ui/Select';
 import { transferToPayload, transferRowId, isValidTransfer } from '../utils/sharedTransfer';
 import { fmtCurrency, privText } from '../utils/displayFormat';
 import { usePrivacy } from '../context/PrivacyContext';
@@ -339,18 +347,22 @@ export default function SharedExpenseEvent() {
                 Copy participant names from a past trip or dinner (skips duplicates).
               </p>
               <div className="flex flex-col sm:flex-row gap-2">
-                <select
-                  className="input flex-1"
-                  value={importSourceId}
-                  onChange={(e) => setImportSourceId(e.target.value)}
+                <Select
+                  value={importSourceId || 'none'}
+                  onValueChange={(val) => setImportSourceId(val === 'none' ? '' : val)}
                 >
-                  <option value="">Select event…</option>
-                  {otherEvents.map((e) => (
-                    <option key={e.id} value={e.id}>
-                      {e.name} ({e.participant_count} people)
-                    </option>
-                  ))}
-                </select>
+                  <SelectTrigger className="flex-1">
+                    <SelectValue placeholder="Select event…" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-60">
+                    <SelectItem value="none">Select event…</SelectItem>
+                    {otherEvents.map((e) => (
+                      <SelectItem key={e.id} value={String(e.id)}>
+                        {e.name} ({e.participant_count} people)
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <button
                   type="button"
                   className="btn-secondary shrink-0"
@@ -431,11 +443,10 @@ export default function SharedExpenseEvent() {
                   value={expenseForm.description}
                   onChange={(e) => setExpenseForm({ ...expenseForm, description: e.target.value })}
                 />
-                <input
-                  type="date"
-                  className="input"
+                <DatePicker
                   value={expenseForm.expenseDate}
-                  onChange={(e) => setExpenseForm({ ...expenseForm, expenseDate: e.target.value })}
+                  onChange={(v) => setExpenseForm({ ...expenseForm, expenseDate: v })}
+                  placeholder="Expense date"
                 />
                 <input
                   className="input"
@@ -465,15 +476,21 @@ export default function SharedExpenseEvent() {
                   Split payment across multiple people
                 </label>
                 {!expenseForm.splitPay ? (
-                  <select
-                    className="input"
-                    value={expenseForm.payerId}
-                    onChange={(e) => setExpenseForm({ ...expenseForm, payerId: e.target.value })}
+                  <Select
+                    value={String(expenseForm.payerId || (participants[0]?.id ?? ''))}
+                    onValueChange={(val) => setExpenseForm({ ...expenseForm, payerId: val })}
                   >
-                    {participants.map((p) => (
-                      <option key={p.id} value={p.id}>{p.name}</option>
-                    ))}
-                  </select>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select payer" />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-60">
+                      {participants.map((p) => (
+                        <SelectItem key={p.id} value={String(p.id)}>
+                          {p.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 ) : (
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                     {participants.map((p) => (
@@ -498,15 +515,23 @@ export default function SharedExpenseEvent() {
 
               <div>
                 <p className="text-xs font-semibold text-gray-500 uppercase mb-2">Fair split</p>
-                <select
-                  className="input mb-2"
-                  value={expenseForm.splitType}
-                  onChange={(e) => setExpenseForm({ ...expenseForm, splitType: e.target.value })}
-                >
-                  {SPLIT_TYPES.map((s) => (
-                    <option key={s.id} value={s.id}>{s.label}</option>
-                  ))}
-                </select>
+                <div className="mb-2">
+                  <Select
+                    value={expenseForm.splitType || 'equal'}
+                    onValueChange={(val) => setExpenseForm({ ...expenseForm, splitType: val })}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Split type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {SPLIT_TYPES.map((s) => (
+                        <SelectItem key={s.id} value={s.id}>
+                          {s.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
 
                 {expenseForm.splitType === 'equal_subset' && (
                   <div className="flex flex-wrap gap-2">
@@ -529,15 +554,21 @@ export default function SharedExpenseEvent() {
                 )}
 
                 {expenseForm.splitType === 'single' && (
-                  <select
-                    className="input"
-                    value={expenseForm.assigneeId}
-                    onChange={(e) => setExpenseForm({ ...expenseForm, assigneeId: e.target.value })}
+                  <Select
+                    value={String(expenseForm.assigneeId || (participants[0]?.id ?? ''))}
+                    onValueChange={(val) => setExpenseForm({ ...expenseForm, assigneeId: val })}
                   >
-                    {participants.map((p) => (
-                      <option key={p.id} value={p.id}>{p.name} owes full amount</option>
-                    ))}
-                  </select>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select person who owes" />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-60">
+                      {participants.map((p) => (
+                        <SelectItem key={p.id} value={String(p.id)}>
+                          {p.name} owes full amount
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 )}
 
                 {expenseForm.splitType === 'custom' && (

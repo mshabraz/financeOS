@@ -10,6 +10,13 @@ import LoadingSpinner from '../components/ui/LoadingSpinner';
 import TableSkeleton from '../components/ui/TableSkeleton';
 import EmptyState from '../components/ui/EmptyState';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from '../components/ui/Select';
 import { useUrlQueryState } from '../hooks/useUrlQueryState';
 import clsx from 'clsx';
 
@@ -189,22 +196,27 @@ export default function Categories() {
                       onKeyDown={(e) => e.key === 'Enter' && saveCat.mutate()} />
                     <input type="color" value={editCatColor} onChange={(e) => setEditCatColor(e.target.value)}
                       className="h-8 w-8 rounded border border-gray-200 dark:border-gray-700 cursor-pointer" />
-                    <select value={editCatType} onChange={(e) => setEditCatType(e.target.value)}
-                      className="input w-28 py-1.5 text-sm">
-                      <option value="expense">Expense</option>
-                      <option value="savings">Savings (not spending)</option>
-                      <option value="income">Income</option>
-                      <option value="transfer">Transfer</option>
-                    </select>
+                    <Select value={editCatType} onValueChange={setEditCatType}>
+                      <SelectTrigger className="w-28 py-1.5 h-9 min-h-[36px] text-xs">
+                        <SelectValue placeholder="Type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="expense">Expense</SelectItem>
+                        <SelectItem value="savings">Savings (not spending)</SelectItem>
+                        <SelectItem value="income">Income</SelectItem>
+                        <SelectItem value="transfer">Transfer</SelectItem>
+                      </SelectContent>
+                    </Select>
                     {editCatType === 'expense' && (
-                      <select
-                        value={editCatTier}
-                        onChange={(e) => setEditCatTier(e.target.value)}
-                        className="input w-28 py-1.5 text-sm"
-                      >
-                        <option value="essential">Essential</option>
-                        <option value="variable">Variable</option>
-                      </select>
+                      <Select value={editCatTier} onValueChange={setEditCatTier}>
+                        <SelectTrigger className="w-28 py-1.5 h-9 min-h-[36px] text-xs">
+                          <SelectValue placeholder="Tier" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="essential">Essential</SelectItem>
+                          <SelectItem value="variable">Variable</SelectItem>
+                        </SelectContent>
+                      </Select>
                     )}
                     <button onClick={() => saveCat.mutate()} className="p-1.5 rounded-lg text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20">
                       <Check size={15} />
@@ -225,15 +237,18 @@ export default function Categories() {
                       </p>
                     </div>
                     {c.type === 'expense' && (
-                      <select
+                      <Select
                         value={c.expense_tier || 'variable'}
-                        onChange={(e) => tierMut.mutate({ id: c.id, expense_tier: e.target.value })}
-                        className="input py-1 text-xs w-24"
-                        title="Essential vs variable"
+                        onValueChange={(val) => tierMut.mutate({ id: c.id, expense_tier: val })}
                       >
-                        <option value="essential">Essential</option>
-                        <option value="variable">Variable</option>
-                      </select>
+                        <SelectTrigger className="w-24 py-1 h-8 min-h-[32px] text-xs">
+                          <SelectValue placeholder="Tier" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="essential">Essential</SelectItem>
+                          <SelectItem value="variable">Variable</SelectItem>
+                        </SelectContent>
+                      </Select>
                     )}
                     <input
                       type="color"
@@ -273,12 +288,17 @@ export default function Categories() {
             />
             <input type="text" placeholder="Icon" value={newIcon} onChange={(e) => setNewIcon(e.target.value)} className="input w-16 text-center" />
             <input type="color" value={newColor} onChange={(e) => setNewColor(e.target.value)} className="h-10 w-10 rounded-lg border border-gray-200 dark:border-gray-700 cursor-pointer" />
-            <select value={newType} onChange={(e) => setNewType(e.target.value)} className="input w-36">
-              <option value="expense">Expense</option>
-              <option value="savings">Savings (not spending)</option>
-              <option value="income">Income</option>
-              <option value="transfer">Transfer</option>
-            </select>
+            <Select value={newType} onValueChange={setNewType}>
+              <SelectTrigger className="w-36 text-sm">
+                <SelectValue placeholder="Type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="expense">Expense</SelectItem>
+                <SelectItem value="savings">Savings (not spending)</SelectItem>
+                <SelectItem value="income">Income</SelectItem>
+                <SelectItem value="transfer">Transfer</SelectItem>
+              </SelectContent>
+            </Select>
             <button onClick={() => addCat.mutate()} disabled={!newName} className="btn-primary flex items-center gap-1.5">
               <Plus size={15} />Add
             </button>
@@ -413,15 +433,30 @@ export default function Categories() {
               type="text" placeholder="Pattern (e.g. NETFLIX)" value={rulePattern}
               onChange={(e) => setRulePat(e.target.value)} className="input flex-1 min-w-[140px]"
             />
-            <select value={ruleField} onChange={(e) => setRuleField(e.target.value)} className="input w-36">
-              <option value="merchant">merchant</option>
-              <option value="beneficiary">beneficiary</option>
-              <option value="details">details</option>
-            </select>
-            <select value={ruleCat} onChange={(e) => setRuleCat(e.target.value)} className="input w-48">
-              <option value="">→ Category</option>
-              {cats.data?.map((c) => <option key={c.id} value={c.id}>{c.icon} {c.name}</option>)}
-            </select>
+            <Select value={ruleField} onValueChange={setRuleField}>
+              <SelectTrigger className="w-36 text-sm">
+                <SelectValue placeholder="Field" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="merchant">merchant</SelectItem>
+                <SelectItem value="beneficiary">beneficiary</SelectItem>
+                <SelectItem value="details">details</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={ruleCat || 'none'} onValueChange={(val) => setRuleCat(val === 'none' ? '' : val)}>
+              <SelectTrigger className="w-48 text-sm">
+                <SelectValue placeholder="→ Category" />
+              </SelectTrigger>
+              <SelectContent className="max-h-60">
+                <SelectItem value="none">→ Category</SelectItem>
+                {cats.data?.map((c) => (
+                  <SelectItem key={c.id} value={String(c.id)}>
+                    <span className="mr-2">{c.icon}</span>
+                    <span>{c.name}</span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <input
               type="number" placeholder="Priority" value={rulePri}
               onChange={(e) => setRulePri(e.target.value)} className="input w-24"

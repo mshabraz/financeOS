@@ -8,6 +8,13 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from 'recharts';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from '../components/ui/Select';
 import { fmtEur, privText } from '../utils/displayFormat';
 import { usePrivacy } from '../context/PrivacyContext';
 import clsx from 'clsx';
@@ -169,14 +176,38 @@ export default function Tags() {
             <div className="card p-4">
               <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Merge Tags</p>
               <div className="space-y-2">
-                <select value={mergeFrom} onChange={(e) => setMergeFrom(e.target.value)} className="input">
-                  <option value="">Merge from...</option>
-                  {tags.data?.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
-                </select>
-                <select value={mergeTo} onChange={(e) => setMergeTo(e.target.value)} className="input">
-                  <option value="">Into...</option>
-                  {tags.data?.filter((t) => String(t.id) !== mergeFrom).map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
-                </select>
+                <Select value={mergeFrom || 'none'} onValueChange={(val) => setMergeFrom(val === 'none' ? '' : val)}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Merge from..." />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-60">
+                    <SelectItem value="none">Merge from...</SelectItem>
+                    {tags.data?.map((t) => (
+                      <SelectItem key={t.id} value={String(t.id)}>
+                        <div className="flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: t.color || '#3b82f6' }} />
+                          <span>{t.name}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select value={mergeTo || 'none'} onValueChange={(val) => setMergeTo(val === 'none' ? '' : val)}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Into..." />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-60">
+                    <SelectItem value="none">Into...</SelectItem>
+                    {tags.data?.filter((t) => String(t.id) !== mergeFrom).map((t) => (
+                      <SelectItem key={t.id} value={String(t.id)}>
+                        <div className="flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: t.color || '#3b82f6' }} />
+                          <span>{t.name}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <button
                   onClick={() => mergeMut.mutate()}
                   disabled={!mergeFrom || !mergeTo}

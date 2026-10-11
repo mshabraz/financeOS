@@ -6,6 +6,7 @@ import {
   getTasksGrouped, createTask, updateTask, completeTask, deleteTask,
 } from '../api/client';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
+import DatePicker from '../components/ui/DatePicker';
 
 function TaskRow({ task, onToggle, onDelete, onUpdate }) {
   const [expanded, setExpanded] = useState(false);
@@ -136,7 +137,7 @@ export default function Tasks() {
           value={title}
           onChange={(e) => setTitle(e.target.value)}
         />
-        <input className="input sm:w-36" type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+        <DatePicker className="sm:w-44" value={dueDate} onChange={setDueDate} placeholder="Due date" />
         <button type="submit" className="btn-primary shrink-0" disabled={!title.trim() || createMut.isPending}>
           <Plus size={16} />
           Add

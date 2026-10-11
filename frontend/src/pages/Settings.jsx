@@ -21,6 +21,14 @@ import {
   syncOpenBanking,
 } from '../api/client';
 import ManualBalancesPanel from '../components/settings/ManualBalancesPanel';
+import DatePicker from '../components/ui/DatePicker';
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from '../components/ui/Select';
 import { invalidateDashboardData } from '../lib/queryKeys';
 
 function AdminUsersPanel({ showToast }) {
@@ -267,22 +275,26 @@ function BankConnectionsPanel({ showToast }) {
               )}
 
               <div className="mt-4 flex flex-wrap items-end gap-3">
-                <label className="text-sm flex-1 min-w-[200px]">
-                  <span className="text-xs text-gray-500">Connect bank</span>
-                  <select
-                    className="input mt-1 block w-full max-w-sm"
-                    value={selectedBank}
-                    onChange={(e) => setSelectedBank(e.target.value)}
+                <div className="text-sm flex-1 min-w-[200px]">
+                  <span className="text-xs text-gray-500 block mb-1">Connect bank</span>
+                  <Select
+                    value={selectedBank || 'none'}
+                    onValueChange={(val) => setSelectedBank(val === 'none' ? '' : val)}
                     disabled={banksQ.isLoading}
                   >
-                    <option value="">Select bank…</option>
-                    {banks.map((b) => (
-                      <option key={`${b.name}-${b.country}`} value={`${b.name}|${b.country}`}>
-                        {b.name} ({b.country})
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                    <SelectTrigger className="w-full max-w-sm">
+                      <SelectValue placeholder="Select bank…" />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-60">
+                      <SelectItem value="none">Select bank…</SelectItem>
+                      {banks.map((b) => (
+                        <SelectItem key={`${b.name}-${b.country}`} value={`${b.name}|${b.country}`}>
+                          {b.name} ({b.country})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
                 <button
                   type="button"
                   className="btn-primary text-sm"
@@ -489,15 +501,15 @@ export default function Settings() {
                 </span>
               </label>
               {applyScope === 'from_date' && (
-                <label className="text-sm block ml-6">
-                  <span className="text-xs text-gray-500">Apply from</span>
-                  <input
-                    type="date"
-                    className="input w-44 mt-1 block"
+                <div className="text-sm block ml-6">
+                  <span className="text-xs text-gray-500 block mb-1">Apply from</span>
+                  <DatePicker
+                    className="w-44"
                     value={applyFromDate}
-                    onChange={(e) => setApplyFromDate(e.target.value)}
+                    onChange={setApplyFromDate}
+                    placeholder="Pick date"
                   />
-                </label>
+                </div>
               )}
               <label className="flex items-start gap-2 text-sm cursor-pointer">
                 <input
@@ -550,23 +562,27 @@ export default function Settings() {
                 />
                 <span>Show converted amount on dashboard</span>
               </label>
-              <label className="text-sm block">
-                <span className="text-xs text-gray-500">Target currency</span>
-                <select
-                  className="input mt-1 block w-full max-w-xs"
-                  value={fxCurrency}
+              <div className="text-sm block">
+                <span className="text-xs text-gray-500 block mb-1">Target currency</span>
+                <Select
+                  value={fxCurrency || 'PKR'}
+                  onValueChange={setFxCurrency}
                   disabled={!fxEnabled}
-                  onChange={(e) => setFxCurrency(e.target.value)}
                 >
-                  {(netWorthFxQ.data?.supportedCurrencies ?? [{ code: 'PKR', label: 'Pakistani Rupee (PKR)' }]).map(
-                    (c) => (
-                      <option key={c.code} value={c.code}>
-                        {c.label}
-                      </option>
-                    ),
-                  )}
-                </select>
-              </label>
+                  <SelectTrigger className="w-full max-w-xs">
+                    <SelectValue placeholder="Target currency" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-60">
+                    {(netWorthFxQ.data?.supportedCurrencies ?? [{ code: 'PKR', label: 'Pakistani Rupee (PKR)' }]).map(
+                      (c) => (
+                        <SelectItem key={c.code} value={c.code}>
+                          {c.label}
+                        </SelectItem>
+                      ),
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
               <button
                 type="button"
                 className="btn-primary text-sm"

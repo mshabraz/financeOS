@@ -12,6 +12,13 @@ import LoadingSpinner from '../components/ui/LoadingSpinner';
 import StatCardSkeleton from '../components/ui/StatCardSkeleton';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
 import QueryErrorPanel from '../components/ui/QueryErrorPanel';
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from '../components/ui/Select';
 import { usePrivacy } from '../context/PrivacyContext';
 import {
   currentPeriodValue, buildPeriodOptions, prevPeriodValue,
@@ -298,15 +305,21 @@ export default function Dashboard() {
               </button>
             ))}
           </div>
-          <select
-            value={periodValue ?? ''}
-            onChange={(e) => setPeriod(periodType, e.target.value)}
-            className="input text-sm w-full sm:w-44"
+          <Select
+            value={String(periodValue ?? (periodOptions[0]?.value ?? ''))}
+            onValueChange={(val) => setPeriod(periodType, val)}
           >
-            {periodOptions.map((o) => (
-              <option key={o.value} value={o.value}>{o.label}</option>
-            ))}
-          </select>
+            <SelectTrigger className="w-full sm:w-44 text-sm">
+              <SelectValue placeholder="Select period" />
+            </SelectTrigger>
+            <SelectContent className="max-h-72">
+              {periodOptions.map((o) => (
+                <SelectItem key={o.value} value={String(o.value)}>
+                  {o.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </header>
 
