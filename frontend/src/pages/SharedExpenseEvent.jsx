@@ -323,10 +323,10 @@ export default function SharedExpenseEvent() {
             type="button"
             onClick={() => setTab(tid)}
             className={clsx(
-              'flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap shrink-0',
+              'flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap shrink-0 transition-all',
               tab === tid
-                ? 'bg-brand-600 text-white'
-                : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
+                ? 'bg-brand-600 text-white shadow-sm'
+                : 'border border-black/[0.08] dark:border-white/[0.08] bg-white/60 dark:bg-slate-900/40 backdrop-blur-sm text-slate-600 dark:text-slate-400 hover:border-brand-500/50 hover:text-slate-900 dark:hover:text-white'
             )}
           >
             <Icon size={16} />

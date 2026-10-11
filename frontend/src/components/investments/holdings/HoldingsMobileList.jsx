@@ -13,7 +13,7 @@ function MobileCard({ row, showEur, expanded, onToggle, onOpen }) {
   const insights = expanded ? holdingInsight(row).slice(0, 2) : [];
 
   return (
-    <li className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/80 overflow-hidden">
+    <li className="rounded-2xl border border-black/[0.06] dark:border-white/[0.08] bg-white/70 dark:bg-slate-900/60 backdrop-blur-md shadow-[inset_0_1px_0_0_rgba(255,255,255,0.8)] dark:shadow-[inset_0_1px_0_0_rgba(255,255,255,0.06)] overflow-hidden">
       <button
         type="button"
         className="w-full text-left p-4 space-y-3"
@@ -63,7 +63,7 @@ function MobileCard({ row, showEur, expanded, onToggle, onOpen }) {
         )}
       </button>
 
-      <div className="px-4 pb-3 border-t border-gray-100 dark:border-gray-800">
+      <div className="px-4 pb-3 border-t border-black/[0.06] dark:border-white/[0.08]">
         <button
           type="button"
           className="flex items-center gap-1 text-xs text-gray-500 py-2 w-full"

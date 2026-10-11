@@ -105,8 +105,8 @@ function BulkCategorizeModal({ merchant, onClose, onApplied }) {
               className={clsx(
                 'flex-1 py-2 rounded-lg text-sm font-medium border transition-colors',
                 mode === val
-                  ? 'bg-brand-600 border-brand-600 text-white'
-                  : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-gray-300'
+                  ? 'bg-brand-600 border-brand-600 text-white shadow-sm'
+                  : 'border-black/[0.08] dark:border-white/[0.08] bg-white/60 dark:bg-slate-900/40 backdrop-blur-sm text-slate-600 dark:text-slate-400 hover:border-brand-500/50 hover:text-slate-900 dark:hover:text-white'
               )}
             >
               {label}
@@ -116,10 +116,10 @@ function BulkCategorizeModal({ merchant, onClose, onApplied }) {
         {preview.isLoading ? (
           <LoadingSpinner />
         ) : (
-          <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
-            <div className="px-4 py-2.5 bg-gray-50 dark:bg-gray-800 flex items-center gap-2">
+          <div className="border border-black/[0.06] dark:border-white/[0.08] rounded-lg overflow-hidden">
+            <div className="px-4 py-2.5 bg-black/[0.02] dark:bg-white/[0.03] flex items-center gap-2">
               <AlertCircle size={14} className="text-amber-500" />
-              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
                 {preview.data?.count ?? 0} matching transactions
               </span>
             </div>
@@ -174,7 +174,7 @@ function BulkCategorizeModal({ merchant, onClose, onApplied }) {
 function TagChip({ tag, onRemove }) {
   return (
     <span
-      className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-xs font-medium border border-gray-200/60 dark:border-gray-800/60"
+      className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-xs font-medium border border-black/[0.08] dark:border-white/[0.10]"
       style={{
         background: tag.color ? `${tag.color}15` : 'rgba(100, 116, 139, 0.1)',
         borderColor: tag.color ? `${tag.color}35` : 'rgba(100, 116, 139, 0.2)',
@@ -733,7 +733,7 @@ export default function Transactions() {
         )}
       </PageHeader>
 
-      <div className="flex gap-1 p-1 bg-gray-100 dark:bg-gray-800 rounded-xl w-full sm:w-auto">
+      <div className="flex gap-1 p-1 bg-black/[0.04] dark:bg-white/[0.06] border border-black/[0.04] dark:border-white/[0.06] rounded-xl w-full sm:w-auto backdrop-blur-sm">
         {[
           { id: 'list', label: 'List' },
           { id: 'duplicates', label: 'Duplicate review', icon: Shield },
@@ -744,10 +744,10 @@ export default function Transactions() {
             type="button"
             onClick={() => setTab(id)}
             className={clsx(
-              'flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors min-h-[44px]',
+              'flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-lg text-sm font-medium transition-all min-h-[44px]',
               tab === id
-                ? 'bg-white dark:bg-gray-900 text-brand-600 shadow-sm'
-                : 'text-gray-600 dark:text-gray-400'
+                ? 'bg-white dark:bg-slate-800 text-brand-600 dark:text-brand-400 shadow-sm border border-black/[0.04] dark:border-white/[0.06]'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
             )}
           >
             {Icon && <Icon size={16} />}
@@ -860,19 +860,19 @@ export default function Transactions() {
       {/* Bulk action floating toolbar */}
       {selected.size > 0 && (
         <div className="space-y-2">
-          <div className="flex items-center justify-between gap-3 p-2.5 sm:px-4 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-md backdrop-blur-sm flex-wrap">
+          <div className="flex items-center justify-between gap-3 p-2.5 sm:px-4 bg-white/90 dark:bg-slate-900/85 border border-black/[0.08] dark:border-white/[0.1] rounded-xl shadow-lg backdrop-blur-xl flex-wrap">
             {/* Selection Info */}
             <div className="flex items-center gap-2.5 min-w-0">
               <div className="flex items-center justify-center min-w-[24px] h-6 px-1.5 rounded-md bg-brand-500/10 text-brand-600 dark:text-brand-400 font-semibold text-xs shrink-0 tabular-nums">
                 {selected.size}
               </div>
-              <div className="text-xs text-gray-700 dark:text-gray-300 font-medium truncate flex items-center gap-1.5 flex-wrap">
+              <div className="text-xs text-slate-700 dark:text-slate-300 font-medium truncate flex items-center gap-1.5 flex-wrap">
                 <span>selected</span>
-                <span className={clsx('font-semibold tabular-nums', selectedSum >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-900 dark:text-white')}>
+                <span className={clsx('font-semibold tabular-nums', selectedSum >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-900 dark:text-white')}>
                   ({selectedSum >= 0 ? '+' : ''}{fmt(selectedSum)})
                 </span>
                 {selectedSplit.revolutIds.length > 0 && (
-                  <span className="hidden sm:inline text-gray-400 text-[11px] font-normal">
+                  <span className="hidden sm:inline text-slate-400 text-[11px] font-normal">
                     · {selectedSplit.bankIds.length} bank, {selectedSplit.revolutIds.length} Revolut
                   </span>
                 )}
@@ -888,15 +888,15 @@ export default function Transactions() {
                     variant="outline"
                     size="sm"
                     disabled={bulkApplying}
-                    className="gap-1.5 h-8 text-xs font-medium border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800"
+                    className="gap-1.5 h-8 text-xs font-medium"
                   >
                     {bulkApplying ? (
                       <span className="inline-block animate-spin mr-1">⟳</span>
                     ) : (
-                      <FolderPlus size={13} className="text-gray-400 shrink-0" />
+                      <FolderPlus size={13} className="text-slate-400 shrink-0" />
                     )}
                     <span>Category</span>
-                    <ChevronDown size={12} className="text-gray-400 shrink-0" />
+                    <ChevronDown size={12} className="text-slate-400 shrink-0" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56 max-h-72 overflow-y-auto">
@@ -924,15 +924,15 @@ export default function Transactions() {
                     variant="outline"
                     size="sm"
                     disabled={bulkTagApplying}
-                    className="gap-1.5 h-8 text-xs font-medium border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800"
+                    className="gap-1.5 h-8 text-xs font-medium"
                   >
                     {bulkTagApplying ? (
                       <span className="inline-block animate-spin mr-1">⟳</span>
                     ) : (
-                      <Tag size={13} className="text-gray-400 shrink-0" />
+                      <Tag size={13} className="text-slate-400 shrink-0" />
                     )}
                     <span>Tag</span>
-                    <ChevronDown size={12} className="text-gray-400 shrink-0" />
+                    <ChevronDown size={12} className="text-slate-400 shrink-0" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-52 max-h-72 overflow-y-auto">
@@ -1116,7 +1116,7 @@ export default function Transactions() {
             <div className="table-scroll">
               <table className="w-full text-sm min-w-[920px]">
                 <thead>
-                  <tr className="border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
+                  <tr className="border-b border-black/[0.06] dark:border-white/[0.07] bg-black/[0.02] dark:bg-white/[0.02]">
                     <th className="px-4 py-3 w-8">
                       <input type="checkbox"
                         checked={selected.size === data?.data?.length && data?.data?.length > 0}
@@ -1365,8 +1365,8 @@ export default function Transactions() {
             </div>
 
             {/* Pagination */}
-            <div className="px-4 py-3 border-t border-gray-200 dark:border-gray-800 flex items-center justify-between">
-              <p className="text-xs text-gray-500 dark:text-gray-400">
+            <div className="px-4 py-3 border-t border-black/[0.06] dark:border-white/[0.07] flex items-center justify-between">
+              <p className="text-xs text-slate-500 dark:text-slate-400">
                 Page {data?.page} of {data?.totalPages} ({data?.total} total)
               </p>
               <div className="flex gap-1">

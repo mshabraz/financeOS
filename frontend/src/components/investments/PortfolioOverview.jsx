@@ -41,7 +41,7 @@ function HeroSection({ hero, lastUpdated, onOpenHoldings }) {
   const up = (hero.unrealizedPnLEur ?? 0) >= 0;
 
   return (
-    <div className="card p-5 sm:p-6 bg-gradient-to-br from-slate-50 to-white dark:from-gray-900 dark:to-gray-900/80 border-brand-100 dark:border-gray-800">
+    <div className="card p-5 sm:p-6 bg-gradient-to-br from-white/90 via-white/70 to-brand-50/20 dark:from-slate-900/90 dark:via-slate-900/70 dark:to-brand-950/20">
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
         <div>
           <p className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
@@ -92,7 +92,7 @@ function HeroSection({ hero, lastUpdated, onOpenHoldings }) {
           { label: 'Holdings (market)', value: fmtEur(hero.holdingsValueEur), icon: TrendingUp, color: 'text-indigo-600' },
           { label: 'Cash', value: fmtEur(hero.cashBalanceEur), icon: PiggyBank, color: 'text-amber-600' },
         ].map((k) => (
-          <div key={k.label} className="rounded-xl bg-white/80 dark:bg-gray-800/60 p-3 border border-gray-100 dark:border-gray-700/50">
+          <div key={k.label} className="rounded-xl bg-white/70 dark:bg-slate-800/50 backdrop-blur-sm p-3 border border-black/[0.06] dark:border-white/[0.08] shadow-[inset_0_1px_0_0_rgba(255,255,255,0.8)] dark:shadow-[inset_0_1px_0_0_rgba(255,255,255,0.05)]">
             <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wide text-gray-400">
               <k.icon size={12} className={k.color} />
               {k.label}
@@ -177,8 +177,8 @@ function AllocationChart({ allocations, view, onViewChange }) {
               className={clsx(
                 'px-2 py-0.5 rounded-md text-[10px] font-medium transition-colors',
                 currentView === v.id
-                  ? 'bg-brand-600 text-white'
-                  : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800'
+                  ? 'bg-brand-600 text-white shadow-sm'
+                  : 'text-gray-500 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-black/[0.04] dark:hover:bg-white/[0.06]'
               )}
             >
               {v.label}
@@ -245,15 +245,15 @@ function PerformanceChart({ performance, period, onPeriodChange }) {
     <div className="card p-5 h-full flex flex-col">
       <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
         <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Portfolio value</h2>
-        <div className="flex gap-0.5 rounded-lg bg-gray-100 dark:bg-gray-800 p-0.5">
+        <div className="flex gap-0.5 rounded-lg bg-black/[0.04] dark:bg-white/[0.06] p-0.5 border border-black/[0.04] dark:border-white/[0.06]">
           {PERIOD_OPTIONS.map((p) => (
             <button
               key={p.id}
               type="button"
               onClick={() => onPeriodChange(p.id)}
               className={clsx(
-                'px-2 py-0.5 rounded text-[10px] font-medium',
-                period === p.id ? 'bg-white dark:bg-gray-700 shadow-sm' : 'text-gray-500'
+                'px-2 py-0.5 rounded text-[10px] font-medium transition-colors',
+                period === p.id ? 'bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-sm' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
               )}
             >
               {p.label}
@@ -402,7 +402,7 @@ function CompositionTable({ rows, brokerFilter }) {
 
   return (
     <div className="card overflow-hidden">
-      <div className="p-4 border-b border-gray-100 dark:border-gray-800 flex flex-col sm:flex-row sm:items-center gap-3 justify-between">
+      <div className="p-4 border-b border-black/[0.06] dark:border-white/[0.08] flex flex-col sm:flex-row sm:items-center gap-3 justify-between">
         <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Holdings composition</h2>
         <div className="flex items-center gap-2">
           <div className="relative flex-1 sm:w-48">
@@ -422,7 +422,7 @@ function CompositionTable({ rows, brokerFilter }) {
       </div>
 
       {showCols && (
-        <div className="px-4 py-2 flex flex-wrap gap-2 border-b border-gray-100 dark:border-gray-800 text-xs">
+        <div className="px-4 py-2 flex flex-wrap gap-2 border-b border-black/[0.06] dark:border-white/[0.08] text-xs">
           {cols.filter((c) => c.optional).map((c) => (
             <span key={c.key} className="text-gray-400">{c.label}</span>
           ))}
@@ -432,7 +432,7 @@ function CompositionTable({ rows, brokerFilter }) {
       <div className="overflow-x-auto">
         <table className="w-full text-xs">
           <thead>
-            <tr className="text-left text-gray-400 border-b border-gray-100 dark:border-gray-800">
+            <tr className="text-left text-gray-400 border-b border-black/[0.06] dark:border-white/[0.08]">
               {cols.map((c) => (
                 <th
                   key={c.key}
@@ -449,7 +449,7 @@ function CompositionTable({ rows, brokerFilter }) {
             {filtered.map((r) => {
               const up = (r.unrealizedPnLEur ?? 0) >= 0;
               return (
-                <tr key={`${r.broker}-${r.ticker}-${r.currency}`} className="border-b border-gray-50 dark:border-gray-800/50 hover:bg-gray-50/50 dark:hover:bg-gray-800/30">
+                <tr key={`${r.broker}-${r.ticker}-${r.currency}`} className="border-b border-black/[0.04] dark:border-white/[0.05] hover:bg-black/[0.02] dark:hover:bg-white/[0.03]">
                   <td className="px-3 py-2.5 min-w-[120px]">
                     <SecurityDisplay
                       row={r}
@@ -491,11 +491,11 @@ function DividendsSection({ dividends }) {
     <div className="card p-5">
       <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4">Income & dividends</h2>
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4">
-        <div className="rounded-lg bg-gray-50 dark:bg-gray-800/50 p-3">
+        <div className="rounded-xl bg-black/[0.02] dark:bg-white/[0.04] border border-black/[0.04] dark:border-white/[0.06] p-3">
           <p className="text-[10px] text-gray-400 uppercase">Trailing 12 mo</p>
           <p className="text-lg font-semibold tabular-nums">{fmtEur(dividends.trailing12Months)}</p>
         </div>
-        <div className="rounded-lg bg-gray-50 dark:bg-gray-800/50 p-3">
+        <div className="rounded-xl bg-black/[0.02] dark:bg-white/[0.04] border border-black/[0.04] dark:border-white/[0.06] p-3">
           <p className="text-[10px] text-gray-400 uppercase">Projected annual</p>
           <p className="text-lg font-semibold tabular-nums">{fmtEur(dividends.projectedAnnualIncome)}</p>
         </div>

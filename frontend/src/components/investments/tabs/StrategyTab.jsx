@@ -522,7 +522,7 @@ export default function StrategyTab({ brokerFilter = '' }) {
               <div key={c.id ?? `new-${idx}`} className="flex flex-wrap items-center gap-2">
                 <input
                   type="color"
-                  className="h-9 w-10 rounded border border-gray-200 dark:border-gray-700 bg-transparent"
+                  className="h-9 w-10 rounded-lg border border-black/[0.08] dark:border-white/[0.12] bg-transparent cursor-pointer"
                   value={c.color}
                   onChange={(e) => {
                     setDraftCats((prev) => prev.map((x, i) => (i === idx ? { ...x, color: e.target.value } : x)));

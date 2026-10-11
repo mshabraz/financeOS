@@ -35,7 +35,7 @@ export default function PriceSyncCompact({
   });
 
   return (
-    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 py-2 px-3 rounded-lg border border-gray-100 dark:border-gray-800 bg-gray-50/80 dark:bg-gray-800/40 text-xs">
+    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 py-2 px-3 rounded-xl border border-black/[0.06] dark:border-white/[0.08] bg-white/60 dark:bg-slate-900/40 backdrop-blur-md shadow-[inset_0_1px_0_0_rgba(255,255,255,0.7)] dark:shadow-[inset_0_1px_0_0_rgba(255,255,255,0.04)] text-xs">
       <div className="flex items-center gap-2 min-w-0">
         <span
           className={clsx(
@@ -66,14 +66,14 @@ export default function PriceSyncCompact({
           type="button"
           onClick={onSync}
           disabled={running}
-          className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:border-brand-400 disabled:opacity-50"
+          className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-white/80 dark:bg-white/[0.08] border border-black/[0.08] dark:border-white/[0.12] text-gray-700 dark:text-gray-200 hover:bg-white hover:text-brand-600 dark:hover:bg-white/[0.15] transition-colors disabled:opacity-50"
         >
           {running ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
           Sync
         </button>
       </div>
       {expanded && (
-        <div className="w-full sm:col-span-2 flex flex-wrap items-center gap-2 pt-1 border-t border-gray-200/80 dark:border-gray-700/80 sm:border-0 sm:pt-0">
+        <div className="w-full sm:col-span-2 flex flex-wrap items-center gap-2 pt-1.5 border-t border-black/[0.06] dark:border-white/[0.08] sm:border-0 sm:pt-0">
           {onClearAutoLinks && (
             <button type="button" onClick={onClearAutoLinks} disabled={clearingAuto} className="text-[10px] text-gray-500 hover:text-brand-600">
               Clear auto-links

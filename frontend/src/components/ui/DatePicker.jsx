@@ -82,13 +82,16 @@ export default function DatePicker({
             type="button"
             id={id}
             className={cn(
-              'flex min-h-[44px] h-[44px] w-full items-center justify-between rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-colors select-none cursor-pointer',
-              !value && 'text-gray-400 dark:text-gray-500'
+              'flex min-h-[44px] h-[44px] w-full items-center justify-between rounded-lg backdrop-blur-sm px-3 py-2 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 select-none cursor-pointer transition-colors',
+              'border border-black/[0.08] dark:border-white/[0.08] bg-white/70 dark:bg-slate-900/50',
+              'hover:bg-white/90 dark:hover:bg-slate-900/70 hover:border-black/[0.12] dark:hover:border-white/[0.12]',
+              'focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500/80 focus:bg-white dark:focus:bg-slate-900/80',
+              !value && 'text-slate-400 dark:text-slate-500'
             )}
             aria-label={placeholder}
           >
             <div className="flex items-center gap-2 truncate">
-              <CalendarIcon size={14} className="text-gray-400 shrink-0" />
+              <CalendarIcon size={14} className="text-slate-400 dark:text-slate-500 shrink-0" />
               <span className="truncate text-xs sm:text-sm font-medium">
                 {value ? displayValue(value) : placeholder}
               </span>
@@ -99,7 +102,7 @@ export default function DatePicker({
                 tabIndex={0}
                 onClick={handleClear}
                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleClear(e); }}
-                className="p-1 rounded-full text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors shrink-0 ml-1"
+                className="p-1 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-black/[0.05] dark:hover:bg-white/[0.08] transition-colors shrink-0 ml-1"
                 title="Clear date"
                 aria-label="Clear date"
               >
@@ -115,18 +118,18 @@ export default function DatePicker({
             <button
               type="button"
               onClick={() => setCurrentMonth((prev) => subMonths(prev, 1))}
-              className="p-1.5 rounded-lg text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+              className="p-1.5 rounded-lg text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-black/[0.05] dark:hover:bg-white/[0.08] transition-colors"
               title="Previous month"
             >
               <ChevronLeft size={16} />
             </button>
-            <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+            <span className="text-sm font-semibold text-slate-900 dark:text-slate-100">
               {format(currentMonth, 'MMMM yyyy')}
             </span>
             <button
               type="button"
               onClick={() => setCurrentMonth((prev) => addMonths(prev, 1))}
-              className="p-1.5 rounded-lg text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+              className="p-1.5 rounded-lg text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-black/[0.05] dark:hover:bg-white/[0.08] transition-colors"
               title="Next month"
             >
               <ChevronRight size={16} />
@@ -136,7 +139,7 @@ export default function DatePicker({
           {/* Weekday headers */}
           <div className="grid grid-cols-7 gap-1 text-center mb-1">
             {WEEKDAYS.map((day) => (
-              <span key={day} className="text-[11px] font-medium text-gray-400 dark:text-gray-500 py-1">
+              <span key={day} className="text-[11px] font-medium text-slate-400 dark:text-slate-500 py-1">
                 {day}
               </span>
             ))}
@@ -159,8 +162,8 @@ export default function DatePicker({
                     isSelected
                       ? 'bg-brand-600 text-white font-semibold shadow-sm'
                       : isCurrentMonth
-                      ? 'text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800'
-                      : 'text-gray-300 dark:text-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800/40',
+                      ? 'text-slate-900 dark:text-slate-100 hover:bg-black/[0.05] dark:hover:bg-white/[0.08]'
+                      : 'text-slate-300 dark:text-slate-600 hover:bg-black/[0.03] dark:hover:bg-white/[0.04]',
                     isTodayDate && !isSelected && 'ring-1 ring-brand-500 text-brand-600 dark:text-brand-400 font-semibold'
                   )}
                 >
@@ -171,7 +174,7 @@ export default function DatePicker({
           </div>
 
           {/* Bottom Actions: Today / Clear */}
-          <div className="mt-3 pt-2.5 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between text-xs px-1">
+          <div className="mt-3 pt-2.5 border-t border-black/[0.06] dark:border-white/[0.08] flex items-center justify-between text-xs px-1">
             <button
               type="button"
               onClick={handleToday}
@@ -183,7 +186,7 @@ export default function DatePicker({
               <button
                 type="button"
                 onClick={() => { onChange(''); setOpen(false); }}
-                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
               >
                 Clear
               </button>

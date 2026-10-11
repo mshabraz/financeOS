@@ -156,7 +156,7 @@ export default function InvestmentLedger({ brokerFilter }) {
       />
       <Dialog open={!!auditTx} onOpenChange={(open) => { if (!open) setAuditTx(null); }}>
         <DialogContent className="max-w-2xl max-h-[80vh] p-0 flex flex-col overflow-hidden">
-          <DialogHeader className="px-5 py-4 border-b border-gray-200 dark:border-gray-800 shrink-0">
+          <DialogHeader className="px-5 py-4 border-b border-black/[0.06] dark:border-white/[0.08] shrink-0">
             <DialogTitle className="text-base font-semibold text-gray-900 dark:text-white">
               Transaction Audit History · #{auditTx?.id}
             </DialogTitle>
@@ -167,7 +167,7 @@ export default function InvestmentLedger({ brokerFilter }) {
             ) : (
               <div className="space-y-2">
                 {(auditQ.data || []).map((a) => (
-                  <div key={a.id} className="rounded-lg border border-gray-200 dark:border-gray-800 p-3 text-xs bg-gray-50/50 dark:bg-gray-800/40">
+                  <div key={a.id} className="rounded-xl border border-black/[0.06] dark:border-white/[0.08] p-3 text-xs bg-black/[0.02] dark:bg-white/[0.03]">
                     <p className="font-medium text-gray-800 dark:text-gray-200">
                       {a.action} · {a.changed_at}
                     </p>
@@ -332,7 +332,7 @@ export default function InvestmentLedger({ brokerFilter }) {
           </div>
           </>
         )}
-        <div className="px-4 py-3 border-t border-gray-200 dark:border-gray-800 flex flex-col sm:flex-row sm:items-center gap-2 justify-between text-xs text-gray-500">
+        <div className="px-4 py-3 border-t border-black/[0.06] dark:border-white/[0.08] flex flex-col sm:flex-row sm:items-center gap-2 justify-between text-xs text-gray-500">
           <span>
             Page {list.data?.page ?? 1} / {list.data?.totalPages ?? 1} · {list.data?.total ?? 0} rows
           </span>

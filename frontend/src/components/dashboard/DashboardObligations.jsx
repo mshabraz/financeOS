@@ -47,7 +47,7 @@ export default function DashboardObligations({ summary, upcoming = [] }) {
             <li key={r.id}>
               <Link
                 to="/due"
-                className="flex justify-between gap-2 rounded-lg border border-gray-100 dark:border-gray-800 px-2.5 py-2 text-xs hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                className="flex justify-between gap-2 rounded-lg border border-black/[0.06] dark:border-white/[0.08] px-2.5 py-2 text-xs hover:bg-black/[0.03] dark:hover:bg-white/[0.04] transition-colors"
               >
                 <span className="font-medium truncate">{r.title}</span>
                 <span className="tabular-nums text-gray-500 shrink-0">

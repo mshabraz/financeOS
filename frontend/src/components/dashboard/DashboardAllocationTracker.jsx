@@ -118,14 +118,14 @@ export default function DashboardAllocationTracker() {
 
       {(compute.emergencyReserve?.totalEur > 0.01 || compute.brokerCashEur != null) && (
         <div className="grid grid-cols-2 gap-3 text-xs">
-          <div className="rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2">
+          <div className="rounded-xl border border-black/[0.06] dark:border-white/[0.08] bg-black/[0.01] dark:bg-white/[0.02] px-3 py-2">
             <p className="text-gray-500">Emergency / daily cash</p>
             <p className="mt-0.5 font-semibold tabular-nums text-gray-900 dark:text-white">
               {fmtEur(compute.emergencyReserve?.totalEur ?? 0)}
             </p>
             <p className="text-[11px] text-gray-400 mt-0.5">Not in portfolio rebalancing</p>
           </div>
-          <div className="rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2">
+          <div className="rounded-xl border border-black/[0.06] dark:border-white/[0.08] bg-black/[0.01] dark:bg-white/[0.02] px-3 py-2">
             <p className="text-gray-500">Brokerage cash</p>
             <p className="mt-0.5 font-semibold tabular-nums text-gray-900 dark:text-white">
               {fmtEur(compute.brokerCashEur ?? 0)}
@@ -142,7 +142,7 @@ export default function DashboardAllocationTracker() {
             {compute.depositPlan.map((p) => (
               <div
                 key={p.categoryId}
-                className="rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-1.5 text-xs"
+                className="rounded-lg border border-black/[0.06] dark:border-white/[0.08] bg-black/[0.01] dark:bg-white/[0.02] px-3 py-1.5 text-xs"
               >
                 <span
                   className="inline-block w-2 h-2 rounded-full mr-1.5"

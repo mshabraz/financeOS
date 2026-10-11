@@ -101,7 +101,7 @@ export default function GoalSolverView({
         <div className="xl:col-span-4 space-y-3">
           <div className="card p-4 space-y-4">
             <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-500">Your goal</h3>
-            <div className="flex rounded-lg border border-gray-200 dark:border-gray-700 p-0.5 text-sm">
+            <div className="flex rounded-lg border border-black/[0.06] dark:border-white/[0.08] bg-black/[0.03] dark:bg-white/[0.05] p-0.5 text-sm">
               {[
                 { id: 'balance', label: 'Target balance' },
                 { id: 'income', label: 'Monthly income' },
@@ -245,7 +245,7 @@ export default function GoalSolverView({
               )}
 
               <div className="card overflow-hidden">
-                <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-800">
+                <div className="px-4 py-3 border-b border-black/[0.06] dark:border-white/[0.08]">
                   <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200">
                     How much to save by deadline
                   </h3>
@@ -255,7 +255,7 @@ export default function GoalSolverView({
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
-                    <thead className="bg-gray-50 dark:bg-gray-800/50 text-xs text-gray-500">
+                    <thead className="bg-black/[0.02] dark:bg-white/[0.04] text-xs text-gray-500">
                       <tr>
                         {['Deadline', 'Monthly', 'Yearly', 'Weekly'].map((h) => (
                           <th key={h} className="text-left px-4 py-2.5 font-medium">{h}</th>

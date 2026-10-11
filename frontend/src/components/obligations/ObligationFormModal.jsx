@@ -74,7 +74,7 @@ export default function ObligationFormModal({ open, onClose, onSubmit, initial, 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => { if (!isOpen) onClose?.(); }}>
       <DialogContent className="max-w-lg p-0 flex flex-col overflow-hidden max-h-[92vh]">
-        <DialogHeader className="p-4 border-b border-gray-100 dark:border-gray-800 shrink-0">
+        <DialogHeader className="p-4 border-b border-black/[0.06] dark:border-white/[0.08] shrink-0">
           <DialogTitle className="text-sm sm:text-base font-semibold text-gray-900 dark:text-white">
             {initial ? 'Edit obligation' : 'Add payment or IOU'}
           </DialogTitle>
@@ -88,7 +88,7 @@ export default function ObligationFormModal({ open, onClose, onSubmit, initial, 
                 className={`flex-1 py-2 rounded-lg text-sm font-medium border transition-colors ${
                   direction === 'payable'
                     ? 'border-amber-500/50 bg-amber-500/10 text-amber-800 dark:text-amber-200'
-                    : 'border-gray-200 dark:border-gray-700 text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800'
+                    : 'border-black/[0.08] dark:border-white/[0.10] text-gray-500 hover:bg-black/[0.03] dark:hover:bg-white/[0.05]'
                 }`}
                 onClick={() => setDirection('payable')}
               >
@@ -99,7 +99,7 @@ export default function ObligationFormModal({ open, onClose, onSubmit, initial, 
                 className={`flex-1 py-2 rounded-lg text-sm font-medium border transition-colors ${
                   direction === 'receivable'
                     ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-800 dark:text-emerald-200'
-                    : 'border-gray-200 dark:border-gray-700 text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800'
+                    : 'border-black/[0.08] dark:border-white/[0.10] text-gray-500 hover:bg-black/[0.03] dark:hover:bg-white/[0.05]'
                 }`}
                 onClick={() => setDirection('receivable')}
               >
@@ -193,7 +193,7 @@ export default function ObligationFormModal({ open, onClose, onSubmit, initial, 
             </label>
           </div>
 
-          <div className="p-4 border-t border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/50 flex gap-2 shrink-0">
+          <div className="p-4 border-t border-black/[0.06] dark:border-white/[0.08] bg-black/[0.02] dark:bg-white/[0.02] flex gap-2 shrink-0">
             <button type="button" className="btn-secondary flex-1" onClick={onClose}>Cancel</button>
             <button type="submit" className="btn-primary flex-1" disabled={saving}>
               {saving ? 'Saving…' : initial ? 'Save' : 'Add'}

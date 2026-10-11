@@ -87,7 +87,7 @@ export default function DashboardWealthPortfolio({
               return (
                 <li
                   key={s.key}
-                  className="rounded-xl border border-gray-100 dark:border-gray-800 px-3 py-2.5 flex items-center gap-3"
+                  className="rounded-xl border border-black/[0.06] dark:border-white/[0.08] bg-black/[0.01] dark:bg-white/[0.02] px-3 py-2.5 flex items-center gap-3"
                 >
                   <span className="text-lg shrink-0">{s.icon}</span>
                   <div className="min-w-0 flex-1">

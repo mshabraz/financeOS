@@ -387,9 +387,9 @@ export default function CompoundPlanner({ brokerFilter = '', plannerView }) {
                   key={i}
                   className={clsx(
                     'text-xs rounded-lg px-3 py-2 border',
-                    ins.type === 'positive' && 'border-emerald-200 bg-emerald-50/50 dark:border-emerald-800 dark:bg-emerald-900/20',
-                    ins.type === 'tip' && 'border-amber-200 bg-amber-50/50 dark:border-amber-800 dark:bg-amber-900/20',
-                    ins.type === 'info' && 'border-gray-200 bg-gray-50/50 dark:border-gray-700 dark:bg-gray-800/30'
+                    ins.type === 'positive' && 'border-emerald-500/20 bg-emerald-500/10 text-emerald-800 dark:text-emerald-200',
+                    ins.type === 'tip' && 'border-amber-500/20 bg-amber-500/10 text-amber-800 dark:text-amber-200',
+                    ins.type === 'info' && 'border-black/[0.06] bg-black/[0.02] dark:border-white/[0.08] dark:bg-white/[0.03]'
                   )}
                 >
                   {ins.text}
@@ -399,12 +399,12 @@ export default function CompoundPlanner({ brokerFilter = '', plannerView }) {
           </div>
 
           <div className="card overflow-hidden">
-            <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-800">
+            <div className="px-4 py-3 border-b border-black/[0.06] dark:border-white/[0.08]">
               <h3 className="text-sm font-semibold">Yearly projection table</h3>
             </div>
             <div className="overflow-x-auto max-h-64">
               <table className="w-full text-xs">
-                <thead className="bg-gray-50 dark:bg-gray-800/50 sticky top-0">
+                <thead className="bg-black/[0.02] dark:bg-white/[0.04] backdrop-blur-md sticky top-0">
                   <tr>
                     {['Year', 'Balance', 'Contributed', 'Gains', 'Real'].map((h) => (
                       <th key={h} className="text-left px-3 py-2 font-medium text-gray-500">{h}</th>

@@ -34,7 +34,7 @@ export default function HistoryTab({ importHistory, brokerFilter: chromeBroker }
         showBroker={!chromeBroker}
       />
       <div className="card overflow-hidden">
-        <div className="px-5 py-3 border-b border-gray-200 dark:border-gray-800 hidden md:block">
+        <div className="px-5 py-3 border-b border-black/[0.06] dark:border-white/[0.08] hidden md:block">
           <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Import History</h2>
         </div>
         {importHistory.isLoading ? (

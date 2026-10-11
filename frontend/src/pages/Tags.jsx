@@ -265,32 +265,32 @@ export default function Tags() {
 
               {/* Tagged transactions */}
               <div className="card overflow-hidden">
-                <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-800">
-                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Transactions</span>
+                <div className="px-4 py-3 border-b border-black/[0.06] dark:border-white/[0.07]">
+                  <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Transactions</span>
                 </div>
                 <div className="overflow-x-auto max-h-96">
                   <table className="w-full text-sm">
-                    <thead className="bg-gray-50 dark:bg-gray-800/50 sticky top-0">
+                    <thead className="bg-black/[0.02] dark:bg-white/[0.02] border-b border-black/[0.06] dark:border-white/[0.07] sticky top-0 backdrop-blur-sm">
                       <tr>
                         {['Date','Source','Merchant','Amount','Category','Note'].map((h) => (
-                          <th key={h} className="text-left px-4 py-2.5 text-xs font-medium text-gray-500">{h}</th>
+                          <th key={h} className="text-left px-4 py-2.5 text-xs font-medium text-slate-500 dark:text-slate-400">{h}</th>
                         ))}
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                    <tbody className="divide-y divide-black/[0.04] dark:divide-white/[0.05]">
                       {analytics.data.transactions?.map((tx) => (
-                        <tr key={`${tx.source || 'bank'}-${tx.id}`} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                          <td className="px-4 py-2.5 text-xs text-gray-400">{tx.date}</td>
+                        <tr key={`${tx.source || 'bank'}-${tx.id}`} className="hover:bg-black/[0.02] dark:hover:bg-white/[0.03] transition-colors">
+                          <td className="px-4 py-2.5 text-xs text-slate-400">{tx.date}</td>
                           <td className="px-4 py-2.5">
                             {tx.source === 'revolut' ? (
                               <span className="text-[10px] font-semibold uppercase tracking-wide text-purple-600 dark:text-purple-400 bg-purple-500/10 px-1.5 py-0.5 rounded">Revolut</span>
                             ) : (
-                              <span className="text-[10px] text-gray-400">Bank</span>
+                              <span className="text-[10px] text-slate-400">Bank</span>
                             )}
                           </td>
-                          <td className="px-4 py-2.5 text-gray-800 dark:text-gray-200">{privText(tx.merchant || tx.beneficiary)}</td>
+                          <td className="px-4 py-2.5 text-slate-800 dark:text-slate-200">{privText(tx.merchant || tx.beneficiary)}</td>
                           <td
-                            className={clsx('px-4 py-2.5 font-medium', tx.direction === 'K' ? 'text-green-600' : 'text-gray-900 dark:text-white')}
+                            className={clsx('px-4 py-2.5 font-medium', tx.direction === 'K' ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-900 dark:text-white')}
                             title={
                               tx.source === 'revolut' && tx.effective_amount != null && Math.abs(tx.amount - tx.effective_amount) > 0.001
                                 ? `Statement: ${fmt(Math.abs(tx.amount))} · Analytics: ${fmt(Math.abs(tx.effective_amount))}`
@@ -309,7 +309,7 @@ export default function Tags() {
                               {tx.category_icon} {tx.category_name}
                             </span>
                           </td>
-                          <td className="px-4 py-2.5 text-xs text-gray-500 max-w-[200px] line-clamp-2" title={tx.notes || ''}>
+                          <td className="px-4 py-2.5 text-xs text-slate-500 max-w-[200px] line-clamp-2" title={tx.notes || ''}>
                             {tx.notes?.trim() ? tx.notes : '—'}
                           </td>
                         </tr>
@@ -322,23 +322,23 @@ export default function Tags() {
           ) : (
             /* Summary table */
             <div className="card overflow-hidden">
-              <div className="px-5 py-4 border-b border-gray-200 dark:border-gray-800">
-                <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Tag Overview</h2>
+              <div className="px-5 py-4 border-b border-black/[0.06] dark:border-white/[0.07]">
+                <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-300">Tag Overview</h2>
               </div>
               {summary.isLoading ? <LoadingSpinner /> : (
                 <table className="w-full text-sm">
-                  <thead className="bg-gray-50 dark:bg-gray-800/50">
+                  <thead className="bg-black/[0.02] dark:bg-white/[0.02] border-b border-black/[0.06] dark:border-white/[0.07]">
                     <tr>
                       {['Tag','Transactions','Net spending','Net income','Date Range'].map((h) => (
-                        <th key={h} className="text-left px-4 py-2.5 text-xs font-medium text-gray-500">{h}</th>
+                        <th key={h} className="text-left px-4 py-2.5 text-xs font-medium text-slate-500 dark:text-slate-400">{h}</th>
                       ))}
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                  <tbody className="divide-y divide-black/[0.04] dark:divide-white/[0.05]">
                     {summary.data?.map((r) => (
                       <tr
                         key={r.id}
-                        className="hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer"
+                        className="hover:bg-black/[0.02] dark:hover:bg-white/[0.03] transition-colors cursor-pointer"
                         onClick={() => setSelectedTag(r.id)}
                       >
                         <td className="px-4 py-2.5">

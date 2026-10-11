@@ -24,7 +24,7 @@ function BalanceRow({ row, onSave }) {
   };
 
   return (
-    <div className="flex items-center justify-between gap-3 py-3 border-b border-gray-100 dark:border-gray-800 last:border-0">
+    <div className="flex items-center justify-between gap-3 py-3 border-b border-black/[0.04] dark:border-white/[0.05] last:border-0">
       <div className="flex items-center gap-2.5 min-w-0">
         <span className="text-xl">{row.icon}</span>
         <div>

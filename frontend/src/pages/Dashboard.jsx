@@ -288,17 +288,17 @@ export default function Dashboard() {
           </p>
         </div>
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-          <div className="flex bg-gray-100 dark:bg-gray-800 rounded-lg p-0.5 text-sm">
+          <div className="flex bg-black/[0.04] dark:bg-white/[0.06] border border-black/[0.04] dark:border-white/[0.06] rounded-lg p-0.5 text-sm backdrop-blur-sm">
             {['month', 'quarter', 'year'].map((t) => (
               <button
                 key={t}
                 type="button"
                 onClick={() => setPeriod(t, currentPeriodValue(t))}
                 className={clsx(
-                  'px-3 py-1.5 rounded-md font-medium capitalize transition-colors',
+                  'px-3 py-1.5 rounded-md font-medium capitalize transition-all',
                   periodType === t
-                    ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
-                    : 'text-gray-500 hover:text-gray-700',
+                    ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm border border-black/[0.04] dark:border-white/[0.06]'
+                    : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200',
                 )}
               >
                 {t}

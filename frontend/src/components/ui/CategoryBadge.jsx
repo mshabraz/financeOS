@@ -5,7 +5,7 @@ export default function CategoryBadge({ icon, name, color, className }) {
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-xs font-medium border border-gray-200/70 dark:border-gray-800/70 bg-gray-50/80 dark:bg-gray-800/50 text-gray-700 dark:text-gray-300 transition-colors',
+        'inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-xs font-medium border border-black/[0.08] dark:border-white/[0.10] bg-white/60 dark:bg-slate-800/40 backdrop-blur-sm text-gray-700 dark:text-gray-300 transition-colors',
         className
       )}
       style={

@@ -49,7 +49,7 @@ export default function DividendsTab({ dividends, brokerFilter: chromeBroker }) 
   const totalTax = filtered.reduce((s, r) => s + (r.totalTax || 0), 0);
 
   return (
-    <div className="space-y-4 rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 sm:p-5 shadow-sm">
+    <div className="space-y-4 rounded-xl border border-black/[0.06] dark:border-white/[0.08] bg-white/70 dark:bg-slate-900/60 backdrop-blur-md shadow-[inset_0_1px_0_0_rgba(255,255,255,0.8)] dark:shadow-[inset_0_1px_0_0_rgba(255,255,255,0.06)] p-4 sm:p-5">
       <InvestmentTabFilters
         search={search}
         onSearchChange={setSearch}
@@ -81,7 +81,7 @@ export default function DividendsTab({ dividends, brokerFilter: chromeBroker }) 
       </div>
 
       <div className="card overflow-hidden">
-        <div className="px-5 py-3 border-b border-gray-200 dark:border-gray-800 flex flex-col sm:flex-row sm:items-center gap-2 justify-between">
+        <div className="px-5 py-3 border-b border-black/[0.06] dark:border-white/[0.08] flex flex-col sm:flex-row sm:items-center gap-2 justify-between">
           <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300">By Ticker</h2>
           <div className="flex items-center gap-4 text-xs">
             <span className="text-gray-400">
@@ -132,7 +132,7 @@ export default function DividendsTab({ dividends, brokerFilter: chromeBroker }) 
               )}
             </tbody>
             {filtered.length > 0 && (
-              <tfoot className="border-t-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+              <tfoot className="border-t border-black/[0.06] dark:border-white/[0.08] bg-black/[0.02] dark:bg-white/[0.03]">
                 <tr>
                   <td className="px-4 py-2.5 text-xs font-semibold text-gray-500" colSpan={3}>TOTAL</td>
                   <td className="px-4 py-2.5 font-semibold text-gray-700 dark:text-gray-200">

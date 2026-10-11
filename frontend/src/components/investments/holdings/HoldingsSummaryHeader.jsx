@@ -16,7 +16,7 @@ function KpiCard({ label, value, sub, icon: Icon, tone = 'neutral' }) {
     muted: 'text-gray-600 dark:text-gray-300',
   };
   return (
-    <div className="rounded-2xl border border-gray-200/80 dark:border-gray-700/80 bg-white/60 dark:bg-gray-900/50 p-3.5 min-w-0">
+    <div className="rounded-2xl border border-black/[0.06] dark:border-white/[0.08] bg-white/70 dark:bg-slate-900/60 backdrop-blur-md shadow-[inset_0_1px_0_0_rgba(255,255,255,0.8)] dark:shadow-[inset_0_1px_0_0_rgba(255,255,255,0.06)] p-3.5 min-w-0">
       <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-gray-400 mb-1.5">
         {Icon && <Icon size={12} className="shrink-0 opacity-70" />}
         <span className="truncate">{label}</span>
@@ -48,7 +48,7 @@ export default function HoldingsSummaryHeader({ summary, alerts = [] }) {
             </span>
           )}
           {alerts.map((a) => (
-            <span key={a} className="text-xs text-gray-500 dark:text-gray-400 px-2 py-1 rounded-full bg-gray-100 dark:bg-gray-800">
+            <span key={a} className="text-xs text-slate-500 dark:text-slate-400 px-2 py-1 rounded-full border border-black/[0.06] dark:border-white/[0.08] bg-black/[0.03] dark:bg-white/[0.05]">
               {a}
             </span>
           ))}

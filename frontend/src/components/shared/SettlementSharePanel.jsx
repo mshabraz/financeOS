@@ -46,27 +46,27 @@ export default function SettlementSharePanel({
 
       <div
         ref={previewRef}
-        className="rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-700 shadow-lg max-w-md mx-auto sm:mx-0"
+        className="rounded-2xl overflow-hidden border border-black/[0.08] dark:border-white/[0.1] shadow-xl max-w-md mx-auto sm:mx-0"
         style={{
           background: 'linear-gradient(145deg, #0f172a 0%, #1e3a5f 100%)',
           padding: '12px',
         }}
       >
-        <div className="bg-white dark:bg-gray-900 rounded-xl p-5 space-y-4">
+        <div className="card p-5 space-y-4">
           <div>
             <p className="text-teal-700 dark:text-teal-400 text-sm font-semibold flex items-center gap-1">
               <Share2 size={14} />
               Settlement
             </p>
-            <h3 className="text-lg font-bold text-gray-900 dark:text-white mt-1 leading-tight">
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white mt-1 leading-tight">
               {privText(eventName)}
             </h3>
             {totalSpend != null && (
-              <p className="text-sm text-gray-500 mt-1">Total: {fmt(totalSpend, currency)}</p>
+              <p className="text-sm text-slate-500 mt-1">Total: {fmt(totalSpend, currency)}</p>
             )}
           </div>
 
-          <div className="border-t border-gray-100 dark:border-gray-800 pt-3 space-y-2 max-h-80 overflow-y-auto">
+          <div className="border-t border-black/[0.06] dark:border-white/[0.08] pt-3 space-y-2 max-h-80 overflow-y-auto">
             {shareRows.length === 0 ? (
               <p className="text-green-600 dark:text-green-400 text-sm font-medium">
                 Everyone is settled up!

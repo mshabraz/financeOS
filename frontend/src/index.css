@@ -27,18 +27,18 @@
     --input: 214.3 31.8% 91.4%;
     --ring: 201 96% 32%;
 
-    --surface-subtle: #f8fafc;
-    --surface-panel: #ffffff;
-    --surface-card: #ffffff;
-    --surface-border: #e2e8f0;
+    --surface-subtle: rgba(248, 250, 252, 0.7);
+    --surface-panel: rgba(255, 255, 255, 0.85);
+    --surface-card: rgba(255, 255, 255, 0.75);
+    --surface-border: rgba(0, 0, 0, 0.06);
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
+    --background: 222 47% 7%;
     --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
+    --card: 222 47% 9%;
     --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
+    --popover: 222 47% 9%;
     --popover-foreground: 210 40% 98%;
     --primary: 201 96% 40%;
     --primary-foreground: 210 40% 98%;
@@ -54,10 +54,10 @@
     --input: 217.2 32.6% 17.5%;
     --ring: 201 96% 40%;
 
-    --surface-subtle: #0f172a;
-    --surface-panel: #1e293b;
-    --surface-card: #0f172a;
-    --surface-border: #1e293b;
+    --surface-subtle: rgba(255, 255, 255, 0.03);
+    --surface-panel: rgba(15, 23, 42, 0.85);
+    --surface-card: rgba(15, 23, 42, 0.6);
+    --surface-border: rgba(255, 255, 255, 0.08);
   }
 
   html {
@@ -66,13 +66,19 @@
   }
 
   body {
-    @apply bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-100;
+    @apply bg-slate-50 text-slate-900 dark:bg-[#0b0f17] dark:text-slate-100 min-h-screen antialiased;
+    background-image: radial-gradient(circle at 50% 0%, rgba(14, 165, 233, 0.03) 0%, transparent 60%);
+    background-attachment: fixed;
     font-family: 'Inter', system-ui, sans-serif;
     padding: env(safe-area-inset-top) env(safe-area-inset-right) 0 env(safe-area-inset-left);
   }
 
+  .dark body, body.dark, html.dark body {
+    background-image: radial-gradient(circle at 50% 0%, rgba(14, 165, 233, 0.04) 0%, transparent 60%);
+  }
+
   * {
-    @apply border-gray-200 dark:border-gray-800;
+    @apply border-black/[0.06] dark:border-white/[0.08];
   }
 
   ::-webkit-scrollbar {
@@ -83,7 +89,7 @@
     @apply bg-transparent;
   }
   ::-webkit-scrollbar-thumb {
-    @apply bg-gray-300 dark:bg-gray-700 rounded-full;
+    @apply bg-black/15 dark:bg-white/15 rounded-full hover:bg-black/25 dark:hover:bg-white/25 transition-colors;
   }
 
   /* Remove native spin buttons on number inputs */
@@ -105,35 +111,50 @@
 
 @layer components {
   .card {
-    @apply bg-white dark:bg-gray-900 rounded-xl border border-gray-200/80 dark:border-gray-800/80 shadow-card transition-shadow;
+    @apply rounded-xl backdrop-blur-md transition-all duration-200
+           bg-white/75 dark:bg-slate-900/60
+           border border-black/[0.06] dark:border-white/[0.08]
+           shadow-[0_1px_3px_0_rgba(0,0,0,0.03),inset_0_1px_0_0_rgba(255,255,255,0.9)]
+           dark:shadow-[inset_0_1px_0_0_rgba(255,255,255,0.06),0_1px_3px_0_rgba(0,0,0,0.4)]
+           hover:border-black/[0.1] dark:hover:border-white/[0.12]
+           hover:bg-white/90 dark:hover:bg-slate-900/75;
   }
 
   .card-subtle {
-    @apply bg-gray-50/70 dark:bg-gray-800/40 rounded-lg border border-gray-200/60 dark:border-gray-700/40;
+    @apply rounded-lg backdrop-blur-sm transition-colors
+           bg-slate-50/70 dark:bg-white/[0.03]
+           border border-black/[0.04] dark:border-white/[0.06];
   }
 
   .btn-primary {
     @apply bg-brand-600 hover:bg-brand-700 active:bg-brand-700 text-white px-4 py-2.5 rounded-lg text-sm font-medium
            transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed
-           min-h-[44px] inline-flex items-center justify-center touch-manipulation;
+           min-h-[44px] inline-flex items-center justify-center touch-manipulation
+           shadow-sm;
   }
 
   .btn-secondary {
-    @apply bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700
-           active:bg-gray-300 dark:active:bg-gray-600 text-gray-700 dark:text-gray-300 px-4 py-2.5 rounded-lg text-sm font-medium
-           transition-colors duration-150 min-h-[44px] inline-flex items-center justify-center touch-manipulation;
+    @apply backdrop-blur-sm px-4 py-2.5 rounded-lg text-sm font-medium
+           transition-colors duration-150 min-h-[44px] inline-flex items-center justify-center touch-manipulation
+           bg-black/[0.04] hover:bg-black/[0.07] active:bg-black/[0.09] border border-black/[0.05] text-slate-800 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.8)]
+           dark:bg-white/[0.06] dark:hover:bg-white/[0.1] dark:active:bg-white/[0.12] dark:border-white/[0.08] dark:text-slate-200 dark:shadow-[inset_0_1px_0_0_rgba(255,255,255,0.05)];
   }
 
   .btn-ghost {
-    @apply hover:bg-gray-100 dark:hover:bg-gray-800 active:bg-gray-200 dark:active:bg-gray-700
-           text-gray-600 dark:text-gray-400 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors duration-150
+    @apply hover:bg-black/[0.05] dark:hover:bg-white/[0.06]
+           active:bg-black/[0.08] dark:active:bg-white/[0.09]
+           text-slate-600 dark:text-slate-300 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors duration-150
            min-h-[44px] inline-flex items-center justify-center touch-manipulation;
   }
 
   .input {
-    @apply w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700
-           rounded-lg px-3 py-2.5 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-brand-500
-           focus:border-transparent transition-colors min-h-[44px];
+    @apply w-full backdrop-blur-sm rounded-lg px-3 py-2.5 text-base sm:text-sm min-h-[44px] transition-colors
+           bg-white/70 dark:bg-slate-900/50
+           border border-black/[0.08] dark:border-white/[0.08]
+           text-slate-900 dark:text-slate-100
+           placeholder:text-slate-400 dark:placeholder:text-slate-500
+           focus:outline-none focus:bg-white dark:focus:bg-slate-900/80
+           focus:border-brand-500/80 focus:ring-2 focus:ring-brand-500/20;
   }
 
   .page-header {
@@ -141,11 +162,11 @@
   }
 
   .page-title {
-    @apply text-xl sm:text-2xl font-bold text-gray-900 dark:text-white truncate;
+    @apply text-xl sm:text-2xl font-bold text-slate-900 dark:text-white tracking-tight truncate;
   }
 
   .page-subtitle {
-    @apply text-sm text-gray-500 dark:text-gray-400 mt-0.5;
+    @apply text-sm text-slate-500 dark:text-slate-400 mt-0.5;
   }
 
   .page-actions {
@@ -165,11 +186,17 @@
   }
 
   .modal-overlay {
-    @apply fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 p-0 sm:p-4;
+    @apply fixed inset-0 z-50 flex items-end sm:items-center justify-center
+           bg-black/40 dark:bg-black/65 backdrop-blur-md p-0 sm:p-4;
   }
 
   .modal-panel {
-    @apply bg-white dark:bg-gray-900 w-full sm:max-w-lg rounded-t-2xl sm:rounded-xl shadow-2xl
+    @apply w-full sm:max-w-lg rounded-t-2xl sm:rounded-xl backdrop-blur-xl
+           bg-white/90 dark:bg-slate-900/85
+           border border-black/[0.08] dark:border-white/[0.12]
+           text-slate-900 dark:text-slate-100
+           shadow-[0_20px_40px_-15px_rgba(0,0,0,0.1),inset_0_1px_0_0_rgba(255,255,255,0.9)]
+           dark:shadow-[0_25px_50px_-12px_rgba(0,0,0,0.7),inset_0_1px_0_0_rgba(255,255,255,0.1)]
            max-h-[92dvh] overflow-y-auto p-5 sm:p-6;
   }
 

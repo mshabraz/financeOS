@@ -123,7 +123,7 @@ export function PriceSyncBar({ syncStatus, onSync, syncing, onClearAutoLinks, cl
           </button>
         </div>
       </div>
-      <div className="text-xs border-t border-gray-100 dark:border-gray-800 pt-2">
+      <div className="text-xs border-t border-black/[0.06] dark:border-white/[0.08] pt-2">
         <span className="text-gray-500">Yahoo Finance: </span>
         {yahooHealth.isLoading || yahooHealth.isFetching ? (
           <span className="text-gray-400">checking…</span>
@@ -219,7 +219,7 @@ export function SecurityBindModal({ holding, onClose, onBound }) {
           )}
         </div>
 
-        <div className="pt-2 border-t border-gray-100 dark:border-gray-800">
+        <div className="pt-2 border-t border-black/[0.06] dark:border-white/[0.08]">
           <button type="button" onClick={onClose} className="btn-secondary w-full">Cancel</button>
         </div>
       </DialogContent>
@@ -499,14 +499,14 @@ export function MarketHoldingsTable({ data, valuation, onBind, onUnbind, showEur
         onUnbind={onUnbind}
       />
       <div className="card overflow-hidden hidden md:block">
-        <div className="px-5 py-3 border-b border-gray-200 dark:border-gray-800">
+        <div className="px-5 py-3 border-b border-black/[0.06] dark:border-white/[0.08]">
           <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
             Open positions — market value ({data.length})
           </h2>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="bg-gray-50 dark:bg-gray-800/50">
+            <thead className="bg-black/[0.02] dark:bg-white/[0.04]">
               <tr>
                 {['Broker','Ticker','Security','Qty','Avg cost','Last price','Market value','Unrealized','Updated',''].map((h) => (
                   <th key={h} className="text-left px-3 py-2.5 text-xs font-medium text-gray-500">{h}</th>
@@ -634,7 +634,7 @@ export function HoldingsTable({ data, title, open }) {
       <CostBasisHoldingCards data={data} open={open} />
       <div className="card overflow-hidden hidden md:block">
       {title && (
-        <div className="px-5 py-3 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between">
+        <div className="px-5 py-3 border-b border-black/[0.06] dark:border-white/[0.08] flex items-center justify-between">
           <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300">{title} ({data.length})</h2>
           {/* Inline summary for the section */}
           <div className="flex items-center gap-4 text-xs">
@@ -720,7 +720,7 @@ export function HoldingsTable({ data, title, open }) {
             ))}
           </tbody>
           {/* Totals footer */}
-          <tfoot className="border-t-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+          <tfoot className="border-t border-black/[0.06] dark:border-white/[0.08] bg-black/[0.02] dark:bg-white/[0.03]">
             <tr>
               <td className="px-4 py-2.5 text-xs font-semibold text-gray-500" colSpan={3}>
                 TOTAL {hasMixedCcy && <span className="font-normal text-gray-400">(~EUR equiv.)</span>}

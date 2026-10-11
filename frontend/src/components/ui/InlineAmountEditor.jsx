@@ -36,9 +36,9 @@ export default function InlineAmountEditor({
 
   return (
     <div className={cn('inline-flex items-center gap-1.5', className)}>
-      <div className="relative inline-flex items-center rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-sm focus-within:border-transparent focus-within:ring-2 focus-within:ring-brand-500 transition-colors overflow-hidden">
+      <div className="relative inline-flex items-center rounded-lg border border-black/[0.08] dark:border-white/[0.08] bg-white/70 dark:bg-slate-900/50 backdrop-blur-sm shadow-sm focus-within:border-brand-500/80 focus-within:ring-2 focus-within:ring-brand-500/20 transition-colors overflow-hidden">
         {currency && (
-          <span className="pointer-events-none pl-2.5 pr-1 text-xs font-medium text-gray-400 select-none">
+          <span className="pointer-events-none pl-2.5 pr-1 text-xs font-medium text-slate-400 dark:text-slate-500 select-none">
             {currency}
           </span>
         )}
@@ -49,7 +49,7 @@ export default function InlineAmountEditor({
           value={val}
           onChange={(e) => setVal(e.target.value)}
           onKeyDown={handleKeyDown}
-          className="w-28 py-1.5 pr-2.5 bg-transparent text-sm font-semibold text-right tabular-nums text-gray-900 dark:text-gray-100 placeholder:text-gray-400 focus:outline-none"
+          className="w-28 py-1.5 pr-2.5 bg-transparent text-sm font-semibold text-right tabular-nums text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none"
         />
       </div>
       <button

@@ -50,14 +50,14 @@ function NavItem({ to, icon: Icon, label, end, onClick, compact }) {
         clsx(
           compact
             ? 'flex flex-col items-center justify-center gap-0.5 flex-1 min-w-0 py-1 min-h-[52px] touch-manipulation'
-            : 'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors min-h-[44px]',
+            : 'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all min-h-[44px]',
           isActive
             ? compact
-              ? 'text-brand-600 dark:text-brand-400'
-              : 'bg-brand-50 dark:bg-brand-600/10 text-brand-700 dark:text-brand-400'
+              ? 'text-brand-600 dark:text-brand-400 font-semibold'
+              : 'bg-brand-500/10 text-brand-700 dark:text-brand-400 font-semibold border border-brand-500/20'
             : compact
-              ? 'text-gray-500 dark:text-gray-400'
-              : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
+              ? 'text-slate-500 dark:text-slate-400'
+              : 'text-slate-600 dark:text-slate-400 hover:bg-black/[0.04] dark:hover:bg-white/[0.05] hover:text-slate-900 dark:hover:text-slate-200 border border-transparent'
         )
       }
     >
@@ -80,9 +80,9 @@ export default function Layout({ children }) {
   const isMoreActive = MORE_NAV.some((n) => location.pathname.startsWith(n.to));
 
   return (
-    <div className="flex h-[100dvh] overflow-hidden bg-gray-50 dark:bg-gray-950">
-      <aside className="hidden lg:flex w-56 flex-shrink-0 flex-col border-r border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
-        <div className="h-14 flex items-center px-4 border-b border-gray-200 dark:border-gray-800 min-w-0">
+    <div className="flex h-[100dvh] overflow-hidden bg-slate-50/50 dark:bg-[#0b0f17]/50">
+      <aside className="hidden lg:flex w-56 flex-shrink-0 flex-col border-r border-black/[0.06] dark:border-white/[0.07] bg-white/80 dark:bg-[#0b0f17]/80 backdrop-blur-xl">
+        <div className="h-14 flex items-center px-4 border-b border-black/[0.06] dark:border-white/[0.07] min-w-0">
           <FinanceLogo variant="full" size={36} className="min-w-0" />
         </div>
         <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto">
@@ -90,34 +90,42 @@ export default function Layout({ children }) {
             <NavItem key={to} to={to} icon={icon} label={label} end={to === '/'} />
           ))}
         </nav>
-        <div className="p-3 border-t border-gray-200 dark:border-gray-800 space-y-0.5">
+        <div className="p-3 border-t border-black/[0.06] dark:border-white/[0.07] space-y-0.5">
           <button
             type="button"
             onClick={togglePrivacy}
             className={clsx(
-              'flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium min-h-[44px]',
+              'flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium min-h-[44px] transition-colors',
               privacyMode
-                ? 'bg-amber-50 dark:bg-amber-900/20 text-amber-800 dark:text-amber-300'
-                : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
+                ? 'bg-amber-500/10 text-amber-800 dark:text-amber-300 border border-amber-500/20'
+                : 'text-slate-600 dark:text-slate-400 hover:bg-black/[0.04] dark:hover:bg-white/[0.05]'
             )}
             title={privacyMode ? 'Show amounts and account details' : 'Hide amounts and account details'}
           >
             {privacyMode ? <EyeOff size={18} /> : <Eye size={18} />}
             {privacyMode ? 'Privacy on' : 'Privacy off'}
           </button>
-          <button type="button" onClick={toggle} className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 min-h-[44px]">
+          <button
+            type="button"
+            onClick={toggle}
+            className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium text-slate-600 dark:text-slate-400 hover:bg-black/[0.04] dark:hover:bg-white/[0.05] min-h-[44px] transition-colors"
+          >
             {dark ? <Sun size={18} /> : <Moon size={18} />}
             {dark ? 'Light mode' : 'Dark mode'}
           </button>
           {status?.authEnabled && (
             <>
               {user?.email && (
-                <p className="px-3 py-1 text-[10px] text-gray-400 truncate" title={user.email}>
+                <p className="px-3 py-1 text-[10px] text-slate-400 truncate" title={user.email}>
                   {user.email}
                   {user.role === 'admin' ? ' · admin' : ''}
                 </p>
               )}
-              <button type="button" onClick={() => logout()} className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 min-h-[44px]">
+              <button
+                type="button"
+                onClick={() => logout()}
+                className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium text-slate-600 dark:text-slate-400 hover:bg-black/[0.04] dark:hover:bg-white/[0.05] min-h-[44px] transition-colors"
+              >
                 <LogOut size={18} />
                 Sign out
               </button>
@@ -129,7 +137,7 @@ export default function Layout({ children }) {
       <div className="flex-1 flex flex-col min-w-0 min-h-0">
         {bankAutoSyncing && (
           <div
-            className="shrink-0 border-b border-brand-200/60 dark:border-brand-800/40 bg-brand-50/80 dark:bg-brand-950/40 px-4 py-1.5 text-center text-xs text-brand-700 dark:text-brand-300"
+            className="shrink-0 border-b border-brand-500/20 bg-brand-500/10 backdrop-blur-sm px-4 py-1.5 text-center text-xs font-medium text-brand-700 dark:text-brand-300"
             role="status"
           >
             Syncing connected banks…
@@ -142,7 +150,7 @@ export default function Layout({ children }) {
         </main>
 
         <nav
-          className="lg:hidden fixed bottom-0 inset-x-0 z-40 border-t border-gray-200 dark:border-gray-800 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md pb-[env(safe-area-inset-bottom)]"
+          className="lg:hidden fixed bottom-0 inset-x-0 z-40 border-t border-black/[0.06] dark:border-white/[0.08] bg-white/80 dark:bg-[#0b0f17]/80 backdrop-blur-xl pb-[env(safe-area-inset-bottom)]"
           aria-label="Main navigation"
         >
           <div className="flex items-stretch justify-around max-w-lg mx-auto">
@@ -154,7 +162,7 @@ export default function Layout({ children }) {
               onClick={() => setMoreOpen(true)}
               className={clsx(
                 'flex flex-col items-center justify-center gap-0.5 flex-1 min-w-0 py-1 min-h-[52px] touch-manipulation',
-                isMoreActive || moreOpen ? 'text-brand-600 dark:text-brand-400' : 'text-gray-500 dark:text-gray-400'
+                isMoreActive || moreOpen ? 'text-brand-600 dark:text-brand-400' : 'text-slate-500 dark:text-slate-400'
               )}
             >
               <MoreHorizontal size={22} strokeWidth={isMoreActive ? 2.5 : 2} />
@@ -166,15 +174,15 @@ export default function Layout({ children }) {
 
       {moreOpen && (
         <div className="lg:hidden fixed inset-0 z-50">
-          <button type="button" className="absolute inset-0 bg-black/50" aria-label="Close menu" onClick={() => setMoreOpen(false)} />
+          <button type="button" className="absolute inset-0 bg-black/40 dark:bg-black/65 backdrop-blur-sm" aria-label="Close menu" onClick={() => setMoreOpen(false)} />
           <div
-            className="absolute bottom-0 inset-x-0 bg-white dark:bg-gray-900 rounded-t-2xl border-t border-gray-200 dark:border-gray-800 pb-[env(safe-area-inset-bottom)] max-h-[70dvh] overflow-y-auto"
+            className="absolute bottom-0 inset-x-0 bg-white/90 dark:bg-[#0b0f17]/90 backdrop-blur-2xl rounded-t-2xl border-t border-black/[0.08] dark:border-white/[0.1] pb-[env(safe-area-inset-bottom)] max-h-[70dvh] overflow-y-auto shadow-2xl"
             role="dialog"
             aria-modal="true"
           >
-            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-800">
-              <span className="font-semibold text-gray-900 dark:text-white">More</span>
-              <button type="button" onClick={() => setMoreOpen(false)} className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 min-h-[44px] min-w-[44px] flex items-center justify-center">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-black/[0.06] dark:border-white/[0.08]">
+              <span className="font-semibold text-slate-900 dark:text-white">More</span>
+              <button type="button" onClick={() => setMoreOpen(false)} className="p-2 rounded-lg hover:bg-black/[0.05] dark:hover:bg-white/[0.08] min-h-[44px] min-w-[44px] flex items-center justify-center text-slate-500 hover:text-slate-900 dark:hover:text-slate-100 transition-colors">
                 <X size={20} />
               </button>
             </div>
@@ -186,10 +194,10 @@ export default function Layout({ children }) {
                   onClick={() => setMoreOpen(false)}
                   className={({ isActive }) =>
                     clsx(
-                      'flex items-center gap-3 px-4 py-3.5 rounded-xl text-base font-medium min-h-[48px] touch-manipulation',
+                      'flex items-center gap-3 px-4 py-3.5 rounded-xl text-base font-medium min-h-[48px] touch-manipulation transition-all',
                       isActive
-                        ? 'bg-brand-50 dark:bg-brand-600/10 text-brand-700 dark:text-brand-400'
-                        : 'text-gray-700 dark:text-gray-200 active:bg-gray-100 dark:active:bg-gray-800'
+                        ? 'bg-brand-500/10 text-brand-700 dark:text-brand-400 font-semibold border border-brand-500/20'
+                        : 'text-slate-700 dark:text-slate-200 active:bg-black/[0.05] dark:active:bg-white/[0.08]'
                     )
                   }
                 >
@@ -198,15 +206,15 @@ export default function Layout({ children }) {
                 </NavLink>
               ))}
             </div>
-            <div className="p-2 pt-0 border-t border-gray-100 dark:border-gray-800 mt-1 space-y-0.5">
+            <div className="p-2 pt-0 border-t border-black/[0.06] dark:border-white/[0.08] mt-1 space-y-0.5">
               <button
                 type="button"
                 onClick={togglePrivacy}
                 className={clsx(
-                  'flex items-center gap-3 w-full px-4 py-3.5 rounded-xl text-base font-medium min-h-[48px] active:bg-gray-100 dark:active:bg-gray-800',
+                  'flex items-center gap-3 w-full px-4 py-3.5 rounded-xl text-base font-medium min-h-[48px] active:bg-black/[0.05] dark:active:bg-white/[0.08] transition-colors',
                   privacyMode
-                    ? 'bg-amber-50 dark:bg-amber-900/20 text-amber-800 dark:text-amber-300'
-                    : 'text-gray-700 dark:text-gray-200'
+                    ? 'bg-amber-500/10 text-amber-800 dark:text-amber-300 border border-amber-500/20'
+                    : 'text-slate-700 dark:text-slate-200'
                 )}
               >
                 {privacyMode ? <EyeOff size={22} /> : <Eye size={22} />}
@@ -215,7 +223,7 @@ export default function Layout({ children }) {
               <button
                 type="button"
                 onClick={toggle}
-                className="flex items-center gap-3 w-full px-4 py-3.5 rounded-xl text-base font-medium text-gray-700 dark:text-gray-200 min-h-[48px] active:bg-gray-100 dark:active:bg-gray-800"
+                className="flex items-center gap-3 w-full px-4 py-3.5 rounded-xl text-base font-medium text-slate-700 dark:text-slate-200 min-h-[48px] active:bg-black/[0.05] dark:active:bg-white/[0.08] transition-colors"
               >
                 {dark ? <Sun size={22} /> : <Moon size={22} />}
                 {dark ? 'Light mode' : 'Dark mode'}
@@ -224,7 +232,7 @@ export default function Layout({ children }) {
                 <button
                   type="button"
                   onClick={() => { setMoreOpen(false); logout(); }}
-                  className="flex items-center gap-3 w-full px-4 py-3.5 rounded-xl text-base font-medium text-gray-700 dark:text-gray-200 min-h-[48px] active:bg-gray-100 dark:active:bg-gray-800"
+                  className="flex items-center gap-3 w-full px-4 py-3.5 rounded-xl text-base font-medium text-slate-700 dark:text-slate-200 min-h-[48px] active:bg-black/[0.05] dark:active:bg-white/[0.08] transition-colors"
                 >
                   <LogOut size={22} />
                   Sign out

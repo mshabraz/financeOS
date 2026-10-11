@@ -90,9 +90,9 @@ function GoalPicker({
   defaultGoalId, onSetDefault,
 }) {
   return (
-    <div className="rounded-xl border border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/40 p-3 sm:p-4 space-y-3">
+    <div className="rounded-xl border border-black/[0.06] dark:border-white/[0.08] bg-black/[0.02] dark:bg-white/[0.03] p-3 sm:p-4 space-y-3 backdrop-blur-sm">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">Your goals</p>
+        <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Your goals</p>
         <button type="button" onClick={onCreate} className="btn-secondary text-xs inline-flex items-center gap-1">
           <Plus size={14} />
           New goal
@@ -105,17 +105,17 @@ function GoalPicker({
             type="button"
             onClick={() => onSelect(normalizeGoalId(g.id))}
             className={clsx(
-              'px-3 py-2 rounded-lg text-sm font-medium border transition-colors',
+              'px-3 py-2 rounded-lg text-sm font-medium border transition-all',
               selectedId === normalizeGoalId(g.id) && panel === 'track'
                 ? 'bg-brand-600 border-brand-600 text-white shadow-sm'
-                : 'bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-brand-400'
+                : 'bg-white/70 dark:bg-slate-900/50 border-black/[0.08] dark:border-white/[0.08] text-slate-700 dark:text-slate-300 hover:border-brand-500/50 backdrop-blur-sm'
             )}
           >
             {g.name}
           </button>
         ))}
         {!goals.length && (
-          <span className="text-sm text-gray-400 py-2">No active goals</span>
+          <span className="text-sm text-slate-400 py-2">No active goals</span>
         )}
       </div>
       {selectedId != null && onSetDefault && panel === 'track' && (
@@ -123,10 +123,10 @@ function GoalPicker({
           type="button"
           onClick={() => onSetDefault(selectedId)}
           className={clsx(
-            'text-xs font-medium rounded-lg px-2.5 py-1.5 border transition-colors',
+            'text-xs font-medium rounded-lg px-2.5 py-1.5 border transition-all',
             defaultGoalId === selectedId
-              ? 'border-brand-400 bg-brand-50 dark:bg-brand-950/30 text-brand-700 dark:text-brand-300'
-              : 'border-gray-200 dark:border-gray-700 text-gray-500 hover:border-brand-400 hover:text-gray-700',
+              ? 'border-brand-500/40 bg-brand-500/10 text-brand-700 dark:text-brand-300'
+              : 'border-black/[0.08] dark:border-white/[0.08] bg-white/60 dark:bg-slate-900/40 backdrop-blur-sm text-slate-500 hover:border-brand-500/40 hover:text-slate-700',
           )}
         >
           {defaultGoalId === selectedId
@@ -139,7 +139,7 @@ function GoalPicker({
           <button
             type="button"
             onClick={onToggleArchives}
-            className="text-xs font-medium text-gray-500 flex items-center gap-1 hover:text-gray-700"
+            className="text-xs font-medium text-slate-500 flex items-center gap-1 hover:text-slate-700"
           >
             Archives ({archives.length})
             <ChevronDown size={14} className={clsx('transition-transform', showArchives && 'rotate-180')} />
@@ -152,14 +152,14 @@ function GoalPicker({
                   type="button"
                   onClick={() => onSelect(normalizeGoalId(g.id))}
                   className={clsx(
-                    'px-2.5 py-1 rounded-lg text-xs border',
+                    'px-2.5 py-1 rounded-lg text-xs border transition-all',
                     selectedId === normalizeGoalId(g.id) && panel === 'track'
-                      ? 'border-brand-400 bg-brand-50 dark:bg-brand-950/30'
-                      : 'border-gray-200 dark:border-gray-700 text-gray-500'
+                      ? 'border-brand-500/40 bg-brand-500/10 text-brand-700 dark:text-brand-300'
+                      : 'border-black/[0.08] dark:border-white/[0.08] bg-white/60 dark:bg-slate-900/40 backdrop-blur-sm text-slate-500'
                   )}
                 >
                   {g.name}
-                  <span className="text-[10px] text-gray-400 ml-1">{statusLabel(g.status)}</span>
+                  <span className="text-[10px] text-slate-400 ml-1">{statusLabel(g.status)}</span>
                 </button>
               ))}
             </div>
@@ -604,13 +604,13 @@ export default function WealthGoalTracking() {
             ]}
           />
 
-          <details className="group rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900">
-            <summary className="flex items-center gap-2 px-4 py-3 cursor-pointer text-sm font-medium text-gray-600 dark:text-gray-400 list-none">
+          <details className="group rounded-xl card overflow-hidden">
+            <summary className="flex items-center gap-2 px-4 py-3 cursor-pointer text-sm font-medium text-slate-600 dark:text-slate-400 list-none">
               <MoreHorizontal size={16} />
               More metrics
               <ChevronDown size={14} className="ml-auto transition-transform group-open:rotate-180" />
             </summary>
-            <div className="px-4 pb-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 border-t border-gray-100 dark:border-gray-800 pt-3">
+            <div className="px-4 pb-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 border-t border-black/[0.06] dark:border-white/[0.07] pt-3">
               {[
                 { label: 'Months on target', value: monthly?.hitCount ?? 0 },
                 { label: 'Months missed', value: monthly?.missCount ?? 0 },
@@ -625,23 +625,23 @@ export default function WealthGoalTracking() {
                 },
               ].map(({ label, value }) => (
                 <div key={label} className="text-xs">
-                  <p className="text-gray-400 truncate">{label}</p>
-                  <p className="font-semibold tabular-nums text-gray-900 dark:text-white mt-0.5">{value}</p>
+                  <p className="text-slate-400 truncate">{label}</p>
+                  <p className="font-semibold tabular-nums text-slate-900 dark:text-white mt-0.5">{value}</p>
                 </div>
               ))}
             </div>
           </details>
 
-          <div className="rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 p-4">
-            <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200">Net savings vs pace</h3>
-            <p className="text-xs text-gray-400 mb-3">Last 24 months</p>
+          <div className="rounded-xl card p-4">
+            <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-200">Net savings vs pace</h3>
+            <p className="text-xs text-slate-400 mb-3">Last 24 months</p>
             {chartData.length === 0 ? (
-              <p className="text-sm text-gray-400 py-6 text-center">No savings history in the tracking window yet.</p>
+              <p className="text-sm text-slate-400 py-6 text-center">No savings history in the tracking window yet.</p>
             ) : (
               <div className="chart-h min-h-[200px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={chartData} barGap={2}>
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-700" />
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-slate-200 dark:stroke-slate-800" />
                     <XAxis dataKey="month" tick={{ fontSize: 10 }} />
                     <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `€${v}`} />
                     <Tooltip formatter={(v) => fmtEur(v)} />
@@ -655,14 +655,14 @@ export default function WealthGoalTracking() {
             )}
           </div>
 
-          <details className="rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900">
-            <summary className="px-4 py-3 text-sm font-semibold text-gray-700 dark:text-gray-300 cursor-pointer list-none">
+          <details className="rounded-xl card overflow-hidden">
+            <summary className="px-4 py-3 text-sm font-semibold text-slate-700 dark:text-slate-300 cursor-pointer list-none">
               Month-by-month table
             </summary>
-            <div className="overflow-x-auto px-4 pb-4 border-t border-gray-100 dark:border-gray-800">
+            <div className="overflow-x-auto px-4 pb-4 border-t border-black/[0.06] dark:border-white/[0.07]">
               <table className="w-full text-sm min-w-[480px]">
                 <thead>
-                  <tr className="text-left text-xs text-gray-500 border-b border-gray-200 dark:border-gray-700">
+                  <tr className="text-left text-xs text-slate-500 border-b border-black/[0.06] dark:border-white/[0.07]">
                     <th className="pb-2 pr-4">Month</th>
                     <th className="pb-2 pr-4">Net savings</th>
                     <th className="pb-2 pr-4">Required</th>
@@ -672,7 +672,7 @@ export default function WealthGoalTracking() {
                 </thead>
                 <tbody>
                   {(monthly?.rows ?? []).slice().reverse().map((r) => (
-                    <tr key={r.month} className="border-b border-gray-100 dark:border-gray-800">
+                    <tr key={r.month} className="border-b border-black/[0.04] dark:border-white/[0.05]">
                       <td className="py-2 pr-4 font-medium">{r.month}</td>
                       <td className="py-2 pr-4 tabular-nums">{fmtEur(r.actual)}</td>
                       <td className="py-2 pr-4 tabular-nums text-gray-500">{fmtEur(r.required)}</td>

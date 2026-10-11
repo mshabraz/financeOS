@@ -28,7 +28,7 @@ export function MarketHoldingCards({ data, showEur = true, onBind, onUnbind }) {
         return (
           <li
             key={`${h.broker}-${h.ticker}-${i}`}
-            className="rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50/80 dark:bg-gray-800/40 p-3 space-y-2"
+            className="rounded-xl border border-black/[0.06] dark:border-white/[0.08] bg-white/70 dark:bg-slate-900/60 backdrop-blur-md shadow-[inset_0_1px_0_0_rgba(255,255,255,0.7)] dark:shadow-[inset_0_1px_0_0_rgba(255,255,255,0.05)] p-3 space-y-2"
           >
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
@@ -91,7 +91,7 @@ export function CostBasisHoldingCards({ data, open }) {
       {data.map((h, i) => (
         <li
           key={`${h.broker}-${h.ticker}-${i}`}
-          className="rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50/80 dark:bg-gray-800/40 p-3 space-y-2"
+          className="rounded-xl border border-black/[0.06] dark:border-white/[0.08] bg-white/70 dark:bg-slate-900/60 backdrop-blur-md shadow-[inset_0_1px_0_0_rgba(255,255,255,0.7)] dark:shadow-[inset_0_1px_0_0_rgba(255,255,255,0.05)] p-3 space-y-2"
         >
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
@@ -135,7 +135,7 @@ export function DividendTickerCards({ rows }) {
       {rows.map((r, i) => (
         <li
           key={`${r.broker}-${r.ticker}-${i}`}
-          className="rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50/80 dark:bg-gray-800/40 p-3 space-y-2"
+          className="rounded-xl border border-black/[0.06] dark:border-white/[0.08] bg-white/70 dark:bg-slate-900/60 backdrop-blur-md shadow-[inset_0_1px_0_0_rgba(255,255,255,0.7)] dark:shadow-[inset_0_1px_0_0_rgba(255,255,255,0.05)] p-3 space-y-2"
         >
           <div className="flex items-start justify-between gap-2">
             <SecurityDisplay

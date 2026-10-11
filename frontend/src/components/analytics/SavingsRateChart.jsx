@@ -12,7 +12,7 @@ function SavingsTooltip({ active, payload }) {
   const p = payload[0]?.payload;
   if (!p) return null;
   return (
-    <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-xs shadow-lg">
+    <div className="rounded-lg border border-black/[0.08] dark:border-white/[0.12] bg-white/90 dark:bg-slate-900/90 backdrop-blur-md px-3 py-2 text-xs shadow-xl">
       <p className="font-semibold text-gray-800 dark:text-gray-100 mb-1">{p.month}</p>
       <p className="text-brand-600 dark:text-brand-400 font-medium">
         Savings rate {p.savingsRate != null ? fmtPct(p.savingsRate) : '—'}

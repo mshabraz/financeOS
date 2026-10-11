@@ -150,10 +150,10 @@ export default function Obligations() {
             type="button"
             onClick={() => setTab(t.id)}
             className={clsx(
-              'shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors',
+              'shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium transition-all',
               tab === t.id
-                ? 'bg-brand-600 text-white'
-                : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400',
+                ? 'bg-brand-600 text-white shadow-sm'
+                : 'border border-black/[0.08] dark:border-white/[0.08] bg-white/60 dark:bg-slate-900/40 backdrop-blur-sm text-slate-600 dark:text-slate-400 hover:border-brand-500/50 hover:text-slate-900 dark:hover:text-white',
             )}
           >
             {t.label}
@@ -161,7 +161,7 @@ export default function Obligations() {
         ))}
         <Link
           to="/tasks"
-          className="shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:text-brand-600"
+          className="shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium border border-black/[0.08] dark:border-white/[0.08] bg-white/60 dark:bg-slate-900/40 backdrop-blur-sm text-slate-600 dark:text-slate-400 hover:border-brand-500/50 hover:text-brand-600 dark:hover:text-brand-400 transition-all"
         >
           Tasks →
         </Link>

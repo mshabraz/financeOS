@@ -42,7 +42,7 @@ function FundCard({ fund }) {
   }));
 
   return (
-    <div className="rounded-xl border border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/30 p-4 flex flex-col gap-3">
+    <div className="rounded-xl border border-black/[0.06] dark:border-white/[0.08] bg-white/50 dark:bg-slate-800/40 backdrop-blur-sm shadow-[inset_0_1px_0_0_rgba(255,255,255,0.7)] dark:shadow-[inset_0_1px_0_0_rgba(255,255,255,0.04)] p-4 flex flex-col gap-3">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">
@@ -73,8 +73,8 @@ function FundCard({ fund }) {
             className={clsx(
               'px-2 py-0.5 rounded-md text-[10px] font-medium transition-colors',
               tab === t.id
-                ? 'bg-brand-600 text-white'
-                : 'text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700'
+                ? 'bg-brand-600 text-white shadow-sm'
+                : 'text-gray-500 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-black/[0.04] dark:hover:bg-white/[0.06]'
             )}
           >
             {t.label}

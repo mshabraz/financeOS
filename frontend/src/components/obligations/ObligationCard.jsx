@@ -25,7 +25,7 @@ export default function ObligationCard({
         'rounded-xl border px-3 py-3 sm:px-4 transition-colors',
         row.status === 'overdue'
           ? 'border-red-500/30 bg-red-500/5'
-          : 'border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/40',
+          : 'border-black/[0.06] dark:border-white/[0.08] bg-white/70 dark:bg-slate-900/60 backdrop-blur-md shadow-[inset_0_1px_0_0_rgba(255,255,255,0.8)] dark:shadow-[inset_0_1px_0_0_rgba(255,255,255,0.06)]',
       )}
     >
       <div className="flex items-start gap-3">
@@ -80,7 +80,7 @@ export default function ObligationCard({
       </div>
 
       {!compact && !['paid', 'settled', 'cancelled'].includes(row.status) && (
-        <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-gray-100 dark:border-gray-800">
+        <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-black/[0.06] dark:border-white/[0.08]">
           <button
             type="button"
             className="btn-primary text-xs py-1.5 gap-1"

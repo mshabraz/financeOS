@@ -90,11 +90,11 @@ export default function HoldingsToolbar({
               <ChevronDown size={12} className={clsx('transition', showCols && 'rotate-180')} />
             </button>
             {showCols && (
-              <div className="absolute right-0 top-full mt-1 z-20 w-52 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-lg p-2 max-h-64 overflow-y-auto">
+              <div className="absolute right-0 top-full mt-1 z-20 w-52 rounded-xl border border-black/[0.08] dark:border-white/[0.12] bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl shadow-2xl p-2 max-h-64 overflow-y-auto">
                 {HOLDINGS_COLUMNS.map((c) => (
                   <label
                     key={c.id}
-                    className="flex items-center gap-2 px-2 py-1.5 text-xs cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg"
+                    className="flex items-center gap-2 px-2 py-1.5 text-xs cursor-pointer hover:bg-black/[0.04] dark:hover:bg-white/[0.06] rounded-lg"
                   >
                     <input
                       type="checkbox"

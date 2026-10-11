@@ -64,11 +64,11 @@ export default function HoldingDetailDrawer({
     <>
       <div className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm transition-opacity" onClick={onClose} aria-hidden />
       <aside
-        className="fixed inset-y-0 right-0 z-50 w-full max-w-md bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-800 shadow-2xl flex flex-col"
+        className="fixed inset-y-0 right-0 z-50 w-full max-w-md bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border-l border-black/[0.08] dark:border-white/[0.10] shadow-2xl flex flex-col"
         role="dialog"
         aria-label="Position details"
       >
-        <div className="flex items-start justify-between gap-3 px-4 py-4 border-b border-gray-100 dark:border-gray-800 shrink-0">
+        <div className="flex items-start justify-between gap-3 px-4 py-4 border-b border-black/[0.06] dark:border-white/[0.08] shrink-0">
           <div className="min-w-0 flex-1">
             <SecurityDisplay
               row={row}
@@ -127,7 +127,7 @@ export default function HoldingDetailDrawer({
           </div>
 
           {insights.length > 0 && (
-            <div className="rounded-xl border border-gray-200 dark:border-gray-700 p-3 space-y-2">
+            <div className="rounded-xl border border-black/[0.06] dark:border-white/[0.08] bg-black/[0.01] dark:bg-white/[0.02] p-3 space-y-2">
               <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">Insights</p>
               {insights.map((ins, i) => (
                 <p
@@ -148,7 +148,7 @@ export default function HoldingDetailDrawer({
           )}
 
           {chartData.length > 0 && (
-            <div className="rounded-xl border border-gray-200 dark:border-gray-700 p-3">
+            <div className="rounded-xl border border-black/[0.06] dark:border-white/[0.08] bg-black/[0.01] dark:bg-white/[0.02] p-3">
               <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 mb-3">Cost vs market (EUR)</p>
               <div className="h-36">
                 <ResponsiveContainer width="100%" height="100%">
@@ -201,7 +201,7 @@ export default function HoldingDetailDrawer({
             ) : txs.length ? (
               <ul className="space-y-2 max-h-48 overflow-y-auto">
                 {txs.slice(0, 12).map((t) => (
-                  <li key={t.id} className="flex justify-between gap-2 text-xs py-1.5 border-b border-gray-100 dark:border-gray-800 last:border-0">
+                  <li key={t.id} className="flex justify-between gap-2 text-xs py-1.5 border-b border-black/[0.04] dark:border-white/[0.05] last:border-0">
                     <span className="text-gray-500">{t.date} · {t.type}</span>
                     <span className="font-medium tabular-nums">{fmtNative(t.net_amount, t.currency)}</span>
                   </li>

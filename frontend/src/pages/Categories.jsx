@@ -195,7 +195,7 @@ export default function Categories() {
                       className="input flex-1 min-w-[100px] py-1.5 text-sm" placeholder="Name"
                       onKeyDown={(e) => e.key === 'Enter' && saveCat.mutate()} />
                     <input type="color" value={editCatColor} onChange={(e) => setEditCatColor(e.target.value)}
-                      className="h-8 w-8 rounded border border-gray-200 dark:border-gray-700 cursor-pointer" />
+                      className="h-8 w-8 rounded border border-black/[0.08] dark:border-white/[0.08] cursor-pointer" />
                     <Select value={editCatType} onValueChange={setEditCatType}>
                       <SelectTrigger className="w-28 py-1.5 h-9 min-h-[36px] text-xs">
                         <SelectValue placeholder="Type" />
@@ -254,7 +254,7 @@ export default function Categories() {
                       type="color"
                       value={c.color}
                       onChange={(e) => colorMut.mutate({ id: c.id, color: e.target.value })}
-                      className="h-8 w-8 rounded border border-gray-200 dark:border-gray-700 cursor-pointer flex-shrink-0"
+                      className="h-8 w-8 rounded-lg border border-black/[0.08] dark:border-white/[0.12] cursor-pointer flex-shrink-0 bg-transparent"
                       title="Change color"
                     />
                     <div className="flex items-center gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity flex-shrink-0">
@@ -277,8 +277,8 @@ export default function Categories() {
             ))}
           </div>
         )}
-        <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
-          <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-3">Add category</p>
+        <div className="border-t border-black/[0.06] dark:border-white/[0.08] pt-4">
+          <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-3">Add category</p>
           <div className="flex gap-2 flex-wrap">
             <input
               type="text" placeholder="Name" value={newName}
@@ -287,7 +287,7 @@ export default function Categories() {
               className="input flex-1 min-w-[120px]"
             />
             <input type="text" placeholder="Icon" value={newIcon} onChange={(e) => setNewIcon(e.target.value)} className="input w-16 text-center" />
-            <input type="color" value={newColor} onChange={(e) => setNewColor(e.target.value)} className="h-10 w-10 rounded-lg border border-gray-200 dark:border-gray-700 cursor-pointer" />
+            <input type="color" value={newColor} onChange={(e) => setNewColor(e.target.value)} className="h-10 w-10 rounded-lg border border-black/[0.08] dark:border-white/[0.08] cursor-pointer" />
             <Select value={newType} onValueChange={setNewType}>
               <SelectTrigger className="w-36 text-sm">
                 <SelectValue placeholder="Type" />
@@ -311,18 +311,18 @@ export default function Categories() {
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <Zap size={16} className="text-brand-500" />
-            <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Auto-categorization Rules</h2>
-            <span className="text-xs bg-gray-100 dark:bg-gray-800 text-gray-500 px-1.5 py-0.5 rounded-full">{rules.data?.length ?? 0}</span>
+            <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-300">Auto-categorization Rules</h2>
+            <span className="text-xs bg-black/[0.04] dark:bg-white/[0.06] border border-black/[0.04] dark:border-white/[0.06] text-slate-500 dark:text-slate-400 px-1.5 py-0.5 rounded-full">{rules.data?.length ?? 0}</span>
           </div>
 
           {/* Tab filter */}
-          <div className="flex text-xs bg-gray-100 dark:bg-gray-800 rounded-lg p-0.5 gap-0.5">
+          <div className="flex text-xs bg-black/[0.04] dark:bg-white/[0.06] border border-black/[0.04] dark:border-white/[0.06] rounded-lg p-0.5 gap-0.5 backdrop-blur-sm">
             {[['active','Active'],['disabled','Disabled'],['all','All']].map(([val, label]) => (
               <button
                 key={val}
                 onClick={() => setRuleTab(val)}
-                className={clsx('px-2.5 py-1 rounded font-medium transition-colors',
-                  ruleTab === val ? 'bg-white dark:bg-gray-700 text-gray-800 dark:text-white shadow-sm' : 'text-gray-500 dark:text-gray-400')}
+                className={clsx('px-2.5 py-1 rounded font-medium transition-all',
+                  ruleTab === val ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm border border-black/[0.04] dark:border-white/[0.06]' : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200')}
               >{label}</button>
             ))}
           </div>
@@ -343,10 +343,10 @@ export default function Categories() {
               <div
                 key={r.id}
                 className={clsx(
-                  'flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-opacity',
+                  'flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-opacity border border-black/[0.04] dark:border-white/[0.06]',
                   r.is_disabled
-                    ? 'bg-gray-50 dark:bg-gray-800/40 opacity-50'
-                    : 'bg-gray-50 dark:bg-gray-800'
+                    ? 'bg-slate-50/50 dark:bg-white/[0.02] opacity-50'
+                    : 'bg-slate-50/80 dark:bg-white/[0.04]'
                 )}
               >
                 <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -426,8 +426,8 @@ export default function Categories() {
         )}
 
         {/* Add rule form */}
-        <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
-          <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-3">Add rule</p>
+        <div className="border-t border-black/[0.06] dark:border-white/[0.08] pt-4">
+          <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-3">Add rule</p>
           <div className="flex gap-2 flex-wrap">
             <input
               type="text" placeholder="Pattern (e.g. NETFLIX)" value={rulePattern}

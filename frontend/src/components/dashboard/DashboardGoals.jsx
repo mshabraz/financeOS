@@ -69,7 +69,7 @@ export default function DashboardGoals({
             return (
               <li
                 key={g.id}
-                className="rounded-lg border border-gray-100 dark:border-gray-800 px-3 py-2.5"
+                className="rounded-xl border border-black/[0.06] dark:border-white/[0.08] bg-black/[0.01] dark:bg-white/[0.02] px-3 py-2.5"
               >
                 <div className="flex justify-between gap-2 mb-1.5">
                   <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{g.name}</p>
@@ -77,7 +77,7 @@ export default function DashboardGoals({
                     {pct != null ? fmtPct(Math.min(100, pct)) : '—'}
                   </span>
                 </div>
-                <div className="h-1.5 rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden">
+                <div className="h-1.5 rounded-full bg-black/[0.05] dark:bg-white/[0.08] overflow-hidden">
                   <div
                     className={clsx(
                       'h-full rounded-full transition-all',

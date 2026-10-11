@@ -13,7 +13,7 @@ function TaskRow({ task, onToggle, onDelete, onUpdate }) {
   const [notes, setNotes] = useState(task.notes || '');
 
   return (
-    <li className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/40 px-3 py-2.5">
+    <li className="rounded-xl border border-black/[0.06] dark:border-white/[0.08] bg-white/75 dark:bg-slate-900/60 backdrop-blur-md px-3 py-2.5 shadow-sm">
       <div className="flex items-start gap-3">
         <button
           type="button"

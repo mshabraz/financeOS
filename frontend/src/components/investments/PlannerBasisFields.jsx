@@ -77,7 +77,7 @@ export default function PlannerBasisFields({
           ) : !baseline?.openHoldings?.length ? (
             <p className="text-xs text-gray-400">No open positions with a value in your portfolio.</p>
           ) : (
-            <div className="max-h-48 overflow-y-auto space-y-1 border rounded-lg p-2 dark:border-gray-700">
+            <div className="max-h-48 overflow-y-auto space-y-1 border border-black/[0.06] dark:border-white/[0.08] rounded-xl p-2 bg-black/[0.01] dark:bg-white/[0.02]">
               {baseline.openHoldings.map((h) => {
                 const on = tickerPick.includes(h.key);
                 return (

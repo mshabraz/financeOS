@@ -52,7 +52,7 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-[100dvh] flex items-center justify-center p-4 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))] bg-gray-100 dark:bg-gray-950">
+    <div className="min-h-[100dvh] flex items-center justify-center p-4 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))] bg-slate-50/50 dark:bg-[#0b0f17]/50">
       <div className="w-full max-w-md card p-6 sm:p-8 shadow-xl">
         <div className="flex flex-col items-center text-center gap-3 mb-6">
           <FinanceLogo variant="full" size={44} />
@@ -139,8 +139,8 @@ export default function Login() {
         )}
 
         {network.data?.urls?.length > 0 && (
-          <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-800">
-            <div className="flex items-center gap-2 text-xs font-medium text-gray-500 mb-2">
+          <div className="mt-6 pt-6 border-t border-black/[0.06] dark:border-white/[0.08]">
+            <div className="flex items-center gap-2 text-xs font-medium text-slate-500 mb-2">
               <Wifi size={14} /> LAN access URLs
             </div>
             <ul className="space-y-1.5 text-xs text-gray-600 dark:text-gray-400 max-h-32 overflow-y-auto">

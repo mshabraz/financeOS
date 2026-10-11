@@ -179,19 +179,19 @@ export default function TransactionImportPanel() {
         </p>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
-          <div className="rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2">
-            <p className="font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
+          <div className="rounded-lg border border-black/[0.06] dark:border-white/[0.08] bg-black/[0.02] dark:bg-white/[0.02] px-3 py-2">
+            <p className="font-medium text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
               <Building2 size={14} /> Bank (LHV)
             </p>
-            <p className="text-gray-500 mt-0.5">Semicolon account export</p>
+            <p className="text-slate-500 mt-0.5">Semicolon account export</p>
           </div>
-          <div className="rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2">
-            <p className="font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
+          <div className="rounded-lg border border-black/[0.06] dark:border-white/[0.08] bg-black/[0.02] dark:bg-white/[0.02] px-3 py-2">
+            <p className="font-medium text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
               <Building2 size={14} /> Bank (SEB)
             </p>
-            <p className="text-gray-500 mt-0.5">Internet bank kontoväljavõte (semicolon)</p>
+            <p className="text-slate-500 mt-0.5">Internet bank kontoväljavõte (semicolon)</p>
           </div>
-          <div className="rounded-lg border border-purple-200/60 dark:border-purple-900/40 px-3 py-2 bg-purple-50/30 dark:bg-purple-950/10">
+          <div className="rounded-lg border border-purple-500/20 px-3 py-2 bg-purple-500/5 dark:bg-purple-950/20">
             <p className="font-medium text-purple-900 dark:text-purple-200 flex items-center gap-1.5">
               <Wallet size={14} /> Revolut
             </p>
@@ -205,13 +205,13 @@ export default function TransactionImportPanel() {
             className={clsx(
               'border-2 border-dashed rounded-xl p-8 sm:p-12 text-center cursor-pointer transition-colors touch-manipulation',
               isDragActive
-                ? 'border-brand-500 bg-brand-50 dark:bg-brand-900/10'
-                : 'border-gray-300 dark:border-gray-700 hover:border-brand-400 hover:bg-gray-50 dark:hover:bg-gray-900'
+                ? 'border-brand-500 bg-brand-500/10'
+                : 'border-black/15 dark:border-white/15 hover:border-brand-500/60 hover:bg-black/[0.02] dark:hover:bg-white/[0.03]'
             )}
           >
             <input {...getInputProps()} />
-            <Upload size={32} className="mx-auto text-gray-400 mb-3" />
-            <p className="text-base font-medium text-gray-700 dark:text-gray-300">
+            <Upload size={32} className="mx-auto text-slate-400 mb-3" />
+            <p className="text-base font-medium text-slate-700 dark:text-slate-300">
               {isDragActive ? 'Drop your CSV here' : 'Drag & drop bank or Revolut CSV'}
             </p>
             <p className="text-sm text-gray-400 mt-1">or tap to browse</p>
@@ -233,31 +233,31 @@ export default function TransactionImportPanel() {
 
         {stage === 'preview' && preview && (
           <div className="space-y-4">
-            <div className="rounded-lg bg-gray-50 dark:bg-gray-800/50 p-4 flex flex-col sm:flex-row sm:items-start gap-3">
+            <div className="rounded-lg card-subtle p-4 flex flex-col sm:flex-row sm:items-start gap-3">
               <FileText size={20} className={clsx('flex-shrink-0', isRevolut ? 'text-purple-500' : 'text-brand-500')} />
               <div className="flex-1 min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
-                  <p className="font-semibold text-gray-900 dark:text-white truncate">{preview.filename}</p>
+                  <p className="font-semibold text-slate-900 dark:text-white truncate">{preview.filename}</p>
                   <SourceBadge kind={importKind} />
                 </div>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+                <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
                   {privText(sum?.account ?? '—')} · {sum?.dateFrom ?? '—'} → {sum?.dateTo ?? '—'}
                 </p>
               </div>
               <div className="flex gap-4 sm:gap-6 text-center justify-center">
                 <div>
-                  <p className="text-xl sm:text-2xl font-bold text-green-600">{newCount}</p>
-                  <p className="text-xs text-gray-400">New</p>
+                  <p className="text-xl sm:text-2xl font-bold text-emerald-600 dark:text-emerald-400">{newCount}</p>
+                  <p className="text-xs text-slate-400">New</p>
                 </div>
                 <div>
-                  <p className="text-xl sm:text-2xl font-bold text-gray-400">{sum?.duplicateCount ?? 0}</p>
-                  <p className="text-xs text-gray-400">Dupes</p>
+                  <p className="text-xl sm:text-2xl font-bold text-slate-400">{sum?.duplicateCount ?? 0}</p>
+                  <p className="text-xs text-slate-400">Dupes</p>
                 </div>
               </div>
             </div>
 
             {newCount === 0 && (
-              <div className="flex items-center gap-2 text-amber-600 bg-amber-50 dark:bg-amber-900/20 rounded-lg px-4 py-3 text-sm">
+              <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-lg px-4 py-3 text-sm">
                 <AlertTriangle size={16} />
                 {skippedRows > 0 && (sum?.duplicateCount ?? 0) === 0 && preview?.totalRows === 0
                   ? `${skippedRows} row(s) could not be parsed — check date format or row state in the CSV.`
@@ -266,7 +266,7 @@ export default function TransactionImportPanel() {
             )}
 
             {preview.previewTruncated && (
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-slate-500">
                 Showing first {preview.preview?.length ?? 0} of {preview.totalRows ?? '—'} rows in preview.
               </p>
             )}
@@ -274,7 +274,7 @@ export default function TransactionImportPanel() {
             <div className="card overflow-hidden table-scroll">
               <table className="w-full text-sm min-w-[520px]">
                 <thead>
-                  <tr className="border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
+                  <tr className="border-b border-black/[0.06] dark:border-white/[0.07] bg-black/[0.02] dark:bg-white/[0.02]">
                     <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500">Date</th>
                     {isRevolut && (
                       <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500">Type</th>

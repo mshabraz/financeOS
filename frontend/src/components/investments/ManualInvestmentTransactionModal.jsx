@@ -184,7 +184,7 @@ export default function ManualInvestmentTransactionModal({
   return (
     <Dialog open={open} onOpenChange={(isOpen) => { if (!isOpen) onClose?.(); }}>
       <DialogContent className="max-w-3xl max-h-[90vh] p-0 flex flex-col overflow-hidden">
-        <DialogHeader className="px-5 py-4 border-b border-gray-200 dark:border-gray-800 shrink-0">
+        <DialogHeader className="px-5 py-4 border-b border-black/[0.06] dark:border-white/[0.08] shrink-0">
           <DialogTitle className="text-base font-semibold text-gray-900 dark:text-white">
             {isEdit ? 'Edit Manual Investment Transaction' : 'Add Investment Transaction'}
           </DialogTitle>
@@ -296,7 +296,7 @@ export default function ManualInvestmentTransactionModal({
             </div>
           </div>
 
-          <div className="px-5 py-3 border-t border-gray-200 dark:border-gray-800 space-y-2 bg-gray-50/50 dark:bg-gray-900/50 shrink-0">
+          <div className="px-5 py-3 border-t border-black/[0.06] dark:border-white/[0.08] space-y-2 bg-black/[0.02] dark:bg-white/[0.02] shrink-0">
             {lookupLoading && <p className="text-xs text-gray-400">Checking ticker…</p>}
             {lookupHint && <p className="text-xs text-gray-500">{lookupHint}</p>}
             {error && <p className="text-xs text-red-500">{error}</p>}

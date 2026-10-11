@@ -66,7 +66,7 @@ function AdminUsersPanel({ showToast }) {
             {users.map((u) => (
               <li
                 key={u.id}
-                className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-gray-100 dark:border-gray-800 px-3 py-2 text-sm"
+                className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-black/[0.06] dark:border-white/[0.08] px-3 py-2 text-sm"
               >
                 <span className="truncate">
                   <span className="font-medium text-gray-800 dark:text-gray-200">{u.email}</span>
@@ -231,7 +231,7 @@ function BankConnectionsPanel({ showToast }) {
                   {connections.map((c) => (
                     <li
                       key={c.id}
-                      className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-gray-100 dark:border-gray-800 px-3 py-2 text-sm"
+                      className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-black/[0.06] dark:border-white/[0.08] px-3 py-2 text-sm"
                     >
                       <div className="min-w-0">
                         <p className="font-medium text-gray-800 dark:text-gray-200 truncate">

@@ -7,7 +7,7 @@ export default function PlannerMetricStrip({ items }) {
       {items.map(({ label, value, sub, accent }) => (
         <div
           key={label}
-          className="rounded-xl border border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/40 px-3 py-2.5 sm:px-4 sm:py-3"
+          className="rounded-xl border border-black/[0.06] dark:border-white/[0.08] bg-white/60 dark:bg-slate-900/40 backdrop-blur-sm shadow-[inset_0_1px_0_0_rgba(255,255,255,0.7)] dark:shadow-[inset_0_1px_0_0_rgba(255,255,255,0.04)] px-3 py-2.5 sm:px-4 sm:py-3"
         >
           <p className="text-[10px] sm:text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide truncate">
             {label}

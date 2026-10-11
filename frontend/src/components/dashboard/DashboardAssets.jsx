@@ -43,7 +43,7 @@ function AssetRow({ row, onSave, onDelete, isBuiltIn, portfolio }) {
   const fmtCcy = (n) => fmtCurrency(n, displayCcy);
 
   return (
-    <div className="py-2.5 border-b border-gray-100 dark:border-gray-800 last:border-0">
+    <div className="py-2.5 border-b border-black/[0.04] dark:border-white/[0.05] last:border-0">
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2.5 min-w-0">
           <span className="text-xl">{row.icon}</span>
@@ -147,7 +147,7 @@ export default function DashboardAssets({
         <TableSkeleton rows={4} />
       ) : (
         <>
-          <div className="flex justify-between py-2 border-b border-gray-100 dark:border-gray-800 text-sm">
+          <div className="flex justify-between py-2 border-b border-black/[0.04] dark:border-white/[0.05] text-sm">
             <span className="text-gray-600">
               Bank
               {assets?.bankBalanceSource === 'open_banking' && (
@@ -157,7 +157,7 @@ export default function DashboardAssets({
             <span className="font-semibold tabular-nums">{fmtEur(assets?.bankBalance)}</span>
           </div>
           {assets?.revolutClosingBalance != null && (
-            <div className="flex justify-between py-2 border-b border-gray-100 dark:border-gray-800 text-sm gap-2">
+            <div className="flex justify-between py-2 border-b border-black/[0.04] dark:border-white/[0.05] text-sm gap-2">
               <span className="text-gray-600">
                 Revolut
                 {assets?.revolutBalanceSource === 'open_banking' && (

@@ -11,7 +11,7 @@ function HeroKpi({
   label, value, sub, delta, spark, positive, icon: Icon, href,
 }) {
   const inner = (
-    <div className="rounded-xl bg-gray-50/70 dark:bg-gray-800/40 hover:bg-gray-100/60 dark:hover:bg-gray-800/70 border border-gray-100 dark:border-gray-800/60 p-3.5 sm:p-4 h-full flex flex-col gap-2 min-w-0 overflow-hidden transition-colors">
+    <div className="rounded-xl bg-white/60 dark:bg-slate-800/40 hover:bg-white/80 dark:hover:bg-slate-800/60 backdrop-blur-sm border border-black/[0.06] dark:border-white/[0.08] shadow-[inset_0_1px_0_0_rgba(255,255,255,0.7)] dark:shadow-[inset_0_1px_0_0_rgba(255,255,255,0.04)] p-3.5 sm:p-4 h-full flex flex-col gap-2 min-w-0 overflow-hidden transition-colors">
       <div className="flex items-start justify-between gap-2 min-w-0">
         <div className="min-w-0 flex-1">
           <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 leading-tight">
@@ -76,7 +76,7 @@ export default function DashboardHero({
 
   return (
     <section className="card overflow-hidden" aria-labelledby="dash-snapshot-title">
-      <div className="px-4 sm:px-6 py-4 border-b border-gray-100 dark:border-gray-800 bg-gradient-to-r from-[#1A2138]/10 via-transparent to-emerald-500/8">
+      <div className="px-4 sm:px-6 py-4 border-b border-black/[0.06] dark:border-white/[0.08] bg-gradient-to-r from-brand-500/8 via-transparent to-emerald-500/6">
         <p id="dash-snapshot-title" className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">
           Financial snapshot
         </p>

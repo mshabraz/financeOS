@@ -258,8 +258,8 @@ export default function Analytics() {
                 className={clsx(
                   'px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors',
                   !filterMonth && presetId === p.id
-                    ? 'bg-brand-600 border-brand-600 text-white'
-                    : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-brand-400 hover:text-brand-600'
+                    ? 'bg-brand-600 border-brand-600 text-white shadow-sm'
+                    : 'border-black/[0.08] dark:border-white/[0.08] bg-white/60 dark:bg-slate-900/40 backdrop-blur-sm text-slate-600 dark:text-slate-400 hover:border-brand-500/50 hover:text-brand-600 dark:hover:text-brand-400'
                 )}
               >
                 {p.label}
@@ -570,7 +570,7 @@ export default function Analytics() {
                       {fmt(b.spent)} / {fmt(b.budgeted)}
                     </span>
                   </div>
-                  <div className="h-2.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
+                  <div className="h-2.5 bg-black/[0.05] dark:bg-white/[0.08] rounded-full overflow-hidden">
                     <div
                       className={clsx('h-full rounded-full transition-all', over ? 'bg-red-500' : 'bg-green-500')}
                       style={{ width: `${pct}%` }}
@@ -603,7 +603,7 @@ export default function Analytics() {
                       <span className="text-gray-700 dark:text-gray-300 truncate max-w-[60%]">{privText(m.merchant || '(unknown)')}</span>
                       <span className="font-medium text-gray-900 dark:text-white">{fmt(m.total)}</span>
                     </div>
-                    <div className="h-1.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
+                    <div className="h-1.5 bg-black/[0.05] dark:bg-white/[0.08] rounded-full overflow-hidden">
                       <div className="h-full bg-brand-500 rounded-full" style={{ width: `${pct}%` }} />
                     </div>
                   </div>

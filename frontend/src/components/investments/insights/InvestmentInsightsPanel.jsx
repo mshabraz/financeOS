@@ -62,8 +62,8 @@ function PanelShell({ title, icon: Icon, children, className }) {
   return (
     <section
       className={clsx(
-        'rounded-2xl border border-gray-200/80 dark:border-gray-700/80',
-        'bg-white/50 dark:bg-gray-900/40 p-4 min-w-0',
+        'rounded-2xl border border-black/[0.06] dark:border-white/[0.08]',
+        'bg-white/70 dark:bg-slate-900/60 backdrop-blur-md shadow-[inset_0_1px_0_0_rgba(255,255,255,0.8)] dark:shadow-[inset_0_1px_0_0_rgba(255,255,255,0.06)] p-4 min-w-0',
         className,
       )}
     >
@@ -153,7 +153,7 @@ function TopWeightsCard({ allocations }) {
                   {fmtPct(pct)}
                 </span>
               </div>
-              <div className="h-1.5 rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden">
+              <div className="h-1.5 rounded-full bg-black/[0.05] dark:bg-white/[0.08] overflow-hidden">
                 <div
                   className="h-full rounded-full bg-brand-500/80 dark:bg-brand-400/70 transition-all"
                   style={{ width: `${Math.min(100, (pct / maxPct) * 100)}%` }}
@@ -171,7 +171,7 @@ function PerformerRow({ rank, ticker, name, displayName, displaySecondary, pct, 
   const primary = displayName || name || ticker;
   const secondary = displaySecondary || (name && name !== primary ? name : ticker);
   return (
-    <li className="grid grid-cols-[1.25rem_minmax(0,1fr)_auto] items-center gap-x-2 gap-y-0.5 py-1.5 border-b border-gray-100 dark:border-gray-800/80 last:border-0">
+    <li className="grid grid-cols-[1.25rem_minmax(0,1fr)_auto] items-center gap-x-2 gap-y-0.5 py-1.5 border-b border-black/[0.04] dark:border-white/[0.05] last:border-0">
       <span className="text-[10px] font-medium text-gray-400 tabular-nums">{rank}</span>
       <div className="min-w-0">
         <p className="text-xs font-semibold text-gray-900 dark:text-white break-words leading-snug">{primary}</p>
@@ -224,7 +224,7 @@ function PerformersCard({ best, worst }) {
             ))}
           </ul>
         </div>
-        <div className="min-w-0 md:border-l md:border-gray-200/80 md:dark:border-gray-700/80 md:pl-8">
+        <div className="min-w-0 md:border-l md:border-black/[0.06] md:dark:border-white/[0.08] md:pl-8">
           <p className="text-[10px] font-semibold uppercase tracking-wider text-red-600/90 dark:text-red-400 mb-2">
             Worst
           </p>
@@ -297,7 +297,7 @@ export default function InvestmentInsightsPanel({
   return (
     <div className="card overflow-hidden">
       {/* Header */}
-      <div className="px-4 sm:px-5 py-4 border-b border-gray-100 dark:border-gray-800 bg-gradient-to-r from-brand-500/5 via-transparent to-transparent">
+      <div className="px-4 sm:px-5 py-4 border-b border-black/[0.06] dark:border-white/[0.08] bg-gradient-to-r from-brand-500/5 via-transparent to-transparent">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-start gap-3 min-w-0">
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand-500/10 text-brand-600 dark:text-brand-400">
@@ -311,7 +311,7 @@ export default function InvestmentInsightsPanel({
             </div>
           </div>
           {hero?.pricedPositions != null && (
-            <span className="inline-flex items-center gap-1.5 self-start rounded-full border border-gray-200 dark:border-gray-700 bg-white/80 dark:bg-gray-900/80 px-3 py-1 text-xs text-gray-600 dark:text-gray-300 shrink-0">
+            <span className="inline-flex items-center gap-1.5 self-start rounded-full border border-black/[0.08] dark:border-white/[0.10] bg-white/70 dark:bg-slate-900/60 backdrop-blur-sm px-3 py-1 text-xs text-gray-600 dark:text-gray-300 shrink-0">
               <Wallet size={12} className="text-brand-500" />
               <span className="tabular-nums font-medium">
                 {hero.pricedPositions}/{hero.openPositions}
@@ -373,7 +373,7 @@ export default function InvestmentInsightsPanel({
         )}
 
         {hero?.brokerCashBreakdown?.length > 1 && (
-          <p className="text-[11px] text-gray-500 dark:text-gray-400 pt-2 border-t border-gray-100 dark:border-gray-800">
+          <p className="text-[11px] text-gray-500 dark:text-gray-400 pt-2 border-t border-black/[0.06] dark:border-white/[0.08]">
             Cash by broker:{' '}
             {hero.brokerCashBreakdown
               .filter((r) => (r.amountEur ?? r.amount) > 0)

@@ -48,7 +48,7 @@ export default function InvestmentsChrome({
         </div>
 
         <div className="w-full min-w-0 lg:max-w-3xl lg:ml-auto">
-          <div className="scroll-x touch-pan-x rounded-xl bg-gray-100 dark:bg-gray-800/80 p-1 text-sm shadow-inner">
+          <div className="scroll-x touch-pan-x rounded-xl bg-black/[0.04] dark:bg-white/[0.06] border border-black/[0.04] dark:border-white/[0.06] p-1 text-sm backdrop-blur-sm">
             {TABS.map((t) => (
               <button
                 key={t.id}
@@ -57,8 +57,8 @@ export default function InvestmentsChrome({
                 className={clsx(
                   'px-3 py-2 rounded-lg font-medium transition-all whitespace-nowrap min-h-[40px]',
                   tab === t.id
-                    ? 'bg-white dark:bg-gray-900 text-gray-900 dark:text-white shadow-sm ring-1 ring-gray-200/80 dark:ring-gray-700'
-                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
+                    ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm border border-black/[0.04] dark:border-white/[0.06]'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 )}
               >
                 {t.label}
@@ -79,7 +79,7 @@ export default function InvestmentsChrome({
                 'px-3 py-1.5 rounded-full text-xs font-medium border transition-colors whitespace-nowrap',
                 brokerFilter === key
                   ? 'bg-brand-600 border-brand-600 text-white shadow-sm'
-                  : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-brand-400'
+                  : 'border-black/[0.08] dark:border-white/[0.08] bg-white/60 dark:bg-slate-900/40 backdrop-blur-sm text-slate-600 dark:text-slate-400 hover:border-brand-500/50 hover:text-slate-900 dark:hover:text-white'
               )}
             >
               {key && (
