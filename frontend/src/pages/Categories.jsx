@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Trash2, Zap, ToggleLeft, ToggleRight, Pencil, Check, X, AlertCircle, Play } from 'lucide-react';
+import { Plus, Trash2, Zap, Pencil, Check, X, AlertCircle, Play } from 'lucide-react';
 import {
   getCategories, createCategory, updateCategory, deleteCategory,
   getCategoryRules, createCategoryRule, updateCategoryRule, deleteCategoryRule,
@@ -17,6 +17,8 @@ import {
   SelectContent,
   SelectItem,
 } from '../components/ui/Select';
+import { Tabs, TabsList, TabsTrigger } from '../components/ui/Tabs';
+import { Switch } from '../components/ui/Switch';
 import { useUrlQueryState } from '../hooks/useUrlQueryState';
 import clsx from 'clsx';
 
@@ -316,16 +318,19 @@ export default function Categories() {
           </div>
 
           {/* Tab filter */}
-          <div className="flex text-xs bg-black/[0.04] dark:bg-white/[0.06] border border-black/[0.04] dark:border-white/[0.06] rounded-lg p-0.5 gap-0.5 backdrop-blur-sm">
-            {[['active','Active'],['disabled','Disabled'],['all','All']].map(([val, label]) => (
-              <button
-                key={val}
-                onClick={() => setRuleTab(val)}
-                className={clsx('px-2.5 py-1 rounded font-medium transition-all',
-                  ruleTab === val ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm border border-black/[0.04] dark:border-white/[0.06]' : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200')}
-              >{label}</button>
-            ))}
-          </div>
+          <Tabs value={ruleTab} onValueChange={setRuleTab}>
+            <TabsList className="h-8 p-0.5">
+              {[['active','Active'],['disabled','Disabled'],['all','All']].map(([val, label]) => (
+                <TabsTrigger
+                  key={val}
+                  value={val}
+                  className="px-2.5 py-1 text-xs"
+                >
+                  {label}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
         </div>
 
         {/* Rule search */}
@@ -389,13 +394,12 @@ export default function Categories() {
                   </button>
 
                   {/* Toggle disable */}
-                  <button
-                    onClick={() => toggleRule.mutate({ id: r.id, is_disabled: r.is_disabled })}
-                    className={clsx('transition-colors', r.is_disabled ? 'text-gray-300 dark:text-gray-600 hover:text-brand-400' : 'text-brand-500 hover:text-brand-700')}
+                  <Switch
+                    checked={!r.is_disabled}
+                    onCheckedChange={() => toggleRule.mutate({ id: r.id, is_disabled: r.is_disabled })}
                     title={r.is_disabled ? 'Enable rule' : 'Disable rule'}
-                  >
-                    {r.is_disabled ? <ToggleLeft size={18} /> : <ToggleRight size={18} />}
-                  </button>
+                    aria-label={r.is_disabled ? 'Enable rule' : 'Disable rule'}
+                  />
 
                   <button type="button" onClick={() => setRuleToDelete(r)} className="text-gray-400 hover:text-red-500">
                     <Trash2 size={13} />

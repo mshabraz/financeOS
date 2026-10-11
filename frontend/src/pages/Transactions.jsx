@@ -30,6 +30,7 @@ import {
   DialogTitle,
 } from '../components/ui/Dialog';
 import { Button } from '../components/ui/Button';
+import { Tabs, TabsList, TabsTrigger } from '../components/ui/Tabs';
 import {
   getTransactions, updateTransaction, getCategories,
   exportTransactionsCSV, getTags, assignTag, removeTag, assignRevolutTag, removeRevolutTag,
@@ -748,28 +749,24 @@ export default function Transactions() {
         )}
       </PageHeader>
 
-      <div className="flex gap-1 p-1 bg-black/[0.04] dark:bg-white/[0.06] border border-black/[0.04] dark:border-white/[0.06] rounded-xl w-full sm:w-auto backdrop-blur-sm">
-        {[
-          { id: 'list', label: 'List' },
-          { id: 'duplicates', label: 'Duplicate review', icon: Shield },
-          { id: 'import', label: 'Import / Export', icon: Upload },
-        ].map(({ id, label, icon: Icon }) => (
-          <button
-            key={id}
-            type="button"
-            onClick={() => setTab(id)}
-            className={clsx(
-              'flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-lg text-sm font-medium transition-all min-h-[44px]',
-              tab === id
-                ? 'bg-white dark:bg-slate-800 text-brand-600 dark:text-brand-400 shadow-sm border border-black/[0.04] dark:border-white/[0.06]'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
-            )}
-          >
-            {Icon && <Icon size={16} />}
-            {label}
-          </button>
-        ))}
-      </div>
+      <Tabs value={tab} onValueChange={setTab} className="w-full sm:w-auto">
+        <TabsList className="w-full sm:w-auto flex">
+          {[
+            { id: 'list', label: 'List' },
+            { id: 'duplicates', label: 'Duplicate review', icon: Shield },
+            { id: 'import', label: 'Import / Export', icon: Upload },
+          ].map(({ id, label, icon: Icon }) => (
+            <TabsTrigger
+              key={id}
+              value={id}
+              className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-lg text-sm font-medium transition-all min-h-[44px]"
+            >
+              {Icon && <Icon size={16} />}
+              {label}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+      </Tabs>
 
       {tab === 'import' ? (
         <TransactionImportPanel />

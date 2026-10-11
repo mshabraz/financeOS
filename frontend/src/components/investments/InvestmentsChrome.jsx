@@ -1,5 +1,6 @@
 import clsx from 'clsx';
 import { BROKER_LABELS, BROKER_COLORS } from './constants';
+import { Tabs, TabsList, TabsTrigger } from '../ui/Tabs';
 
 const TABS = [
   { id: 'overview', label: 'Overview' },
@@ -48,23 +49,19 @@ export default function InvestmentsChrome({
         </div>
 
         <div className="w-full min-w-0 lg:max-w-3xl lg:ml-auto">
-          <div className="scroll-x touch-pan-x rounded-xl bg-black/[0.04] dark:bg-white/[0.06] border border-black/[0.04] dark:border-white/[0.06] p-1 text-sm backdrop-blur-sm">
-            {TABS.map((t) => (
-              <button
-                key={t.id}
-                type="button"
-                onClick={() => onTabChange(t.id)}
-                className={clsx(
-                  'px-3 py-2 rounded-lg font-medium transition-all whitespace-nowrap min-h-[40px]',
-                  tab === t.id
-                    ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm border border-black/[0.04] dark:border-white/[0.06]'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                )}
-              >
-                {t.label}
-              </button>
-            ))}
-          </div>
+          <Tabs value={tab} onValueChange={onTabChange}>
+            <TabsList className="scroll-x touch-pan-x w-full justify-start overflow-x-auto">
+              {TABS.map((t) => (
+                <TabsTrigger
+                  key={t.id}
+                  value={t.id}
+                  className="px-3 py-2 whitespace-nowrap min-h-[40px]"
+                >
+                  {t.label}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
         </div>
       </div>
 
