@@ -10,6 +10,7 @@ import { usePrivacy } from '../../context/PrivacyContext';
 import { useOpenBankingAutoSync } from '../../hooks/useOpenBankingAutoSync';
 import clsx from 'clsx';
 import FinanceLogo from '../ui/FinanceLogo';
+import { Switch } from '../ui/Switch';
 
 const PRIMARY_NAV = [
   { to: '/',             icon: LayoutDashboard, label: 'Home' },
@@ -91,20 +92,17 @@ export default function Layout({ children }) {
           ))}
         </nav>
         <div className="p-3 border-t border-black/[0.06] dark:border-white/[0.07] space-y-0.5">
-          <button
-            type="button"
-            onClick={togglePrivacy}
-            className={clsx(
-              'flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium min-h-[44px] transition-colors',
-              privacyMode
-                ? 'bg-amber-500/10 text-amber-800 dark:text-amber-300 border border-amber-500/20'
-                : 'text-slate-600 dark:text-slate-400 hover:bg-black/[0.04] dark:hover:bg-white/[0.05]'
-            )}
-            title={privacyMode ? 'Show amounts and account details' : 'Hide amounts and account details'}
-          >
-            {privacyMode ? <EyeOff size={18} /> : <Eye size={18} />}
-            {privacyMode ? 'Privacy on' : 'Privacy off'}
-          </button>
+          <div className="flex items-center justify-between w-full px-3 py-2 rounded-lg text-sm font-medium text-slate-600 dark:text-slate-400 hover:bg-black/[0.03] dark:hover:bg-white/[0.04] transition-colors">
+            <span className="flex items-center gap-3">
+              {privacyMode ? <EyeOff size={18} className="text-amber-500" /> : <Eye size={18} className="text-slate-400" />}
+              <span>Privacy mode</span>
+            </span>
+            <Switch
+              checked={privacyMode}
+              onCheckedChange={togglePrivacy}
+              aria-label="Toggle privacy mode"
+            />
+          </div>
           <button
             type="button"
             onClick={toggle}
@@ -207,19 +205,17 @@ export default function Layout({ children }) {
               ))}
             </div>
             <div className="p-2 pt-0 border-t border-black/[0.06] dark:border-white/[0.08] mt-1 space-y-0.5">
-              <button
-                type="button"
-                onClick={togglePrivacy}
-                className={clsx(
-                  'flex items-center gap-3 w-full px-4 py-3.5 rounded-xl text-base font-medium min-h-[48px] active:bg-black/[0.05] dark:active:bg-white/[0.08] transition-colors',
-                  privacyMode
-                    ? 'bg-amber-500/10 text-amber-800 dark:text-amber-300 border border-amber-500/20'
-                    : 'text-slate-700 dark:text-slate-200'
-                )}
-              >
-                {privacyMode ? <EyeOff size={22} /> : <Eye size={22} />}
-                {privacyMode ? 'Privacy on' : 'Privacy off'}
-              </button>
+              <div className="flex items-center justify-between w-full px-4 py-3 rounded-xl text-base font-medium text-slate-700 dark:text-slate-200">
+                <span className="flex items-center gap-3">
+                  {privacyMode ? <EyeOff size={22} className="text-amber-500" /> : <Eye size={22} className="text-slate-400" />}
+                  <span>Privacy mode</span>
+                </span>
+                <Switch
+                  checked={privacyMode}
+                  onCheckedChange={togglePrivacy}
+                  aria-label="Toggle privacy mode"
+                />
+              </div>
               <button
                 type="button"
                 onClick={toggle}

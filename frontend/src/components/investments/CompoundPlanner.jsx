@@ -23,6 +23,7 @@ import {
 import NumericField from './plannerNumericField';
 import PlannerBasisFields from './PlannerBasisFields';
 import GoalSolverView from './GoalSolverView';
+import { Switch } from '../ui/Switch';
 import WealthGoalTracking from '../wealthGoals/WealthGoalTracking';
 import WealthPlannerShell from './WealthPlannerShell';
 import PlannerMetricStrip from './PlannerMetricStrip';
@@ -297,14 +298,14 @@ export default function CompoundPlanner({ brokerFilter = '', plannerView }) {
               <NumericField label="Inflation" value={form.inflationRate} onChange={(v) => set('inflationRate', v)} min={0} max={20} step={0.1} unit="%" />
               <NumericField label="Tax drag" value={form.taxDrag} onChange={(v) => set('taxDrag', v)} min={0} max={50} step={0.5} unit="%" />
               <NumericField label="Fee drag" value={form.feeDrag} onChange={(v) => set('feeDrag', v)} min={0} max={5} step={0.05} unit="%" />
-              <label className="flex items-center gap-2 text-xs">
-                <input type="checkbox" checked={form.useRealReturns} onChange={(e) => set('useRealReturns', e.target.checked)} />
-                Use inflation-adjusted (real) returns
-              </label>
-              <label className="flex items-center gap-2 text-xs">
-                <input type="checkbox" checked={form.dividendReinvest} onChange={(e) => set('dividendReinvest', e.target.checked)} />
-                Dividend reinvestment
-              </label>
+              <div className="flex items-center justify-between py-1 text-xs">
+                <span className="text-gray-700 dark:text-gray-300">Use inflation-adjusted (real) returns</span>
+                <Switch checked={form.useRealReturns} onCheckedChange={(c) => set('useRealReturns', c)} />
+              </div>
+              <div className="flex items-center justify-between py-1 text-xs">
+                <span className="text-gray-700 dark:text-gray-300">Dividend reinvestment</span>
+                <Switch checked={form.dividendReinvest} onCheckedChange={(c) => set('dividendReinvest', c)} />
+              </div>
               <NumericField label="Retirement draw / month (€)" value={form.withdrawalMonthly} onChange={(v) => set('withdrawalMonthly', v)} min={0} step={50} />
               <NumericField label="Draw starts after year" value={form.withdrawalStartYear ?? 0} onChange={(v) => set('withdrawalStartYear', v || null)} min={0} max={80} step={1} />
             </div>
