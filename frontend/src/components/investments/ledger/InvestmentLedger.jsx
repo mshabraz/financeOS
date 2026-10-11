@@ -7,6 +7,13 @@ import {
   createManualInvestmentTransaction, deleteInvestmentTransaction, getInvestmentTransactionAudit,
 } from '../../../api/client';
 import LoadingSpinner from '../../ui/LoadingSpinner';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '../../ui/Dialog';
+import ConfirmDialog from '../../ui/ConfirmDialog';
 import UserNoteField from '../../transactions/UserNoteField';
 import ManualInvestmentTransactionModal from '../ManualInvestmentTransactionModal';
 import InvestmentTabFilters from '../filters/InvestmentTabFilters';
@@ -23,6 +30,7 @@ export default function InvestmentLedger({ brokerFilter }) {
   const [manualOpen, setManualOpen] = useState(false);
   const [editingTx, setEditingTx] = useState(null);
   const [auditTx, setAuditTx] = useState(null);
+  const [txToDelete, setTxToDelete] = useState(null);
   const [manualFormError, setManualFormError] = useState('');
   const brokerOptions = Object.entries(BROKER_LABELS);
   const [localBroker, setLocalBroker] = useState('');
@@ -129,10 +137,9 @@ export default function InvestmentLedger({ brokerFilter }) {
     };
     await manualMut.mutateAsync({ id: form.id, ...payload });
   };
-  const handleDelete = async (form) => {
+  const handleDelete = (form) => {
     if (!form?.id) return;
-    if (!window.confirm('Delete this manual investment transaction permanently?')) return;
-    await deleteMut.mutateAsync(form.id);
+    setTxToDelete(form);
   };
 
   return (
@@ -147,35 +154,50 @@ export default function InvestmentLedger({ brokerFilter }) {
         saving={manualMut.isPending}
         deleting={deleteMut.isPending}
       />
-      {auditTx && (
-        <div className="fixed inset-0 z-50 bg-black/50 p-3 sm:p-6 flex items-end sm:items-center justify-center" onClick={() => setAuditTx(null)}>
-          <div className="w-full max-w-2xl bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-2xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
-            <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Transaction Audit History · #{auditTx.id}</h3>
-              <button type="button" className="text-gray-400 hover:text-gray-600" onClick={() => setAuditTx(null)}>Close</button>
-            </div>
-            <div className="p-4 max-h-[65vh] overflow-y-auto">
-              {auditQ.isLoading ? (
-                <LoadingSpinner />
-              ) : (
-                <div className="space-y-2">
-                  {(auditQ.data || []).map((a) => (
-                    <div key={a.id} className="rounded-lg border border-gray-200 dark:border-gray-800 p-3 text-xs">
-                      <p className="font-medium text-gray-800 dark:text-gray-200">
-                        {a.action} · {a.changed_at}
-                      </p>
-                      {!!a.changed_fields?.length && (
-                        <p className="text-gray-500 mt-1">Fields: {a.changed_fields.join(', ')}</p>
-                      )}
-                    </div>
-                  ))}
-                  {!auditQ.data?.length && <p className="text-xs text-gray-400">No audit entries yet.</p>}
-                </div>
-              )}
-            </div>
+      <Dialog open={!!auditTx} onOpenChange={(open) => { if (!open) setAuditTx(null); }}>
+        <DialogContent className="max-w-2xl max-h-[80vh] p-0 flex flex-col overflow-hidden">
+          <DialogHeader className="px-5 py-4 border-b border-gray-200 dark:border-gray-800 shrink-0">
+            <DialogTitle className="text-base font-semibold text-gray-900 dark:text-white">
+              Transaction Audit History · #{auditTx?.id}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="p-5 max-h-[60vh] overflow-y-auto flex-1">
+            {auditQ.isLoading ? (
+              <LoadingSpinner />
+            ) : (
+              <div className="space-y-2">
+                {(auditQ.data || []).map((a) => (
+                  <div key={a.id} className="rounded-lg border border-gray-200 dark:border-gray-800 p-3 text-xs bg-gray-50/50 dark:bg-gray-800/40">
+                    <p className="font-medium text-gray-800 dark:text-gray-200">
+                      {a.action} · {a.changed_at}
+                    </p>
+                    {!!a.changed_fields?.length && (
+                      <p className="text-gray-500 mt-1">Fields: {a.changed_fields.join(', ')}</p>
+                    )}
+                  </div>
+                ))}
+                {!auditQ.data?.length && <p className="text-xs text-gray-400">No audit entries yet.</p>}
+              </div>
+            )}
           </div>
-        </div>
-      )}
+        </DialogContent>
+      </Dialog>
+
+      <ConfirmDialog
+        isOpen={!!txToDelete}
+        onCancel={() => setTxToDelete(null)}
+        onConfirm={async () => {
+          if (txToDelete) {
+            await deleteMut.mutateAsync(txToDelete.id);
+            setTxToDelete(null);
+            setManualOpen(false);
+          }
+        }}
+        title="Delete Transaction"
+        message="Are you sure you want to permanently delete this manual investment transaction? This action cannot be undone."
+        confirmText="Delete"
+        variant="danger"
+      />
       <div className="flex flex-col sm:flex-row sm:items-center gap-3 justify-between">
         <p className="text-sm text-gray-500 dark:text-gray-400 max-w-3xl">
           Broker trades and cash flows from imports and manual entries. Manual rows flow through the same holdings, valuation, and analytics pipeline.

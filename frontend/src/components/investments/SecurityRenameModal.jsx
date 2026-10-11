@@ -1,8 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { X, Tag } from 'lucide-react';
+import { Tag } from 'lucide-react';
 import { setInvestmentSecurityDisplay } from '../../api/client';
 import { resolveDisplaySecondary, officialSecurityName } from '../../utils/securityDisplay';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '../ui/Dialog';
 
 export default function SecurityRenameModal({ holding, onClose, onSaved }) {
   const qc = useQueryClient();
@@ -49,26 +55,18 @@ export default function SecurityRenameModal({ holding, onClose, onSaved }) {
   if (!holding) return null;
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4">
-      <div className="absolute inset-0 bg-black/50" onClick={onClose} aria-hidden />
-      <div
-        role="dialog"
-        aria-labelledby="rename-security-title"
-        className="relative w-full sm:max-w-md bg-white dark:bg-gray-900 rounded-t-2xl sm:rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl max-h-[90vh] overflow-y-auto"
-      >
-        <div className="flex items-center justify-between gap-2 px-4 py-3 border-b border-gray-100 dark:border-gray-800 sticky top-0 bg-white dark:bg-gray-900">
-          <div className="flex items-center gap-2 min-w-0">
+    <Dialog open={!!holding} onOpenChange={(open) => { if (!open) onClose?.(); }}>
+      <DialogContent className="max-w-md p-6 space-y-4">
+        <DialogHeader>
+          <div className="flex items-center gap-2">
             <Tag size={18} className="text-brand-500 shrink-0" />
-            <h2 id="rename-security-title" className="text-sm font-semibold text-gray-900 dark:text-white truncate">
+            <DialogTitle className="text-base font-semibold text-gray-900 dark:text-white">
               Rename security
-            </h2>
+            </DialogTitle>
           </div>
-          <button type="button" onClick={onClose} className="p-2 rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800">
-            <X size={18} />
-          </button>
-        </div>
+        </DialogHeader>
 
-        <div className="p-4 space-y-4">
+        <div className="space-y-4">
           <div className="rounded-xl bg-gray-50 dark:bg-gray-800/60 px-3 py-2.5 text-xs text-gray-500">
             <p className="font-mono text-brand-600 dark:text-brand-400">{holding.ticker}</p>
             {secondary && <p className="mt-1 break-words">{secondary}</p>}
@@ -143,7 +141,7 @@ export default function SecurityRenameModal({ holding, onClose, onSaved }) {
             </button>
           </div>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

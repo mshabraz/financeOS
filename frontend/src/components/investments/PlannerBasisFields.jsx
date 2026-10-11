@@ -2,6 +2,13 @@ import clsx from 'clsx';
 import { RefreshCw } from 'lucide-react';
 import { fmtEur, fmtQty } from '../../utils/investmentFormat';
 import { BASIS_OPTIONS } from '../../utils/compoundPlannerEngine';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../ui/Select';
 import NumericField from './plannerNumericField';
 
 export { NumericField };
@@ -25,30 +32,37 @@ export default function PlannerBasisFields({
 
   return (
     <div className="space-y-3">
-      <label className="block text-xs text-gray-500 dark:text-gray-400">Starting amount from</label>
-      <select
-        className="input w-full text-sm"
-        value={basis}
-        onChange={(e) => set('basis', e.target.value)}
-      >
-        {BASIS_OPTIONS.map((o) => (
-          <option key={o.id} value={o.id}>{o.label}</option>
-        ))}
-      </select>
+      <div className="space-y-1">
+        <label className="block text-xs font-medium text-gray-500 dark:text-gray-400">Starting amount from</label>
+        <Select value={basis} onValueChange={(val) => set('basis', val)}>
+          <SelectTrigger className="w-full">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {BASIS_OPTIONS.map((o) => (
+              <SelectItem key={o.id} value={o.id}>{o.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
 
       {basis === 'broker' && (
         <div className="space-y-1">
-          <label className="block text-xs text-gray-500">Broker account</label>
-          <select
-            className="input w-full text-sm"
-            value={form.plannerBroker || ''}
-            onChange={(e) => set('plannerBroker', e.target.value)}
+          <label className="block text-xs font-medium text-gray-500">Broker account</label>
+          <Select
+            value={form.plannerBroker || 'none'}
+            onValueChange={(val) => set('plannerBroker', val === 'none' ? '' : val)}
           >
-            <option value="">Select broker…</option>
-            {(baseline?.brokers || []).map((b) => (
-              <option key={b} value={b}>{BROKER_LABELS[b] || b}</option>
-            ))}
-          </select>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Select broker…" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">Select broker…</SelectItem>
+              {(baseline?.brokers || []).map((b) => (
+                <SelectItem key={b} value={b}>{BROKER_LABELS[b] || b}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           {!form.plannerBroker && (
             <p className="text-[10px] text-amber-600 dark:text-amber-400">Choose a broker to load its portfolio value.</p>
           )}

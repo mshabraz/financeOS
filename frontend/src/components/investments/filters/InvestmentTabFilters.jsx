@@ -1,5 +1,12 @@
 import { Search } from 'lucide-react';
 import clsx from 'clsx';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../../ui/Select';
 import { BROKER_LABELS } from '../constants';
 
 /**
@@ -39,27 +46,35 @@ export default function InvestmentTabFilters({
           </div>
         )}
         {showBroker && onBrokerChange != null && (
-          <select
-            className="input w-full"
-            value={brokerFilter}
-            onChange={(e) => onBrokerChange(e.target.value)}
+          <Select
+            value={brokerFilter || 'all'}
+            onValueChange={(val) => onBrokerChange(val === 'all' ? '' : val)}
           >
-            <option value="">All brokers</option>
-            {brokerOptions.map(([key, label]) => (
-              <option key={key} value={key}>{label}</option>
-            ))}
-          </select>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="All brokers" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All brokers</SelectItem>
+              {brokerOptions.map(([key, label]) => (
+                <SelectItem key={key} value={key}>{label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         )}
         {showSource && onSourceTypeChange != null && (
-          <select
-            className="input w-full"
-            value={sourceType}
-            onChange={(e) => onSourceTypeChange(e.target.value)}
+          <Select
+            value={sourceType || 'all'}
+            onValueChange={(val) => onSourceTypeChange(val === 'all' ? '' : val)}
           >
-            <option value="">All sources</option>
-            <option value="manual">Manual only</option>
-            <option value="imported">Imported only</option>
-          </select>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="All sources" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All sources</SelectItem>
+              <SelectItem value="manual">Manual only</SelectItem>
+              <SelectItem value="imported">Imported only</SelectItem>
+            </SelectContent>
+          </Select>
         )}
         {showNotes && onHasNotesOnlyChange != null && (
           <label className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400 cursor-pointer touch-manipulation min-h-[44px]">

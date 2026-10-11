@@ -18,6 +18,14 @@ import {
   suggestAllocationFromAssetClasses,
 } from '../../../api/client';
 import LoadingSpinner from '../../ui/LoadingSpinner';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../../ui/Select';
+import ConfirmDialog from '../../ui/ConfirmDialog';
 import { fmtEur, fmtPct } from '../../../utils/displayFormat';
 
 const FALLBACK_COLORS = [
@@ -85,6 +93,7 @@ export default function StrategyTab({ brokerFilter = '' }) {
   const [cashCategoryId, setCashCategoryId] = useState('');
   const [toast, setToast] = useState(null);
   const [dirty, setDirty] = useState(false);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
 
   const strategiesQ = useQuery({
     queryKey: ['allocationStrategies'],
@@ -380,30 +389,37 @@ export default function StrategyTab({ brokerFilter = '' }) {
         <div className="flex flex-col sm:flex-row sm:items-end gap-3 justify-between">
           <div className="space-y-2 min-w-0 flex-1">
             <label className="text-xs font-medium text-gray-500">Active strategy</label>
-            <div className="flex flex-wrap gap-2">
-              <select
-                className="input max-w-xs"
-                value={effectiveId || ''}
-                onChange={(e) => { setDirty(false); setSelectedId(Number(e.target.value)); }}
-              >
-                {strategies.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}{s.isActive ? ' (active)' : ''}
-                  </option>
-                ))}
-              </select>
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="w-64">
+                <Select
+                  value={effectiveId ? String(effectiveId) : 'none'}
+                  onValueChange={(val) => {
+                    if (val !== 'none') {
+                      setDirty(false);
+                      setSelectedId(Number(val));
+                    }
+                  }}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select strategy..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {strategies.map((s) => (
+                      <SelectItem key={s.id} value={String(s.id)}>
+                        {s.name}{s.isActive ? ' (active)' : ''}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
               <button type="button" className="btn-secondary" onClick={() => createMut.mutate()}>
                 New
               </button>
               <button
                 type="button"
-                className="btn-ghost text-red-500"
+                className="btn-ghost text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30"
                 disabled={!effectiveId || deleteMut.isPending}
-                onClick={() => {
-                  if (window.confirm('Delete this strategy and all its categories/mappings?')) {
-                    deleteMut.mutate();
-                  }
-                }}
+                onClick={() => setConfirmDeleteOpen(true)}
               >
                 Delete
               </button>
@@ -460,18 +476,27 @@ export default function StrategyTab({ brokerFilter = '' }) {
             </label>
           </div>
           <div>
-            <label className="text-xs text-gray-500">Cash category</label>
-            <select
-              className="input mt-1"
-              value={cashCategoryId}
-              disabled={!includeCash}
-              onChange={(e) => { setCashCategoryId(e.target.value); setDirty(true); }}
-            >
-              <option value="">—</option>
-              {draftCats.map((c) => (
-                <option key={c.id ?? c.name} value={c.id ?? ''}>{c.name}</option>
-              ))}
-            </select>
+            <label className="text-xs text-gray-500 font-medium">Cash category</label>
+            <div className="mt-1 min-w-[160px]">
+              <Select
+                value={cashCategoryId ? String(cashCategoryId) : 'none'}
+                disabled={!includeCash}
+                onValueChange={(val) => {
+                  setCashCategoryId(val === 'none' ? '' : val);
+                  setDirty(true);
+                }}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="—" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">—</SelectItem>
+                  {draftCats.map((c) => (
+                    <SelectItem key={String(c.id ?? c.name)} value={String(c.id ?? '')}>{c.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </div>
         <button
@@ -638,23 +663,28 @@ export default function StrategyTab({ brokerFilter = '' }) {
                     </td>
                     <td className="py-2 pr-3 text-right tabular-nums font-medium">{fmtEur(h.marketValueEur)}</td>
                     <td className="py-2">
-                      <select
-                        className="input text-sm"
-                        value={draftMaps[h.holdingKey] ?? ''}
-                        onChange={(e) => {
-                          const v = e.target.value;
-                          setDraftMaps((prev) => ({
-                            ...prev,
-                            [h.holdingKey]: v === '' ? undefined : (/^\d+$/.test(v) ? Number(v) : v),
-                          }));
-                          setDirty(true);
-                        }}
-                      >
-                        <option value="">Unmapped</option>
-                        {categoryOptions.map((c) => (
-                          <option key={String(c.id)} value={c.id}>{c.label}</option>
-                        ))}
-                      </select>
+                      <div className="w-48">
+                        <Select
+                          value={draftMaps[h.holdingKey] ? String(draftMaps[h.holdingKey]) : 'unmapped'}
+                          onValueChange={(v) => {
+                            setDraftMaps((prev) => ({
+                              ...prev,
+                              [h.holdingKey]: v === 'unmapped' ? undefined : (/^\d+$/.test(v) ? Number(v) : v),
+                            }));
+                            setDirty(true);
+                          }}
+                        >
+                          <SelectTrigger className="w-full h-8 text-xs">
+                            <SelectValue placeholder="Unmapped" />
+                          </SelectTrigger>
+                          <SelectContent className="max-h-56">
+                            <SelectItem value="unmapped">Unmapped</SelectItem>
+                            {categoryOptions.map((c) => (
+                              <SelectItem key={String(c.id)} value={String(c.id)}>{c.label}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -709,6 +739,19 @@ export default function StrategyTab({ brokerFilter = '' }) {
           <p className="text-sm text-gray-500">Set a monthly contribution and save targets to see the plan.</p>
         )}
       </div>
+
+      <ConfirmDialog
+        isOpen={confirmDeleteOpen}
+        onCancel={() => setConfirmDeleteOpen(false)}
+        onConfirm={() => {
+          deleteMut.mutate();
+          setConfirmDeleteOpen(false);
+        }}
+        title="Delete Strategy"
+        message="Are you sure you want to delete this strategy and all its categories and mappings? This action cannot be undone."
+        confirmText="Delete"
+        variant="danger"
+      />
     </div>
   );
 }

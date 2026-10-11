@@ -20,6 +20,14 @@ import {
 } from '../../api/client';
 import LoadingSpinner from '../ui/LoadingSpinner';
 import QueryErrorPanel from '../ui/QueryErrorPanel';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../ui/Select';
+import ConfirmDialog from '../ui/ConfirmDialog';
 import PlannerMetricStrip from '../investments/PlannerMetricStrip';
 import { fmtEur, fmtPct } from '../../utils/displayFormat';
 import { usePrivacy } from '../../context/PrivacyContext';
@@ -170,6 +178,7 @@ export default function WealthGoalTracking() {
   const [form, setForm] = useState(defaultForm);
   const [showArchives, setShowArchives] = useState(false);
   const [defaultGoalId, setDefaultGoalId] = useGoalsPageDefaultGoalId();
+  const [goalToDelete, setGoalToDelete] = useState(null);
 
   const activeGoalsQ = useQuery({
     queryKey: ['wealthGoals', 'active'],
@@ -400,32 +409,40 @@ export default function WealthGoalTracking() {
                 onChange={(e) => setForm((f) => ({ ...f, annualReturn: e.target.value }))}
               />
             </label>
-            <label className="block sm:col-span-2">
-              <span className="text-xs font-medium text-gray-500">Progress measured by</span>
-              <select
-                className="input mt-1 w-full"
+            <div className="space-y-1 sm:col-span-2">
+              <label className="text-xs font-medium text-gray-500">Progress measured by</label>
+              <Select
                 value={form.basis}
-                onChange={(e) => setForm((f) => ({ ...f, basis: e.target.value }))}
+                onValueChange={(val) => setForm((f) => ({ ...f, basis: val }))}
               >
-                {BASIS_OPTIONS.map((o) => (
-                  <option key={o.id} value={o.id}>{o.label}</option>
-                ))}
-              </select>
-            </label>
-            {baselineQ.data?.brokers?.length > 0 && form.basis === 'portfolio' && (
-              <label className="block sm:col-span-2">
-                <span className="text-xs font-medium text-gray-500">Broker (optional)</span>
-                <select
-                  className="input mt-1 w-full"
-                  value={form.broker}
-                  onChange={(e) => setForm((f) => ({ ...f, broker: e.target.value }))}
-                >
-                  <option value="">All brokers</option>
-                  {baselineQ.data.brokers.map((b) => (
-                    <option key={b} value={b}>{b}</option>
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {BASIS_OPTIONS.map((o) => (
+                    <SelectItem key={o.id} value={o.id}>{o.label}</SelectItem>
                   ))}
-                </select>
-              </label>
+                </SelectContent>
+              </Select>
+            </div>
+            {baselineQ.data?.brokers?.length > 0 && form.basis === 'portfolio' && (
+              <div className="space-y-1 sm:col-span-2">
+                <label className="text-xs font-medium text-gray-500">Broker (optional)</label>
+                <Select
+                  value={form.broker || 'all'}
+                  onValueChange={(val) => setForm((f) => ({ ...f, broker: val === 'all' ? '' : val }))}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="All brokers" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All brokers</SelectItem>
+                    {baselineQ.data.brokers.map((b) => (
+                      <SelectItem key={b} value={b}>{b}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             )}
           </div>
           <div className="flex flex-wrap gap-2">
@@ -693,11 +710,7 @@ export default function WealthGoalTracking() {
               </button>
               <button
                 type="button"
-                onClick={() => {
-                  if (window.confirm('Permanently delete this goal?')) {
-                    deleteMut.mutate(data.goal.id);
-                  }
-                }}
+                onClick={() => setGoalToDelete(data.goal)}
                 className="text-xs text-red-600 hover:underline inline-flex items-center gap-1"
                 disabled={deleteMut.isPending}
               >
@@ -708,6 +721,21 @@ export default function WealthGoalTracking() {
           )}
         </>
       )}
+
+      <ConfirmDialog
+        isOpen={!!goalToDelete}
+        onCancel={() => setGoalToDelete(null)}
+        onConfirm={() => {
+          if (goalToDelete) {
+            deleteMut.mutate(goalToDelete.id);
+            setGoalToDelete(null);
+          }
+        }}
+        title="Delete Goal"
+        message={`Are you sure you want to permanently delete "${goalToDelete?.name}"? This action cannot be undone.`}
+        confirmText="Delete permanently"
+        variant="danger"
+      />
     </div>
   );
 }

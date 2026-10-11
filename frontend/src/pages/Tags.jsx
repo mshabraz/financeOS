@@ -8,6 +8,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from 'recharts';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
+import ConfirmDialog from '../components/ui/ConfirmDialog';
 import {
   Select,
   SelectTrigger,
@@ -36,6 +37,7 @@ export default function Tags() {
   const [mergeFrom, setMergeFrom] = useState('');
   const [mergeTo,   setMergeTo]   = useState('');
   const [selectedTag, setSelectedTag] = useState(null);
+  const [tagToDelete, setTagToDelete] = useState(null);
 
   const tags    = useQuery({ queryKey: ['tags'],       queryFn: getTags });
   const summary = useQuery({ queryKey: ['tagSummary'], queryFn: getTagSummary });
@@ -155,7 +157,7 @@ export default function Tags() {
                           <Pencil size={13} />
                         </button>
                         <button
-                          onClick={(e) => { e.stopPropagation(); if (confirm(`Delete tag "${tag.name}"?`)) deleteMut.mutate(tag.id); }}
+                          onClick={(e) => { e.stopPropagation(); setTagToDelete(tag); }}
                           className="text-gray-400 hover:text-red-500"
                         >
                           <Trash2 size={13} />
@@ -361,6 +363,21 @@ export default function Tags() {
           )}
         </div>
       </div>
+
+      <ConfirmDialog
+        isOpen={!!tagToDelete}
+        onCancel={() => setTagToDelete(null)}
+        onConfirm={() => {
+          if (tagToDelete) {
+            deleteMut.mutate(tagToDelete.id);
+            setTagToDelete(null);
+          }
+        }}
+        title="Delete Tag"
+        message={`Are you sure you want to delete the tag "${tagToDelete?.name}"? Transactions associated with this tag will not be deleted, but the tag will be removed.`}
+        confirmText="Delete"
+        variant="danger"
+      />
     </div>
   );
 }

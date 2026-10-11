@@ -62,7 +62,7 @@ export default function HoldingDetailDrawer({
 
   return (
     <>
-      <div className="fixed inset-0 z-40 bg-black/40" onClick={onClose} aria-hidden />
+      <div className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm transition-opacity" onClick={onClose} aria-hidden />
       <aside
         className="fixed inset-y-0 right-0 z-50 w-full max-w-md bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-800 shadow-2xl flex flex-col"
         role="dialog"

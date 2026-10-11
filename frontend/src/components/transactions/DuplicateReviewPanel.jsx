@@ -18,6 +18,7 @@ import TransactionSourceBadges, { TransactionAmountDetail } from './TransactionS
 import CategoryBadge from '../ui/CategoryBadge';
 import LoadingSpinner from '../ui/LoadingSpinner';
 import QueryErrorPanel from '../ui/QueryErrorPanel';
+import ConfirmDialog from '../ui/ConfirmDialog';
 import {
   Select,
   SelectTrigger,
@@ -227,6 +228,7 @@ export default function DuplicateReviewPanel() {
   const [minConfidence, setMinConfidence] = useState('medium');
   const [search, setSearch] = useState('');
   const [selectedGroups, setSelectedGroups] = useState(new Set());
+  const [confirmBulkDeleteOpen, setConfirmBulkDeleteOpen] = useState(false);
 
   const scanQuery = useQuery({
     queryKey: ['duplicates', mode, minConfidence, search],
@@ -257,7 +259,7 @@ export default function DuplicateReviewPanel() {
   const groups = scanQuery.data?.groups ?? [];
   const stats = scanQuery.data?.stats;
 
-  const handleBulkDelete = async () => {
+  const executeBulkDelete = async () => {
     const items = groups
       .filter((g) => selectedGroups.has(g.groupId))
       .map((g) => ({
@@ -268,10 +270,9 @@ export default function DuplicateReviewPanel() {
       .filter((i) => i.removeIds.length > 0);
 
     if (!items.length) return;
-    if (!window.confirm(`Remove duplicates from ${items.length} selected groups? Archived for undo.`)) return;
-
     await bulkResolveDuplicates({ items });
     setSelectedGroups(new Set());
+    setConfirmBulkDeleteOpen(false);
     invalidateAll();
   };
 
@@ -382,7 +383,7 @@ export default function DuplicateReviewPanel() {
       {selectedGroups.size > 0 && (
         <div className="card p-3 flex flex-wrap items-center gap-3">
           <span className="text-sm font-medium">{selectedGroups.size} selected</span>
-          <button type="button" onClick={handleBulkDelete} className="btn-primary gap-2">
+          <button type="button" onClick={() => setConfirmBulkDeleteOpen(true)} className="btn-primary gap-2">
             <Trash2 size={16} /> Remove selected duplicates
           </button>
           <button type="button" onClick={() => setSelectedGroups(new Set())} className="btn-secondary">
@@ -436,6 +437,16 @@ export default function DuplicateReviewPanel() {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        isOpen={confirmBulkDeleteOpen}
+        onCancel={() => setConfirmBulkDeleteOpen(false)}
+        onConfirm={executeBulkDelete}
+        title="Remove Duplicate Transactions"
+        message={`Are you sure you want to remove duplicates from ${selectedGroups.size} selected group(s)? Removed transactions will be archived and can be restored.`}
+        confirmText="Remove Duplicates"
+        variant="danger"
+      />
     </div>
   );
 }

@@ -4,6 +4,7 @@ import { Wallet, Check, X, Pencil } from 'lucide-react';
 import { getManualBalances, updateManualBalance } from '../../api/client';
 import { invalidateAssets } from '../../lib/queryKeys';
 import LoadingSpinner from '../ui/LoadingSpinner';
+import InlineAmountEditor from '../ui/InlineAmountEditor';
 import { fmtEur } from '../../utils/displayFormat';
 
 const EDITABLE_KEYS = ['pension', 'paypal'];
@@ -33,30 +34,25 @@ function BalanceRow({ row, onSave }) {
       </div>
       <div className="flex items-center gap-2 shrink-0">
         {editing ? (
-          <>
-            <span className="text-sm text-gray-500">€</span>
-            <input
-              type="number"
-              value={val}
-              onChange={(e) => setVal(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') save();
-                if (e.key === 'Escape') cancel();
-              }}
-              className="input w-28 py-1 text-sm text-right"
-              autoFocus
-            />
-            <button type="button" onClick={save} className="p-1.5 rounded-lg text-green-600 hover:bg-green-50">
-              <Check size={14} />
-            </button>
-            <button type="button" onClick={cancel} className="p-1.5 rounded-lg text-gray-400">
-              <X size={14} />
-            </button>
-          </>
+          <InlineAmountEditor
+            value={val}
+            currency="€"
+            onSave={(newVal) => {
+              onSave(parseFloat(newVal) || 0);
+              setEditing(false);
+            }}
+            onCancel={() => setEditing(false)}
+          />
         ) : (
           <>
             <span className="text-base font-semibold tabular-nums">{fmtEur(row.amount)}</span>
-            <button type="button" onClick={startEdit} className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600">
+            <button
+              type="button"
+              onClick={startEdit}
+              className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+              title="Edit balance"
+              aria-label="Edit balance"
+            >
               <Pencil size={13} />
             </button>
           </>

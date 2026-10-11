@@ -11,6 +11,20 @@ import {
   setInvestmentBrokerCash, setInvestmentHoldingQuantity, setInvestmentHoldingAvgCost,
 } from '../../../api/client';
 import StatCard from '../../ui/StatCard';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '../../ui/Dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../../ui/Select';
+import InlineAmountEditor from '../../ui/InlineAmountEditor';
 import { BROKER_COLORS, BROKER_LABELS } from '../constants';
 import { fmt, fmtQty } from '../investmentPageFmt';
 import { MarketHoldingCards, CostBasisHoldingCards } from './HoldingsCardGrid';
@@ -157,19 +171,18 @@ export function SecurityBindModal({ holding, onClose, onBound }) {
   });
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={onClose}>
-      <div
-        className="card p-5 w-full max-w-lg max-h-[80vh] overflow-hidden flex flex-col"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-1">
-          Link market data — {holding.ticker}
-        </h3>
-        <p className="text-xs text-gray-500 mb-3">
-          Search and pick the exact Yahoo symbol (often includes exchange suffix, e.g. VGVE.DE, PPFB.DE, EMIM.L).
-          Binding is saved permanently.
-        </p>
-        <div className="relative mb-3">
+    <Dialog open onOpenChange={(open) => { if (!open) onClose?.(); }}>
+      <DialogContent className="max-w-lg max-h-[85vh] p-6 flex flex-col overflow-hidden">
+        <DialogHeader>
+          <DialogTitle className="text-base font-semibold text-gray-900 dark:text-white">
+            Link market data — {holding.ticker}
+          </DialogTitle>
+          <p className="text-xs text-gray-500">
+            Search and pick the exact Yahoo symbol (often includes exchange suffix, e.g. VGVE.DE, PPFB.DE, EMIM.L). Binding is saved permanently.
+          </p>
+        </DialogHeader>
+
+        <div className="relative my-2">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
             className="input pl-9 w-full"
@@ -179,7 +192,8 @@ export function SecurityBindModal({ holding, onClose, onBound }) {
             autoFocus
           />
         </div>
-        <div className="overflow-y-auto flex-1 min-h-0 space-y-1">
+
+        <div className="overflow-y-auto flex-1 min-h-[140px] space-y-1">
           {searchQ.isError && (
             <p className="text-xs text-red-500 py-3 px-2">
               {searchQ.error?.message || 'Search failed'}
@@ -192,11 +206,11 @@ export function SecurityBindModal({ holding, onClose, onBound }) {
               type="button"
               onClick={() => bindMut.mutate(hit)}
               disabled={bindMut.isPending}
-              className="w-full text-left px-3 py-2.5 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 border border-transparent hover:border-gray-200 dark:hover:border-gray-700"
+              className="w-full text-left px-3 py-2.5 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 border border-transparent hover:border-gray-200 dark:hover:border-gray-700 transition-colors"
             >
-              <span className="font-mono text-sm font-semibold text-brand-600">{hit.providerSymbol}</span>
+              <span className="font-mono text-sm font-semibold text-brand-600 dark:text-brand-400">{hit.providerSymbol}</span>
               <span className="text-xs text-gray-500 ml-2">{hit.exchange}</span>
-              <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5 truncate">{hit.name}</p>
+              <p className="text-xs text-gray-700 dark:text-gray-300 mt-0.5 truncate">{hit.name}</p>
               <p className="text-[10px] text-gray-400">{hit.quoteType} · {hit.currency}</p>
             </button>
           ))}
@@ -204,9 +218,12 @@ export function SecurityBindModal({ holding, onClose, onBound }) {
             <p className="text-xs text-gray-400 py-4 text-center">No matches</p>
           )}
         </div>
-        <button type="button" onClick={onClose} className="btn-secondary mt-3 w-full">Cancel</button>
-      </div>
-    </div>
+
+        <div className="pt-2 border-t border-gray-100 dark:border-gray-800">
+          <button type="button" onClick={onClose} className="btn-secondary w-full">Cancel</button>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -253,23 +270,12 @@ export function ManualAvgCostCell({ holding, onSaved }) {
 
   if (editing) {
     return (
-      <div className="flex items-center gap-1">
-        <input
-          type="number"
-          step="any"
-          className="input w-24 py-0.5 text-xs"
-          value={val}
-          onChange={(e) => setVal(e.target.value)}
-          autoFocus
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') saveMut.mutate(parseFloat(val) || 0);
-            if (e.key === 'Escape') setEditing(false);
-          }}
-        />
-        <button type="button" className="text-xs text-brand-600" onClick={() => saveMut.mutate(parseFloat(val) || 0)}>
-          Save
-        </button>
-      </div>
+      <InlineAmountEditor
+        value={val}
+        currency={holding.currency}
+        onSave={(newVal) => saveMut.mutate(parseFloat(newVal) || 0)}
+        onCancel={() => setEditing(false)}
+      />
     );
   }
 
@@ -313,23 +319,12 @@ export function ManualQtyCell({ holding, onSaved }) {
 
   if (editing) {
     return (
-      <div className="flex items-center gap-1">
-        <input
-          type="number"
-          step="any"
-          className="input w-24 py-0.5 text-xs"
-          value={val}
-          onChange={(e) => setVal(e.target.value)}
-          autoFocus
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') saveMut.mutate(parseFloat(val) || 0);
-            if (e.key === 'Escape') setEditing(false);
-          }}
-        />
-        <button type="button" className="text-xs text-brand-600" onClick={() => saveMut.mutate(parseFloat(val) || 0)}>
-          Save
-        </button>
-      </div>
+      <InlineAmountEditor
+        value={val}
+        currency=""
+        onSave={(newVal) => saveMut.mutate(parseFloat(newVal) || 0)}
+        onCancel={() => setEditing(false)}
+      />
     );
   }
 
@@ -393,42 +388,34 @@ export function ManualCashBox({ valuation, brokerFilter, onSaved }) {
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
-        <label className="text-xs text-gray-500">Broker</label>
-        <select
-          className="input text-sm w-auto min-w-[160px]"
-          value={selectedBroker}
-          onChange={(e) => {
-            setSelectedBroker(e.target.value);
-            setEditing(false);
-          }}
-          disabled={!!brokerFilter}
-        >
-          {brokers.map(([key, label]) => (
-            <option key={key} value={key}>{label}</option>
-          ))}
-        </select>
+        <label className="text-xs text-gray-500 font-medium">Broker</label>
+        <div className="min-w-[170px]">
+          <Select
+            value={selectedBroker}
+            disabled={!!brokerFilter}
+            onValueChange={(val) => {
+              setSelectedBroker(val);
+              setEditing(false);
+            }}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {brokers.map(([key, label]) => (
+                <SelectItem key={key} value={key}>{label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
         {editing ? (
-          <div className="flex items-center gap-2 flex-wrap">
-            <input
-              type="number"
-              className="input w-36 text-right"
-              value={val}
-              onChange={(e) => setVal(e.target.value)}
-              autoFocus
-            />
-            <span className="text-xs text-gray-500">{ccy}</span>
-            <button
-              type="button"
-              className="btn-primary text-xs py-1.5"
-              onClick={() => saveMut.mutate(parseFloat(val) || 0)}
-            >
-              Save
-            </button>
-            <button type="button" className="btn-secondary text-xs py-1.5" onClick={() => setEditing(false)}>
-              Cancel
-            </button>
-          </div>
+          <InlineAmountEditor
+            value={val}
+            currency={ccy}
+            onSave={(newVal) => saveMut.mutate(parseFloat(newVal) || 0)}
+            onCancel={() => setEditing(false)}
+          />
         ) : (
           <div className="flex items-center gap-3">
             <span className="text-lg font-semibold text-gray-900 dark:text-white tabular-nums">

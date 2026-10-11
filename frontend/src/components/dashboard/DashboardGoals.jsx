@@ -1,6 +1,13 @@
 import { Link } from 'react-router-dom';
 import { ChevronRight } from 'lucide-react';
 import clsx from 'clsx';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../ui/Select';
 import { fmtEur, fmtPct } from '../../utils/displayFormat';
 import { normalizeGoalId } from '../../hooks/useGoalPreferences';
 
@@ -26,21 +33,26 @@ export default function DashboardGoals({
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {active.length > 1 && onFeaturedGoalChange && (
-            <label className="flex items-center gap-1.5 text-xs text-gray-500">
-              <span className="shrink-0">KPI goal</span>
-              <select
-                className="input text-xs py-1 min-w-[8rem] max-w-[12rem]"
-                value={featuredValue}
-                onChange={(e) => onFeaturedGoalChange(normalizeGoalId(e.target.value))}
-                aria-label="Goal shown on dashboard KPI"
-              >
-                {active.map((g) => (
-                  <option key={g.id} value={normalizeGoalId(g.id) ?? g.id}>
-                    {g.name}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <div className="flex items-center gap-1.5 text-xs text-gray-500">
+              <span className="shrink-0 font-medium">KPI goal</span>
+              <div className="min-w-[8rem] max-w-[12rem]">
+                <Select
+                  value={String(featuredValue)}
+                  onValueChange={(val) => onFeaturedGoalChange(normalizeGoalId(val))}
+                >
+                  <SelectTrigger className="h-8 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {active.map((g) => (
+                      <SelectItem key={g.id} value={String(normalizeGoalId(g.id) ?? g.id)}>
+                        {g.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
           )}
           <Link to="/investments?tab=planner" className="text-xs text-brand-600 hover:underline inline-flex items-center gap-0.5">
             Planner <ChevronRight size={12} />

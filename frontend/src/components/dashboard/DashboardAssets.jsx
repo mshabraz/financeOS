@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Plus, Check, X, Pencil, Trash2, Wallet } from 'lucide-react';
 import LoadingSpinner from '../ui/LoadingSpinner';
 import TableSkeleton from '../ui/TableSkeleton';
+import InlineAmountEditor from '../ui/InlineAmountEditor';
 import { fmtEur, fmtCurrency, privText, fmtPct } from '../../utils/displayFormat';
 import { usePrivacy } from '../../context/PrivacyContext';
 
@@ -66,26 +67,16 @@ function AssetRow({ row, onSave, onDelete, isBuiltIn, portfolio }) {
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
           {editing ? (
-            <>
-              <span className="text-sm text-gray-500">€</span>
-              <input
-                type="number"
-                value={val}
-                onChange={(e) => setVal(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') save();
-                  if (e.key === 'Escape') cancel();
-                }}
-                className="input w-28 py-1 text-sm text-right"
-                autoFocus
-              />
-              <button type="button" onClick={save} className="p-1.5 rounded-lg text-green-600 hover:bg-green-50">
-                <Check size={14} />
-              </button>
-              <button type="button" onClick={cancel} className="p-1.5 rounded-lg text-gray-400">
-                <X size={14} />
-              </button>
-            </>
+            <InlineAmountEditor
+              value={val}
+              currency="€"
+              onSave={(newVal) => {
+                const parsed = parseFloat(newVal);
+                if (!isNaN(parsed)) onSave(row.key, parsed, label);
+                setEditing(false);
+              }}
+              onCancel={() => setEditing(false)}
+            />
           ) : (
             <>
               <span className="text-base font-semibold text-gray-900 dark:text-white tabular-nums">

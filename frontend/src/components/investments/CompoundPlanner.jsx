@@ -13,6 +13,13 @@ import {
 } from '../../utils/compoundPlannerEngine';
 import { fmtEur } from '../../utils/investmentFormat';
 import LoadingSpinner from '../ui/LoadingSpinner';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../ui/Select';
 import NumericField from './plannerNumericField';
 import PlannerBasisFields from './PlannerBasisFields';
 import GoalSolverView from './GoalSolverView';
@@ -233,11 +240,16 @@ export default function CompoundPlanner({ brokerFilter = '', plannerView }) {
               step={0.1}
               unit="%"
             />
-            <select className="input w-full text-sm" value={form.timeMode} onChange={(e) => set('timeMode', e.target.value)}>
-              <option value="years">Horizon (years)</option>
-              <option value="age">Target age</option>
-              <option value="date">End date</option>
-            </select>
+            <Select value={form.timeMode} onValueChange={(val) => set('timeMode', val)}>
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="years">Horizon (years)</SelectItem>
+                <SelectItem value="age">Target age</SelectItem>
+                <SelectItem value="date">End date</SelectItem>
+              </SelectContent>
+            </Select>
             {form.timeMode === 'years' && (
               <NumericField
                 label="Years"
@@ -257,12 +269,19 @@ export default function CompoundPlanner({ brokerFilter = '', plannerView }) {
             {form.timeMode === 'date' && (
               <input type="date" className="input w-full" value={form.endDate} onChange={(e) => set('endDate', e.target.value)} />
             )}
-            <label className="block text-xs text-gray-500">Compounding</label>
-            <select className="input w-full text-sm" value={form.compounding} onChange={(e) => set('compounding', e.target.value)}>
-              {COMPOUNDING_OPTIONS.map((o) => (
-                <option key={o.id} value={o.id}>{o.label}</option>
-              ))}
-            </select>
+            <div className="space-y-1">
+              <label className="text-xs text-gray-500 font-medium">Compounding</label>
+              <Select value={form.compounding} onValueChange={(val) => set('compounding', val)}>
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {COMPOUNDING_OPTIONS.map((o) => (
+                    <SelectItem key={o.id} value={o.id}>{o.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           <button

@@ -1,6 +1,13 @@
 import { useState } from 'react';
 import { Search, SlidersHorizontal, LayoutList, LayoutGrid, ChevronDown } from 'lucide-react';
 import clsx from 'clsx';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../../ui/Select';
 import PriceSyncCompact from '../PriceSyncCompact';
 import { HOLDINGS_COLUMNS } from './holdingsUtils';
 
@@ -48,15 +55,21 @@ export default function HoldingsToolbar({
           />
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <select
-            className="input text-sm w-auto min-w-[140px]"
-            value={statusFilter}
-            onChange={(e) => onStatusFilterChange(e.target.value)}
-          >
-            <option value="">All positions</option>
-            <option value="priced">Priced only</option>
-            <option value="needs_action">Needs action</option>
-          </select>
+          <div className="min-w-[140px]">
+            <Select
+              value={statusFilter || 'all'}
+              onValueChange={(val) => onStatusFilterChange(val === 'all' ? '' : val)}
+            >
+              <SelectTrigger className="w-full text-xs h-9">
+                <SelectValue placeholder="All positions" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All positions</SelectItem>
+                <SelectItem value="priced">Priced only</SelectItem>
+                <SelectItem value="needs_action">Needs action</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
           <button
             type="button"
             className={clsx('btn-secondary text-xs gap-1', compact && 'ring-1 ring-brand-500/40')}
