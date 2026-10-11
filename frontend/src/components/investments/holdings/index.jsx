@@ -37,6 +37,7 @@ import { BROKER_COLORS, BROKER_LABELS } from '../constants';
 import { fmt, fmtQty } from '../investmentPageFmt';
 import { MarketHoldingCards, CostBasisHoldingCards } from './HoldingsCardGrid';
 import SecurityDisplay from '../SecurityDisplay';
+import TickerHoverCard from '../TickerHoverCard';
 
 export function FundNameCell({ ticker, fundName, isin, row }) {
   const displayRow = row ?? { ticker, fundName, isin };
@@ -539,7 +540,13 @@ export function MarketHoldingsTable({ data, valuation, onBind, onUnbind, showEur
                             {BROKER_LABELS[h.broker] || h.broker}
                           </span>
                         </td>
-                        <td className="px-3 py-2.5 font-mono font-bold text-brand-600">{h.ticker}</td>
+                        <td className="px-3 py-2.5 font-mono font-bold text-brand-600">
+                          <TickerHoverCard holding={h}>
+                            <span className="cursor-help hover:underline decoration-dotted decoration-brand-400/50">
+                              {h.ticker}
+                            </span>
+                          </TickerHoverCard>
+                        </td>
                         <td className="px-3 py-2.5 max-w-[180px]">
                           <SecurityDisplay
                             row={h}

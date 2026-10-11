@@ -47,6 +47,7 @@ import {
   bulkCategorizePrev, bulkCategorizeApply, bulkUpdateCategory, bulkAssignTag, bulkDeleteTransactions,
 } from '../api/client';
 import TransactionSourceBadges, { TransactionAmountDetail } from '../components/transactions/TransactionSourceBadges';
+import MerchantHoverCard from '../components/transactions/MerchantHoverCard';
 import CategoryBadge from '../components/ui/CategoryBadge';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 import TableSkeleton from '../components/ui/TableSkeleton';
@@ -1206,9 +1207,11 @@ export default function Transactions() {
                             title="Click to expand full details"
                           >
                             <div className="flex items-center gap-1.5">
-                              <p className="font-medium text-gray-900 dark:text-white group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors line-clamp-1">
-                                {privText(tx.merchant || tx.beneficiary || '—')}
-                              </p>
+                              <MerchantHoverCard tx={tx} privText={privText}>
+                                <span className="font-medium text-gray-900 dark:text-white group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors line-clamp-1">
+                                  {privText(tx.merchant || tx.beneficiary || '—')}
+                                </span>
+                              </MerchantHoverCard>
                               {expandedId === rowId
                                 ? <ChevronDown size={12} className="flex-shrink-0 text-brand-500" />
                                 : <ChevronRt size={12} className="flex-shrink-0 text-gray-300 dark:text-gray-600 group-hover:text-brand-400" />
