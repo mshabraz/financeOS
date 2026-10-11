@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Search, Download, ChevronLeft, ChevronRight, Check, X,
-  Tag, Layers, AlertCircle, ChevronDown, ChevronUp, ChevronRight as ChevronRt, Copy, Upload, Trash2, Shield, ArrowUpDown, MoreHorizontal,
+  Tag, Layers, AlertCircle, ChevronDown, ChevronUp, ChevronRight as ChevronRt, Copy, Upload, Trash2, Shield, ArrowUpDown, MoreHorizontal, FolderPlus,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -19,6 +19,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '../components/ui/Dialog';
+import { Button } from '../components/ui/Button';
 import {
   getTransactions, updateTransaction, getCategories,
   exportTransactionsCSV, getTags, assignTag, removeTag, assignRevolutTag, removeRevolutTag,
@@ -392,8 +393,6 @@ export default function Transactions() {
   const [newTagId, setNewTagId] = useState('');
   const [expandedId, setExpandedId] = useState(null); // ← expanded row
   const [selected, setSelected] = useState(new Set());
-  const [bulkCatId, setBulkCatId] = useState('');
-  const [bulkTagId, setBulkTagId] = useState('');
   const [bulkApplying, setBulkApplying] = useState(false);
   const [bulkTagApplying, setBulkTagApplying] = useState(false);
   const [bulkDeleting, setBulkDeleting] = useState(false);
@@ -535,19 +534,19 @@ export default function Transactions() {
   const selectAll = () => setSelected(new Set(data?.data?.map((r) => txnKey(r)) ?? []));
   const clearSel  = () => setSelected(new Set());
 
-  const applyBulkCategory = async () => {
-    if (!bulkCatId || !selected.size) return;
+  const handleBulkCategorySelect = async (categoryId) => {
+    if (!categoryId || !selected.size) return;
     setBulkApplying(true);
     setBulkError('');
     try {
-      const result = await bulkUpdateCategory([...selected], parseInt(bulkCatId, 10));
+      const result = await bulkUpdateCategory([...selected], parseInt(categoryId, 10));
       if (result?.updated === 0) {
         setBulkError('No transactions were updated. Try again or refresh the page.');
         return;
       }
       qc.invalidateQueries({ queryKey: ['transactions'] });
       invalidateDashboardData(qc);
-      clearSel();
+      // Selection preserved so user can continue applying tags or other actions!
     } catch (err) {
       setBulkError(err.message || 'Failed to apply category');
     } finally {
@@ -555,14 +554,20 @@ export default function Transactions() {
     }
   };
 
-  const applyBulkTag = async () => {
+  const handleBulkTagSelect = async (tagId) => {
     const { bankIds, revolutIds } = splitSelectedIds(selected);
-    if (!bulkTagId || (!bankIds.length && !revolutIds.length)) return;
+    if (!tagId || (!bankIds.length && !revolutIds.length)) return;
     setBulkTagApplying(true);
+    setBulkError('');
     try {
-      await bulkAssignTag(parseInt(bulkTagId, 10), bankIds, revolutIds);
-      qc.invalidateQueries({ queryKey: ['transactions'] }); clearSel();
-    } finally { setBulkTagApplying(false); }
+      await bulkAssignTag(parseInt(tagId, 10), bankIds, revolutIds);
+      qc.invalidateQueries({ queryKey: ['transactions'] });
+      // Selection preserved so user can continue applying category or other actions!
+    } catch (err) {
+      setBulkError(err.message || 'Failed to assign tag');
+    } finally {
+      setBulkTagApplying(false);
+    }
   };
 
   const invalidateAfterTxnDelete = () => {
@@ -765,55 +770,138 @@ export default function Transactions() {
         </div>
       </div>
 
-      {/* Bulk action bar */}
+      {/* Bulk action floating toolbar */}
       {selected.size > 0 && (
-        <>
-        <div className="card p-3 bg-brand-50 dark:bg-brand-900/20 border-brand-200 dark:border-brand-800 flex items-center gap-3 flex-wrap">
-          <span className="text-sm font-medium text-brand-700 dark:text-brand-300">
-            <Layers size={14} className="inline mr-1" />
-            {selected.size} selected
-            <span className={clsx('ml-2 font-semibold', selectedSum >= 0 ? 'text-green-700 dark:text-green-400' : 'text-red-600')}>
-              (analytics {selectedSum >= 0 ? '+' : ''}{fmt(selectedSum)})
-            </span>
-            {selectedSplit.revolutIds.length > 0 && (
-              <span className="text-xs text-gray-500 ml-1">
-                · {selectedSplit.bankIds.length} bank, {selectedSplit.revolutIds.length} Revolut
-              </span>
-            )}
-          </span>
-          <select value={bulkCatId} onChange={(e) => setBulkCatId(e.target.value)} className="input py-1 text-xs w-44">
-            <option value="">Set category...</option>
-            {categories?.map((c) => <option key={c.id} value={c.id}>{c.icon} {c.name}</option>)}
-          </select>
-          <button
-            onClick={applyBulkCategory}
-            disabled={!bulkCatId || bulkApplying}
-            className="btn-primary py-1.5 text-xs"
-          >
-            {bulkApplying ? 'Applying...' : 'Apply category'}
-          </button>
-          <select value={bulkTagId} onChange={(e) => setBulkTagId(e.target.value)} className="input py-1 text-xs w-36">
-            <option value="">Assign tag...</option>
-            {allTags?.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
-          </select>
-          <button onClick={applyBulkTag} disabled={!bulkTagId || bulkTagApplying} className="btn-secondary py-1.5 text-xs">
-            {bulkTagApplying ? 'Tagging...' : 'Apply tag'}
-          </button>
-          <button
-            type="button"
-            onClick={requestBulkDelete}
-            disabled={bulkDeleting || bulkApplying || bulkTagApplying}
-            className="inline-flex items-center gap-1 py-1.5 px-3 rounded-lg text-xs font-medium border border-red-200 dark:border-red-900/50 text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-950/30 hover:bg-red-100 dark:hover:bg-red-950/50 disabled:opacity-50"
-          >
-            <Trash2 size={14} />
-            {bulkDeleting ? 'Deleting...' : 'Delete'}
-          </button>
-          <button onClick={clearSel} className="btn-ghost py-1.5 text-xs text-gray-400">Clear</button>
+        <div className="space-y-2">
+          <div className="flex items-center justify-between gap-3 p-2.5 sm:px-4 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-md backdrop-blur-sm flex-wrap">
+            {/* Selection Info */}
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="flex items-center justify-center min-w-[24px] h-6 px-1.5 rounded-md bg-brand-500/10 text-brand-600 dark:text-brand-400 font-semibold text-xs shrink-0 tabular-nums">
+                {selected.size}
+              </div>
+              <div className="text-xs text-gray-700 dark:text-gray-300 font-medium truncate flex items-center gap-1.5 flex-wrap">
+                <span>selected</span>
+                <span className={clsx('font-semibold tabular-nums', selectedSum >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-900 dark:text-white')}>
+                  ({selectedSum >= 0 ? '+' : ''}{fmt(selectedSum)})
+                </span>
+                {selectedSplit.revolutIds.length > 0 && (
+                  <span className="hidden sm:inline text-gray-400 text-[11px] font-normal">
+                    · {selectedSplit.bankIds.length} bank, {selectedSplit.revolutIds.length} Revolut
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Actions group */}
+            <div className="flex items-center gap-2 flex-wrap">
+              {/* Category Dropdown */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={bulkApplying}
+                    className="gap-1.5 h-8 text-xs font-medium border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800"
+                  >
+                    {bulkApplying ? (
+                      <span className="inline-block animate-spin mr-1">⟳</span>
+                    ) : (
+                      <FolderPlus size={13} className="text-gray-400 shrink-0" />
+                    )}
+                    <span>Category</span>
+                    <ChevronDown size={12} className="text-gray-400 shrink-0" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56 max-h-72 overflow-y-auto">
+                  <DropdownMenuLabel className="text-xs">
+                    Set category for {selected.size} item{selected.size > 1 ? 's' : ''}
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  {categories?.map((c) => (
+                    <DropdownMenuItem
+                      key={c.id}
+                      onClick={() => handleBulkCategorySelect(c.id)}
+                      className="flex items-center gap-2 cursor-pointer text-xs py-2"
+                    >
+                      <span className="text-sm shrink-0">{c.icon}</span>
+                      <span className="flex-1 truncate">{c.name}</span>
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              {/* Tag Dropdown */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={bulkTagApplying}
+                    className="gap-1.5 h-8 text-xs font-medium border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800"
+                  >
+                    {bulkTagApplying ? (
+                      <span className="inline-block animate-spin mr-1">⟳</span>
+                    ) : (
+                      <Tag size={13} className="text-gray-400 shrink-0" />
+                    )}
+                    <span>Tag</span>
+                    <ChevronDown size={12} className="text-gray-400 shrink-0" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-52 max-h-72 overflow-y-auto">
+                  <DropdownMenuLabel className="text-xs">
+                    Assign tag to {selected.size} item{selected.size > 1 ? 's' : ''}
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  {allTags?.map((t) => (
+                    <DropdownMenuItem
+                      key={t.id}
+                      onClick={() => handleBulkTagSelect(t.id)}
+                      className="flex items-center gap-2 cursor-pointer text-xs py-2"
+                    >
+                      <span
+                        className="w-2.5 h-2.5 rounded-full shrink-0"
+                        style={{ backgroundColor: t.color || '#64748b' }}
+                      />
+                      <span className="flex-1 truncate">{t.name}</span>
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              {/* Delete Button */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={requestBulkDelete}
+                disabled={bulkDeleting || bulkApplying || bulkTagApplying}
+                className="gap-1.5 h-8 text-xs font-medium text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40 border-rose-200 dark:border-rose-900/50"
+              >
+                <Trash2 size={13} />
+                <span>{bulkDeleting ? 'Deleting...' : 'Delete'}</span>
+              </Button>
+
+              <div className="h-4 w-px bg-gray-200 dark:bg-gray-800 mx-0.5" />
+
+              {/* Deselect */}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={clearSel}
+                className="h-8 text-xs text-gray-500 hover:text-gray-900 dark:hover:text-gray-100"
+              >
+                Deselect
+              </Button>
+            </div>
+          </div>
+
+          {bulkError && (
+            <div className="flex items-center gap-2 px-3 py-2 text-xs text-rose-600 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/50 rounded-lg">
+              <AlertCircle size={13} className="shrink-0" />
+              <span>{bulkError}</span>
+            </div>
+          )}
         </div>
-        {bulkError && (
-          <p className="text-xs text-red-600 dark:text-red-400 px-1">{bulkError}</p>
-        )}
-        </>
       )}
 
       {/* Mobile list */}
