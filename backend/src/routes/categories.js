@@ -85,6 +85,29 @@ router.delete('/:id', (req, res) => {
   res.json({ ok: true });
 });
 
+// POST /api/categories/harmonize-colors
+router.post('/harmonize-colors', (req, res) => {
+  try {
+    const db = getDb();
+    const { updates } = req.body;
+    if (!Array.isArray(updates)) return res.status(400).json({ error: 'updates array is required' });
+
+    const updateStmt = db.prepare('UPDATE categories SET color = ? WHERE id = ?');
+    for (const u of updates) {
+      if (u.id && u.color) {
+        updateStmt.run(u.color, u.id);
+      }
+    }
+    db.flushSync();
+
+    const cats = db.prepare('SELECT * FROM categories ORDER BY type, name').all();
+    res.json(cats);
+  } catch (err) {
+    logger.error('[POST /categories/harmonize-colors]', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // --- Category Rules ---
 
 // GET /api/categories/rules

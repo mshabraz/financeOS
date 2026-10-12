@@ -1,15 +1,18 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Trash2, Zap, Pencil, Check, X, AlertCircle, Play } from 'lucide-react';
+import { Plus, Trash2, Zap, Pencil, Check, X, AlertCircle, Play, Sparkles, Palette } from 'lucide-react';
+import { toast } from 'sonner';
 import {
   getCategories, createCategory, updateCategory, deleteCategory,
   getCategoryRules, createCategoryRule, updateCategoryRule, deleteCategoryRule,
-  applyCategoryRule,
+  applyCategoryRule, harmonizeCategoryColors,
 } from '../api/client';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 import TableSkeleton from '../components/ui/TableSkeleton';
 import EmptyState from '../components/ui/EmptyState';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
+import { Button } from '../components/ui/Button';
+import CategoryColorPicker from '../components/ui/CategoryColorPicker';
 import {
   Select,
   SelectTrigger,
@@ -20,6 +23,7 @@ import {
 import { Tabs, TabsList, TabsTrigger } from '../components/ui/Tabs';
 import { Switch } from '../components/ui/Switch';
 import { useUrlQueryState } from '../hooks/useUrlQueryState';
+import { suggestCategoryColor, harmonizeCategoryPalette } from '../utils/categoryColors';
 import clsx from 'clsx';
 
 export default function Categories() {
@@ -28,8 +32,23 @@ export default function Categories() {
   // Category form (add new)
   const [newName, setNewName]   = useState('');
   const [newIcon, setNewIcon]   = useState('📦');
-  const [newColor, setNewColor] = useState('#94a3b8');
+  const [newColor, setNewColor] = useState('#10b981');
   const [newType, setNewType]   = useState('expense');
+  const [colorManuallyPicked, setColorManuallyPicked] = useState(false);
+
+  const handleNameChange = (val) => {
+    setNewName(val);
+    if (!colorManuallyPicked && val.trim().length > 1) {
+      setNewColor(suggestCategoryColor(val, newType));
+    }
+  };
+
+  const handleTypeChange = (val) => {
+    setNewType(val);
+    if (!colorManuallyPicked) {
+      setNewColor(suggestCategoryColor(newName, val));
+    }
+  };
 
   // Category inline edit
   const [editCatId, setEditCatId]     = useState(null);
@@ -61,7 +80,16 @@ export default function Categories() {
 
   const addCat = useMutation({
     mutationFn: () => createCategory({ name: newName, icon: newIcon, color: newColor, type: newType }),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['categories'] }); setNewName(''); },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['categories'] });
+      setNewName('');
+      setColorManuallyPicked(false);
+      setNewColor('#10b981');
+      toast.success('Category created');
+    },
+    onError: (e) => {
+      toast.error(e?.response?.data?.error || 'Failed to create category');
+    },
   });
 
   const saveCat = useMutation({
@@ -72,18 +100,53 @@ export default function Categories() {
       type: editCatType,
       expense_tier: editCatType === 'expense' ? editCatTier : null,
     }),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['categories'] }); setEditCatId(null); },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['categories'] });
+      qc.invalidateQueries({ queryKey: ['transactions'] });
+      setEditCatId(null);
+      toast.success('Category saved');
+    },
   });
 
   const delCat = useMutation({
     mutationFn: deleteCategory,
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['categories'] }); setDeleteConfirmId(null); },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['categories'] });
+      qc.invalidateQueries({ queryKey: ['transactions'] });
+      setDeleteConfirmId(null);
+      toast.success('Category deleted');
+    },
   });
 
   const colorMut = useMutation({
     mutationFn: ({ id, color }) => updateCategory(id, { color }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['categories'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['categories'] });
+      qc.invalidateQueries({ queryKey: ['transactions'] });
+      qc.invalidateQueries({ queryKey: ['bycat'] });
+      toast.success('Category color updated');
+    },
   });
+
+  const harmonizeMut = useMutation({
+    mutationFn: (updates) => harmonizeCategoryColors(updates),
+    onSuccess: (res) => {
+      qc.invalidateQueries({ queryKey: ['categories'] });
+      qc.invalidateQueries({ queryKey: ['transactions'] });
+      qc.invalidateQueries({ queryKey: ['bycat'] });
+      qc.invalidateQueries({ queryKey: ['summary'] });
+      toast.success(`Harmonized colors across ${res?.data?.length ?? 'all'} categories for dark and light mode`);
+    },
+    onError: (e) => {
+      toast.error(e?.response?.data?.error || 'Failed to harmonize colors');
+    },
+  });
+
+  const handleHarmonizeAll = () => {
+    if (!cats.data?.length) return;
+    const updates = harmonizeCategoryPalette(cats.data);
+    harmonizeMut.mutate(updates);
+  };
 
   const tierMut = useMutation({
     mutationFn: ({ id, expense_tier }) => updateCategory(id, { expense_tier }),
@@ -167,7 +230,23 @@ export default function Categories() {
 
       {/* ── Categories ── */}
       <div className="card p-5">
-        <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4">Categories</h2>
+        <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+          <div>
+            <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Categories</h2>
+            <p className="text-xs text-gray-400">Classify income, expenses, and transfers with dark & light optimized colors</p>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleHarmonizeAll}
+            disabled={harmonizeMut.isPending || !cats.data?.length}
+            className="gap-1.5 text-xs h-8 bg-white/60 dark:bg-white/[0.04] border-black/[0.08] dark:border-white/[0.08] hover:bg-brand-50/50 dark:hover:bg-brand-950/30 hover:text-brand-600 dark:hover:text-brand-400"
+            title="Auto-assign harmonious, accessible colors to all categories for dark and light modes"
+          >
+            <Sparkles size={13} className={harmonizeMut.isPending ? 'animate-spin text-brand-500' : 'text-brand-500'} />
+            <span>{harmonizeMut.isPending ? 'Harmonizing...' : 'Harmonize Colors'}</span>
+          </Button>
+        </div>
         {cats.isLoading ? <TableSkeleton rows={4} /> : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-4">
             {cats.data?.map((c) => (
@@ -190,14 +269,17 @@ export default function Categories() {
                   </div>
                 ) : editCatId === c.id ? (
                   /* ── Inline edit ── */
-                  <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-brand-50 dark:bg-brand-900/10 border border-brand-200 dark:border-brand-800 flex-wrap">
+                  <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-brand-50 dark:bg-brand-900/10 border border-brand-200 dark:border-brand-800 flex-wrap">
                     <input type="text" value={editCatIcon} onChange={(e) => setEditCatIcon(e.target.value)}
                       className="input w-14 text-center py-1.5 text-sm" placeholder="Icon" />
                     <input type="text" value={editCatName} onChange={(e) => setEditCatName(e.target.value)}
                       className="input flex-1 min-w-[100px] py-1.5 text-sm" placeholder="Name"
                       onKeyDown={(e) => e.key === 'Enter' && saveCat.mutate()} />
-                    <input type="color" value={editCatColor} onChange={(e) => setEditCatColor(e.target.value)}
-                      className="h-8 w-8 rounded border border-black/[0.08] dark:border-white/[0.08] cursor-pointer" />
+                    <CategoryColorPicker
+                      color={editCatColor}
+                      categoryName={editCatName}
+                      onChange={setEditCatColor}
+                    />
                     <Select value={editCatType} onValueChange={setEditCatType}>
                       <SelectTrigger className="w-28 py-1.5 h-9 min-h-[36px] text-xs">
                         <SelectValue placeholder="Type" />
@@ -229,10 +311,10 @@ export default function Categories() {
                   </div>
                 ) : (
                   /* ── Normal row ── */
-                  <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-gray-50 dark:bg-gray-800 group">
-                    <span className="text-lg">{c.icon}</span>
+                  <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-gray-50/80 dark:bg-white/[0.03] border border-black/[0.04] dark:border-white/[0.05] group transition-all hover:bg-gray-100/60 dark:hover:bg-white/[0.05]">
+                    <span className="text-lg shrink-0">{c.icon}</span>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-800 dark:text-gray-200">{c.name}</p>
+                      <p className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">{c.name}</p>
                       <p className="text-xs text-gray-400 capitalize">
                         {c.type}
                         {c.type === 'expense' ? ` · ${c.expense_tier || 'variable'}` : ''}
@@ -252,12 +334,10 @@ export default function Categories() {
                         </SelectContent>
                       </Select>
                     )}
-                    <input
-                      type="color"
-                      value={c.color}
-                      onChange={(e) => colorMut.mutate({ id: c.id, color: e.target.value })}
-                      className="h-8 w-8 rounded-lg border border-black/[0.08] dark:border-white/[0.12] cursor-pointer flex-shrink-0 bg-transparent"
-                      title="Change color"
+                    <CategoryColorPicker
+                      color={c.color}
+                      categoryName={c.name}
+                      onChange={(newColor) => colorMut.mutate({ id: c.id, color: newColor })}
                     />
                     <div className="flex items-center gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity flex-shrink-0">
                       <button
@@ -281,16 +361,24 @@ export default function Categories() {
         )}
         <div className="border-t border-black/[0.06] dark:border-white/[0.08] pt-4">
           <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-3">Add category</p>
-          <div className="flex gap-2 flex-wrap">
+          <div className="flex gap-2 flex-wrap items-center">
             <input
               type="text" placeholder="Name" value={newName}
-              onChange={(e) => setNewName(e.target.value)}
+              onChange={(e) => handleNameChange(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && newName && addCat.mutate()}
               className="input flex-1 min-w-[120px]"
             />
             <input type="text" placeholder="Icon" value={newIcon} onChange={(e) => setNewIcon(e.target.value)} className="input w-16 text-center" />
-            <input type="color" value={newColor} onChange={(e) => setNewColor(e.target.value)} className="h-10 w-10 rounded-lg border border-black/[0.08] dark:border-white/[0.08] cursor-pointer" />
-            <Select value={newType} onValueChange={setNewType}>
+            <CategoryColorPicker
+              color={newColor}
+              categoryName={newName}
+              onChange={(chosen) => {
+                setColorManuallyPicked(true);
+                setNewColor(chosen);
+              }}
+              size="lg"
+            />
+            <Select value={newType} onValueChange={handleTypeChange}>
               <SelectTrigger className="w-36 text-sm">
                 <SelectValue placeholder="Type" />
               </SelectTrigger>
@@ -301,8 +389,8 @@ export default function Categories() {
                 <SelectItem value="transfer">Transfer</SelectItem>
               </SelectContent>
             </Select>
-            <button onClick={() => addCat.mutate()} disabled={!newName} className="btn-primary flex items-center gap-1.5">
-              <Plus size={15} />Add
+            <button onClick={() => addCat.mutate()} disabled={!newName || addCat.isPending} className="btn-primary flex items-center gap-1.5">
+              <Plus size={15} />{addCat.isPending ? 'Adding...' : 'Add'}
             </button>
           </div>
         </div>
