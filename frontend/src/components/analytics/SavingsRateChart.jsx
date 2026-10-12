@@ -12,16 +12,29 @@ function SavingsTooltip({ active, payload }) {
   const p = payload[0]?.payload;
   if (!p) return null;
   return (
-    <div className="rounded-lg border border-black/[0.08] dark:border-white/[0.12] bg-white/90 dark:bg-slate-900/90 backdrop-blur-md px-3 py-2 text-xs shadow-xl">
-      <p className="font-semibold text-gray-800 dark:text-gray-100 mb-1">{p.month}</p>
-      <p className="text-brand-600 dark:text-brand-400 font-medium">
-        Savings rate {p.savingsRate != null ? fmtPct(p.savingsRate) : '—'}
-      </p>
-      <p className="text-gray-500 mt-1">Income {fmtEur(p.income)}</p>
-      <p className="text-gray-500">Expenses {fmtEur(p.expenses)}</p>
-      {p.transfers > 0 && (
-        <p className="text-gray-500">Transfers {fmtEur(p.transfers)}</p>
-      )}
+    <div className="z-50 min-w-[9rem] max-w-xs rounded-xl border border-black/[0.08] dark:border-white/[0.12] bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl p-3 text-xs shadow-xl shadow-black/10 dark:shadow-2xl dark:shadow-black/60 pointer-events-none select-none">
+      <div className="font-semibold text-slate-800 dark:text-slate-200 mb-2 border-b border-black/[0.06] dark:border-white/[0.08] pb-1.5 flex items-center justify-between gap-2">
+        <span>{p.month}</span>
+        <span className="text-brand-600 dark:text-brand-400 font-bold tabular-nums">
+          {p.savingsRate != null ? fmtPct(p.savingsRate) : '—'}
+        </span>
+      </div>
+      <div className="space-y-1.5 text-xs">
+        <div className="flex items-center justify-between gap-4">
+          <span className="text-slate-600 dark:text-slate-300">Income</span>
+          <span className="font-semibold text-emerald-600 dark:text-emerald-400 tabular-nums">{fmtEur(p.income)}</span>
+        </div>
+        <div className="flex items-center justify-between gap-4">
+          <span className="text-slate-600 dark:text-slate-300">Expenses</span>
+          <span className="font-semibold text-rose-500 dark:text-rose-400 tabular-nums">{fmtEur(p.expenses)}</span>
+        </div>
+        {p.transfers > 0 && (
+          <div className="flex items-center justify-between gap-4">
+            <span className="text-slate-600 dark:text-slate-300">Transfers</span>
+            <span className="font-semibold text-slate-700 dark:text-slate-200 tabular-nums">{fmtEur(p.transfers)}</span>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

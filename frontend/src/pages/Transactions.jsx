@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Search, Download, ChevronLeft, ChevronRight, Check, X,
   Tag, Layers, AlertCircle, ChevronDown, ChevronUp, ChevronRight as ChevronRt, Copy, Upload, Trash2, ArrowUpDown, MoreHorizontal, FolderPlus,
-  Info, Landmark,
+  Info, Landmark, FileText,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -57,7 +57,6 @@ import TableSkeleton from '../components/ui/TableSkeleton';
 import EmptyState from '../components/ui/EmptyState';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
 import QueryErrorPanel from '../components/ui/QueryErrorPanel';
-import PageHeader from '../components/ui/PageHeader';
 import { toast } from '../components/ui/Sonner';
 import MonthFilterSelect from '../components/ui/MonthFilterSelect';
 import DatePicker from '../components/ui/DatePicker';
@@ -730,6 +729,19 @@ export default function Transactions() {
     setPage(1);
   };
 
+  const activeFilterCount = useMemo(() => {
+    let count = 0;
+    if (searchInput) count++;
+    if (category) count++;
+    if (direction) count++;
+    if (sourceFilter) count++;
+    if (filterMonth) count++;
+    if (dateFrom || dateTo) count++;
+    if (tagFilter) count++;
+    if (hasNotesOnly) count++;
+    return count;
+  }, [searchInput, category, direction, sourceFilter, filterMonth, dateFrom, dateTo, tagFilter, hasNotesOnly]);
+
   const COL_COUNT = 9; // checkbox + date + merchant + note + amount + category + tags + expand + edit
 
   return (
@@ -750,130 +762,210 @@ export default function Transactions() {
         />
       )}
 
-      <PageHeader
-        title="Transactions"
-        subtitle={tab === 'import' ? 'Import or export bank and Revolut CSV' : undefined}
-      >
-        {tab === 'list' && (
-          <button type="button" onClick={handleExport} className="btn-secondary gap-2 w-full sm:w-auto">
-            <Download size={15} />Export CSV
-          </button>
-        )}
-      </PageHeader>
+      {/* Sleek Compact Command Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
+            Transactions
+          </h1>
+          <Tabs value={tab} onValueChange={setTab}>
+            <TabsList className="h-8.5 p-0.5 bg-black/[0.04] dark:bg-white/[0.06] border border-black/[0.06] dark:border-white/[0.08] rounded-lg">
+              <TabsTrigger
+                value="list"
+                className="h-7 px-3 text-xs font-medium rounded-md data-[state=active]:bg-white dark:data-[state=active]:bg-slate-800 data-[state=active]:shadow-sm"
+              >
+                List
+              </TabsTrigger>
+              <TabsTrigger
+                value="import"
+                className="h-7 px-3 text-xs font-medium rounded-md gap-1.5 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-800 data-[state=active]:shadow-sm"
+              >
+                <Upload size={13} />
+                Import / Export
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
 
-      <Tabs value={tab} onValueChange={setTab} className="w-full sm:w-auto">
-        <TabsList className="w-full sm:w-auto flex">
-          {[
-            { id: 'list', label: 'List' },
-            { id: 'import', label: 'Import / Export', icon: Upload },
-          ].map(({ id, label, icon: Icon }) => (
-            <TabsTrigger
-              key={id}
-              value={id}
-              className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-lg text-sm font-medium transition-all min-h-[44px]"
-            >
-              {Icon && <Icon size={16} />}
-              {label}
-            </TabsTrigger>
-          ))}
-        </TabsList>
-      </Tabs>
+        {tab === 'list' && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleExport}
+            className="h-8.5 text-xs font-medium gap-1.5 border-black/[0.08] dark:border-white/[0.1] bg-white/60 dark:bg-slate-900/60 backdrop-blur-md shadow-sm shrink-0"
+          >
+            <Download size={13} />
+            Export CSV
+          </Button>
+        )}
+      </div>
 
       {tab === 'import' ? (
         <TransactionImportPanel />
       ) : (
       <>
-      {/* Filters */}
-      <div className="card p-4 space-y-2">
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2">
-          <div className="relative col-span-2">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input type="text" placeholder="Search merchant, details, your notes…"
-              value={searchInput} onChange={(e) => setSearchInput(e.target.value)}
-              className="input pl-8" />
-          </div>
-          <Select value={category || 'all'} onValueChange={(val) => { setCategory(val === 'all' ? '' : val); setPage(1); }}>
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="All categories" />
-            </SelectTrigger>
-            <SelectContent className="max-h-72">
-              <SelectItem value="all">All categories</SelectItem>
-              {categories?.map((c) => (
-                <SelectItem key={c.id} value={String(c.id)}>
-                  <span className="mr-2">{c.icon}</span>
-                  <span>{c.name}</span>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={direction || 'all'} onValueChange={(val) => { setDir(val === 'all' ? '' : val); setPage(1); }}>
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="All directions" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All directions</SelectItem>
-              <SelectItem value="D">Expenses</SelectItem>
-              <SelectItem value="K">Income</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select value={sourceFilter || 'all'} onValueChange={(val) => { setSourceFilter(val === 'all' ? '' : val); setPage(1); }}>
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="All sources" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All sources</SelectItem>
-              <SelectItem value="bank">Bank only</SelectItem>
-              <SelectItem value="revolut">Revolut only</SelectItem>
-            </SelectContent>
-          </Select>
-          <MonthFilterSelect value={filterMonth} onChange={onMonthChange} className="col-span-2 sm:col-span-1" />
-          <DatePicker
-            value={dateFrom}
-            onChange={onDateFromChange}
-            placeholder="From"
-            className="col-span-1"
-          />
-          <DatePicker
-            value={dateTo}
-            onChange={onDateToChange}
-            placeholder="To"
-            className="col-span-1"
-          />
-        </div>
-        <div className="flex gap-2 items-center flex-wrap">
-          <Select value={tagFilter || 'all'} onValueChange={(val) => { setTagFilter(val === 'all' ? '' : val); setPage(1); }}>
-            <SelectTrigger className="w-48 text-xs min-h-[36px] h-9">
-              <div className="flex items-center gap-1.5 truncate">
-                <Tag size={13} className="text-gray-400 shrink-0" />
-                <SelectValue placeholder="Filter by tag..." />
-              </div>
-            </SelectTrigger>
-            <SelectContent className="max-h-60">
-              <SelectItem value="all">All tags</SelectItem>
-              {allTags?.map((t) => (
-                <SelectItem key={t.id} value={String(t.id)}>
-                  <div className="flex items-center gap-2">
-                    <span
-                      className="w-2 h-2 rounded-full shrink-0"
-                      style={{ backgroundColor: t.color || '#3b82f6' }}
-                    />
-                    <span className="truncate">{t.name}</span>
-                  </div>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <label className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400 cursor-pointer touch-manipulation">
+      {/* Compact Modern Filter Toolbar */}
+      <div className="rounded-xl border border-black/[0.08] dark:border-white/[0.08] bg-white/60 dark:bg-slate-900/50 backdrop-blur-xl p-3 shadow-sm space-y-2.5">
+        {/* Tier 1: Search and Primary Filters */}
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Search Input with Clear Button */}
+          <div className="relative flex-1 min-w-[200px]">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
             <input
-              type="checkbox"
-              checked={hasNotesOnly}
-              onChange={(e) => { setHasNotesOnly(e.target.checked); setPage(1); }}
-              className="rounded border-gray-300 w-4 h-4"
+              type="text"
+              placeholder="Search merchant, details, notes…"
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              className="w-full h-[34px] pl-8 pr-7 text-xs rounded-lg border border-black/[0.08] dark:border-white/[0.08] bg-white/70 dark:bg-slate-900/50 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500/80 transition-colors"
             />
-            Has my note
-          </label>
-          {(searchInput || category || direction || sourceFilter || filterMonth || dateFrom || dateTo || tagFilter || hasNotesOnly) && (
-            <button onClick={resetFilters} className="btn-ghost text-xs text-gray-400">Clear filters</button>
+            {searchInput && (
+              <button
+                type="button"
+                onClick={() => setSearchInput('')}
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                title="Clear search"
+                aria-label="Clear search"
+              >
+                <X size={12} />
+              </button>
+            )}
+          </div>
+
+          {/* Category */}
+          <div className="w-[150px] sm:w-[165px]">
+            <Select value={category || 'all'} onValueChange={(val) => { setCategory(val === 'all' ? '' : val); setPage(1); }}>
+              <SelectTrigger size="sm" className="w-full">
+                <SelectValue placeholder="All categories" />
+              </SelectTrigger>
+              <SelectContent className="max-h-72">
+                <SelectItem value="all">All categories</SelectItem>
+                {categories?.map((c) => (
+                  <SelectItem key={c.id} value={String(c.id)}>
+                    <span className="mr-2">{c.icon}</span>
+                    <span>{c.name}</span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Month */}
+          <MonthFilterSelect
+            value={filterMonth}
+            onChange={onMonthChange}
+            size="sm"
+            className="w-[130px] sm:w-[140px]"
+          />
+
+          {/* Source */}
+          <div className="w-[120px] sm:w-[130px]">
+            <Select value={sourceFilter || 'all'} onValueChange={(val) => { setSourceFilter(val === 'all' ? '' : val); setPage(1); }}>
+              <SelectTrigger size="sm" className="w-full">
+                <SelectValue placeholder="All sources" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All sources</SelectItem>
+                <SelectItem value="bank">Bank only</SelectItem>
+                <SelectItem value="revolut">Revolut only</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Direction */}
+          <div className="w-[120px] sm:w-[130px]">
+            <Select value={direction || 'all'} onValueChange={(val) => { setDir(val === 'all' ? '' : val); setPage(1); }}>
+              <SelectTrigger size="sm" className="w-full">
+                <SelectValue placeholder="All directions" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All directions</SelectItem>
+                <SelectItem value="D">Expenses</SelectItem>
+                <SelectItem value="K">Income</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        {/* Tier 2: Refinements & Toggles */}
+        <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-black/[0.04] dark:border-white/[0.04]">
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Tag Filter */}
+            <div className="w-[145px] sm:w-[160px]">
+              <Select value={tagFilter || 'all'} onValueChange={(val) => { setTagFilter(val === 'all' ? '' : val); setPage(1); }}>
+                <SelectTrigger size="sm" className="w-full">
+                  <div className="flex items-center gap-1.5 truncate">
+                    <Tag size={12} className="text-slate-400 shrink-0" />
+                    <SelectValue placeholder="Filter by tag..." />
+                  </div>
+                </SelectTrigger>
+                <SelectContent className="max-h-60">
+                  <SelectItem value="all">All tags</SelectItem>
+                  {allTags?.map((t) => (
+                    <SelectItem key={t.id} value={String(t.id)}>
+                      <div className="flex items-center gap-2">
+                        <span
+                          className="w-2 h-2 rounded-full shrink-0"
+                          style={{ backgroundColor: t.color || '#3b82f6' }}
+                        />
+                        <span className="truncate">{t.name}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Date Range: From -> To */}
+            <div className="flex items-center gap-1.5">
+              <DatePicker
+                value={dateFrom}
+                onChange={onDateFromChange}
+                placeholder="From"
+                size="sm"
+                className="w-[115px] sm:w-[125px]"
+              />
+              <span className="text-xs text-slate-400 font-medium">to</span>
+              <DatePicker
+                value={dateTo}
+                onChange={onDateToChange}
+                placeholder="To"
+                size="sm"
+                className="w-[115px] sm:w-[125px]"
+              />
+            </div>
+
+            {/* Has Notes Toggle */}
+            <button
+              type="button"
+              onClick={() => { setHasNotesOnly(!hasNotesOnly); setPage(1); }}
+              className={clsx(
+                'h-[34px] px-2.5 rounded-lg text-xs font-medium border transition-colors inline-flex items-center gap-1.5 select-none touch-manipulation',
+                hasNotesOnly
+                  ? 'bg-brand-500/10 border-brand-500/40 text-brand-600 dark:text-brand-400'
+                  : 'bg-white/70 dark:bg-slate-900/50 border-black/[0.08] dark:border-white/[0.08] text-slate-600 dark:text-slate-400 hover:bg-white/90 dark:hover:bg-slate-900/70 hover:text-slate-900 dark:hover:text-slate-200'
+              )}
+            >
+              <FileText size={12} className={hasNotesOnly ? 'text-brand-500' : 'text-slate-400'} />
+              <span>Has notes</span>
+            </button>
+          </div>
+
+          {/* Active Filter Counter & Reset Button */}
+          {activeFilterCount > 0 && (
+            <div className="flex items-center gap-2 ml-auto">
+              <Badge variant="secondary" className="text-[11px] font-normal py-0.5 px-2">
+                {activeFilterCount} active
+              </Badge>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={resetFilters}
+                className="h-[30px] px-2 text-xs text-slate-500 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-500/10 gap-1 transition-colors"
+              >
+                <X size={12} />
+                <span>Reset</span>
+              </Button>
+            </div>
           )}
         </div>
       </div>

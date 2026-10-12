@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { DollarSign, ArrowRightLeft } from 'lucide-react';
 import StatCard from '../../ui/StatCard';
+import { ChartTooltipContent } from '../../ui/ChartTooltip';
 import InvestmentTabFilters from '../filters/InvestmentTabFilters';
 import { DividendTickerCards } from '../holdings/HoldingsCardGrid';
 import { BROKER_COLORS, BROKER_LABELS } from '../constants';
@@ -155,7 +156,10 @@ export default function DividendsTab({ dividends, brokerFilter: chromeBroker }) 
             <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-700" />
             <XAxis dataKey="year" tick={{ fontSize: 11 }} />
             <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `€${v}`} />
-            <Tooltip formatter={(v) => fmt(v)} />
+            <Tooltip
+              content={<ChartTooltipContent valueFormatter={(v) => fmt(v)} />}
+              cursor={{ fill: 'currentColor', opacity: 0.05 }}
+            />
             <Bar dataKey="totalNet" name="Net Dividends" fill="#10b981" radius={[4, 4, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>

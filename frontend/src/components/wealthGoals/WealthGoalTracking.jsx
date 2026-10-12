@@ -30,6 +30,7 @@ import {
 import ConfirmDialog from '../ui/ConfirmDialog';
 import PlannerMetricStrip from '../investments/PlannerMetricStrip';
 import { fmtEur, fmtPct } from '../../utils/displayFormat';
+import { ChartTooltipContent } from '../ui/ChartTooltip';
 import { usePrivacy } from '../../context/PrivacyContext';
 import {
   normalizeGoalId,
@@ -644,7 +645,7 @@ export default function WealthGoalTracking() {
                     <CartesianGrid strokeDasharray="3 3" className="stroke-slate-200 dark:stroke-slate-800" />
                     <XAxis dataKey="month" tick={{ fontSize: 10 }} />
                     <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `€${v}`} />
-                    <Tooltip formatter={(v) => fmtEur(v)} />
+                    <Tooltip cursor={{ fill: 'currentColor', opacity: 0.05 }} content={<ChartTooltipContent valueFormatter={(v) => fmtEur(v)} />} />
                     <Legend />
                     <ReferenceLine y={data.requiredMonthly} stroke="#6366f1" strokeDasharray="4 4" />
                     <Bar dataKey="actual" name="Net savings" fill="#10b981" radius={[2, 2, 0, 0]} />

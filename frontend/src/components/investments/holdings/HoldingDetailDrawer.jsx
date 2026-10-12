@@ -9,6 +9,7 @@ import {
 } from 'recharts';
 import { getInvestmentTransactions } from '../../../api/client';
 import LoadingSpinner from '../../ui/LoadingSpinner';
+import { ChartTooltipContent } from '../../ui/ChartTooltip';
 import { fmtEur, fmtPct, fmtQty, fmtNative } from '../../../utils/investmentFormat';
 import { BROKER_LABELS, BROKER_COLORS } from '../constants';
 import {
@@ -155,7 +156,7 @@ export default function HoldingDetailDrawer({
                   <BarChart data={chartData} layout="vertical" margin={{ left: 8, right: 8 }}>
                     <XAxis type="number" tick={{ fontSize: 10 }} tickFormatter={(v) => `€${v}`} />
                     <YAxis type="category" dataKey="name" tick={{ fontSize: 10 }} width={48} />
-                    <Tooltip formatter={(v) => fmtEur(v)} />
+                    <Tooltip cursor={{ fill: 'currentColor', opacity: 0.05 }} content={<ChartTooltipContent valueFormatter={(v) => fmtEur(v)} />} />
                     <Bar dataKey="value" radius={[0, 4, 4, 0]}>
                       {chartData.map((entry) => (
                         <Cell key={entry.name} fill={entry.fill} />

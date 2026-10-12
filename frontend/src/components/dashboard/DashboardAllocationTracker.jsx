@@ -5,6 +5,7 @@ import {
 } from 'recharts';
 import { getActiveAllocationCompute } from '../../api/client';
 import LoadingSpinner from '../ui/LoadingSpinner';
+import { ChartTooltipContent } from '../ui/ChartTooltip';
 import { fmtEur, fmtPct } from '../../utils/displayFormat';
 
 export default function DashboardAllocationTracker() {
@@ -88,15 +89,17 @@ export default function DashboardAllocationTracker() {
               <XAxis type="number" hide domain={[0, 'auto']} />
               <YAxis type="category" dataKey="name" width={80} tick={{ fontSize: 10 }} />
               <Tooltip
-                formatter={(v, name, p) => {
-                  if (name === 'actual') {
-                    return [
-                      `${fmtPct(v, { decimals: 1 })} · ${fmtEur(p.payload.valueEur)}`,
-                      'Actual',
-                    ];
-                  }
-                  return [`${fmtPct(v, { decimals: 1 })}`, 'Target'];
-                }}
+                content={
+                  <ChartTooltipContent
+                    valueFormatter={(v, name, p) => {
+                      if (name === 'Actual' || name === 'actual') {
+                        return `${fmtPct(v, { decimals: 1 })} · ${fmtEur(p.payload?.valueEur)}`;
+                      }
+                      return `${fmtPct(v, { decimals: 1 })}`;
+                    }}
+                  />
+                }
+                cursor={{ fill: 'currentColor', opacity: 0.05 }}
               />
               <Legend wrapperStyle={{ fontSize: 11 }} />
               <Bar dataKey="actual" name="Actual" radius={[0, 3, 3, 0]} barSize={10}>

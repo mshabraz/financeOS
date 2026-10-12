@@ -27,6 +27,7 @@ import { Switch } from '../ui/Switch';
 import WealthGoalTracking from '../wealthGoals/WealthGoalTracking';
 import WealthPlannerShell from './WealthPlannerShell';
 import PlannerMetricStrip from './PlannerMetricStrip';
+import { ChartTooltipContent } from '../ui/ChartTooltip';
 
 function toPlannerInput(form, withdrawalStartYear) {
   return {
@@ -336,7 +337,7 @@ export default function CompoundPlanner({ brokerFilter = '', plannerView }) {
                   <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-700" />
                   <XAxis dataKey="label" tick={{ fontSize: 10 }} interval="preserveStartEnd" />
                   <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `€${(v / 1000).toFixed(0)}k`} />
-                  <Tooltip formatter={(v) => fmtEur(v)} />
+                  <Tooltip content={<ChartTooltipContent valueFormatter={(v) => fmtEur(v)} />} />
                   <Legend />
                   <Area type="monotone" dataKey="balance" name="Portfolio" stroke="#6366f1" fill="url(#balGrad)" />
                   {form.useRealReturns && (
@@ -356,7 +357,7 @@ export default function CompoundPlanner({ brokerFilter = '', plannerView }) {
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="year" tick={{ fontSize: 10 }} />
                     <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `€${(v / 1000).toFixed(0)}k`} />
-                    <Tooltip formatter={(v) => fmtEur(v)} />
+                    <Tooltip content={<ChartTooltipContent valueFormatter={(v) => fmtEur(v)} />} />
                     <Legend />
                     <Bar dataKey="contributed" name="Invested" stackId="a" fill="#94a3b8" />
                     <Bar dataKey="gains" name="Growth" stackId="a" fill="#10b981" radius={[4, 4, 0, 0]} />

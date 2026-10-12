@@ -4,6 +4,7 @@ import {
 import { fmtEur, fmtPct } from '../../utils/displayFormat';
 import { resolveAllocationLabel } from '../../utils/securityDisplay';
 import { CHART_COLORS } from '../investments/constants';
+import { ChartTooltipContent } from '../ui/ChartTooltip';
 
 function labelText(row) {
   const pct = row.pct ?? row.portfolioPct;
@@ -45,10 +46,14 @@ export default function DashboardAllocChart({ data, dataKey = 'valueEur' }) {
             tickFormatter={(v) => (v.length > 12 ? `${v.slice(0, 11)}…` : v)}
           />
           <Tooltip
-            formatter={(v, _n, p) => [
-              `${fmtEur(p.payload.valueEur)} (${fmtPct(p.payload.pct, { decimals: 1 })})`,
-              p.payload.label,
-            ]}
+            cursor={{ fill: 'currentColor', opacity: 0.05 }}
+            content={
+              <ChartTooltipContent
+                valueFormatter={(_v, _n, item) =>
+                  `${fmtEur(item.payload?.valueEur)} (${fmtPct(item.payload?.pct, { decimals: 1 })})`
+                }
+              />
+            }
           />
           <Bar dataKey={dataKey} radius={[0, 4, 4, 0]} minPointSize={4}>
             {rows.map((_, i) => (

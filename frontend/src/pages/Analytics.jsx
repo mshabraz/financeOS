@@ -16,6 +16,7 @@ import LoadingSpinner from '../components/ui/LoadingSpinner';
 import QueryErrorPanel from '../components/ui/QueryErrorPanel';
 import MonthFilterSelect from '../components/ui/MonthFilterSelect';
 import DatePicker from '../components/ui/DatePicker';
+import { ChartTooltipContent } from '../components/ui/ChartTooltip';
 import {
   Select,
   SelectTrigger,
@@ -334,7 +335,10 @@ export default function Analytics() {
                   type="category" dataKey="name" tick={{ fontSize: 11 }} width={95}
                   tickFormatter={(v, i) => `${byCat.data?.[i]?.icon ?? ''} ${v}`}
                 />
-                <Tooltip formatter={(v, n, { payload }) => [fmt(v), payload?.name]} />
+                <Tooltip
+                  content={<ChartTooltipContent valueFormatter={(v) => fmt(v)} />}
+                  cursor={{ fill: 'currentColor', opacity: 0.05 }}
+                />
                 <Bar dataKey="total" name="Net" radius={[0, 4, 4, 0]} label={{ position: 'right', fontSize: 10, formatter: (v) => fmt(v) }}>
                   {byCat.data?.map((entry, i) => (
                     <Cell key={i} fill={entry.total < 0 ? '#64748b' : (entry.color ?? '#94a3b8')} />
@@ -366,7 +370,10 @@ export default function Analytics() {
                   type="category" dataKey="name" tick={{ fontSize: 11 }} width={95}
                   tickFormatter={(v, i) => `${byIncome.data?.[i]?.icon ?? ''} ${v}`}
                 />
-                <Tooltip formatter={(v, n, { payload }) => [fmt(v), payload?.name]} />
+                <Tooltip
+                  content={<ChartTooltipContent valueFormatter={(v) => fmt(v)} />}
+                  cursor={{ fill: 'currentColor', opacity: 0.05 }}
+                />
                 <Bar dataKey="total" name="Net" radius={[0, 4, 4, 0]} label={{ position: 'right', fontSize: 10, formatter: (v) => fmt(v) }}>
                   {byIncome.data?.map((e, i) => (
                     <Cell key={i} fill={e.total < 0 ? '#64748b' : (e.color ?? '#10b981')} />
@@ -417,11 +424,13 @@ export default function Analytics() {
                   width={40}
                 />
                 <Tooltip
-                  formatter={(v, name) => {
-                    if (name === 'savingsRate' && v != null) return [`${Number(v).toFixed(1)}%`, 'Savings rate'];
-                    return [v, name];
-                  }}
-                  labelFormatter={(_, payload) => payload?.[0]?.payload?.month ?? ''}
+                  content={
+                    <ChartTooltipContent
+                      valueFormatter={(v) => (v != null ? `${Number(v).toFixed(1)}%` : '—')}
+                      labelFormatter={(_, payload) => payload?.[0]?.payload?.month ?? ''}
+                    />
+                  }
+                  cursor={{ stroke: '#6366f1', strokeWidth: 1, strokeDasharray: '3 3' }}
                 />
                 <ReferenceLine y={0} stroke="#94a3b8" strokeDasharray="4 4" />
                 <ReferenceLine y={15} stroke="#10b981" strokeDasharray="2 4" strokeOpacity={0.5} label={{ value: '15%', position: 'right', fontSize: 10, fill: '#10b981' }} />
@@ -461,7 +470,9 @@ export default function Analytics() {
               <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-700" />
               <XAxis dataKey="month" tick={{ fontSize: 11 }} tickFormatter={(v) => v.slice(2)} />
               <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `€${v}`} />
-              <Tooltip formatter={(v) => fmt(v)} />
+              <Tooltip
+                content={<ChartTooltipContent valueFormatter={(v) => fmt(v)} />}
+              />
               <Legend iconSize={10} wrapperStyle={{ fontSize: 12 }} />
               <Area type="monotone" dataKey="income"   name="Net income"   stroke="#10b981" fill="url(#incGrad)" strokeWidth={2} />
               <Area type="monotone" dataKey="expenses" name="Net expenses" stroke="#f43f5e" fill="url(#expGrad)" strokeWidth={2} />

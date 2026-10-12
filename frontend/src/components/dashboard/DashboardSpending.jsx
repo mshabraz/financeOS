@@ -5,6 +5,7 @@ import {
 import { ChevronRight } from 'lucide-react';
 import LoadingSpinner from '../ui/LoadingSpinner';
 import { fmtEur } from '../../utils/displayFormat';
+import { ChartTooltipContent } from '../ui/ChartTooltip';
 
 export default function DashboardSpending({
   periodLabel,
@@ -52,7 +53,7 @@ export default function DashboardSpending({
                   <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-700" />
                   <XAxis dataKey="label" tick={{ fontSize: 9 }} interval="preserveStartEnd" />
                   <YAxis tick={{ fontSize: 9 }} tickFormatter={(v) => `€${v}`} width={44} />
-                  <Tooltip formatter={(v) => fmtEur(v)} />
+                  <Tooltip cursor={{ fill: 'currentColor', opacity: 0.05 }} content={<ChartTooltipContent valueFormatter={(v) => fmtEur(v)} />} />
                   <Bar dataKey="income" name="Income" fill="#10b981" radius={[3, 3, 0, 0]} />
                   <Bar dataKey="expenses" name="Expenses" fill="#f43f5e" radius={[3, 3, 0, 0]} />
                 </BarChart>

@@ -32,6 +32,7 @@ export default function DatePicker({
   placeholder = 'Pick date',
   className,
   id,
+  size = 'default',
 }) {
   const [open, setOpen] = useState(false);
   const selectedDate = useMemo(() => {
@@ -82,7 +83,9 @@ export default function DatePicker({
             type="button"
             id={id}
             className={cn(
-              'flex min-h-[44px] h-[44px] w-full items-center justify-between rounded-lg backdrop-blur-sm px-3 py-2 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 select-none cursor-pointer transition-colors',
+              size === 'sm'
+                ? 'flex min-h-[34px] h-[34px] w-full items-center justify-between rounded-lg backdrop-blur-sm px-2.5 py-1 text-xs text-slate-900 dark:text-slate-100 placeholder:text-slate-400 select-none cursor-pointer transition-colors'
+                : 'flex min-h-[44px] h-[44px] w-full items-center justify-between rounded-lg backdrop-blur-sm px-3 py-2 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 select-none cursor-pointer transition-colors',
               'border border-black/[0.08] dark:border-white/[0.08] bg-white/70 dark:bg-slate-900/50',
               'hover:bg-white/90 dark:hover:bg-slate-900/70 hover:border-black/[0.12] dark:hover:border-white/[0.12]',
               'focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500/80 focus:bg-white dark:focus:bg-slate-900/80',
@@ -91,8 +94,8 @@ export default function DatePicker({
             aria-label={placeholder}
           >
             <div className="flex items-center gap-2 truncate">
-              <CalendarIcon size={14} className="text-slate-400 dark:text-slate-500 shrink-0" />
-              <span className="truncate text-xs sm:text-sm font-medium">
+              <CalendarIcon size={size === 'sm' ? 12 : 14} className="text-slate-400 dark:text-slate-500 shrink-0" />
+              <span className={cn('truncate font-medium', size === 'sm' ? 'text-xs' : 'text-xs sm:text-sm')}>
                 {value ? displayValue(value) : placeholder}
               </span>
             </div>
@@ -106,7 +109,7 @@ export default function DatePicker({
                 title="Clear date"
                 aria-label="Clear date"
               >
-                <X size={13} />
+                <X size={size === 'sm' ? 11 : 13} />
               </span>
             )}
           </button>

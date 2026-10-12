@@ -9,6 +9,7 @@ import {
 } from 'recharts';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
+import { ChartTooltipContent } from '../components/ui/ChartTooltip';
 import {
   Select,
   SelectTrigger,
@@ -256,7 +257,10 @@ export default function Tags({ hideHeader = false }) {
                       <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-700" />
                       <XAxis dataKey="month" tick={{ fontSize: 10 }} tickFormatter={(v) => v.slice(5)} />
                       <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `€${v}`} />
-                      <Tooltip formatter={(v) => fmt(v)} />
+                      <Tooltip
+                        content={<ChartTooltipContent valueFormatter={(v) => fmt(v)} />}
+                        cursor={{ fill: 'currentColor', opacity: 0.05 }}
+                      />
                       <Legend iconSize={10} wrapperStyle={{ fontSize: 11 }} />
                       <Bar dataKey="expenseNet" name="Net spending" fill="#f43f5e" radius={[3,3,0,0]} />
                       <Bar dataKey="incomeNet" name="Net income" fill="#10b981" radius={[3,3,0,0]} />

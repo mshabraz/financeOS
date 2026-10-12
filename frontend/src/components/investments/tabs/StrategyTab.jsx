@@ -27,6 +27,7 @@ import {
 } from '../../ui/Select';
 import ConfirmDialog from '../../ui/ConfirmDialog';
 import { fmtEur, fmtPct } from '../../../utils/displayFormat';
+import { ChartTooltipContent } from '../../ui/ChartTooltip';
 
 const FALLBACK_COLORS = [
   '#0ea5e9', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444',
@@ -56,18 +57,23 @@ function AllocationCompareChart({ rows }) {
           <XAxis type="number" domain={[0, 'auto']} tick={{ fontSize: 11 }} unit="%" />
           <YAxis type="category" dataKey="name" width={96} tick={{ fontSize: 11 }} />
           <Tooltip
-            formatter={(v, name, p) => {
-              if (name === 'actual') {
-                return [`${fmtPct(v, { decimals: 1 })} · ${fmtEur(p.payload.valueEur)}`, 'Actual'];
-              }
-              return [`${fmtPct(v, { decimals: 1 })}`, 'Target'];
-            }}
-            labelFormatter={(label, payload) => {
-              const drift = payload?.[0]?.payload?.driftPct;
-              return drift != null
-                ? `${label} (drift ${fmtPct(drift, { decimals: 1, sign: true })})`
-                : label;
-            }}
+            cursor={{ fill: 'currentColor', opacity: 0.05 }}
+            content={
+              <ChartTooltipContent
+                valueFormatter={(v, name, item) => {
+                  if (name === 'Actual' || item.dataKey === 'actual') {
+                    return `${fmtPct(v, { decimals: 1 })} · ${fmtEur(item.payload?.valueEur)}`;
+                  }
+                  return fmtPct(v, { decimals: 1 });
+                }}
+                labelFormatter={(label, payload) => {
+                  const drift = payload?.[0]?.payload?.driftPct;
+                  return drift != null
+                    ? `${label} (drift ${fmtPct(drift, { decimals: 1, sign: true })})`
+                    : label;
+                }}
+              />
+            }
           />
           <Legend />
           <Bar dataKey="actual" name="Actual" radius={[0, 4, 4, 0]} barSize={12}>

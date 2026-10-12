@@ -156,7 +156,7 @@ export default function ManualBalancesPanel({ showToast }) {
     });
   };
 
-  const rows = (manualsQ.data ?? []).filter((r) => r.key !== 'investments');
+  const rows = (manualsQ.data ?? []).filter((r) => r.key !== 'investments' && r.key !== 'investment_cash');
 
   return (
     <section className="card p-5 space-y-4">

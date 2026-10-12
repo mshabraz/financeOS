@@ -7,11 +7,13 @@ const Select = SelectPrimitive.Root;
 const SelectGroup = SelectPrimitive.Group;
 const SelectValue = SelectPrimitive.Value;
 
-const SelectTrigger = React.forwardRef(({ className, children, ...props }, ref) => (
+const SelectTrigger = React.forwardRef(({ className, size = 'default', children, ...props }, ref) => (
   <SelectPrimitive.Trigger
     ref={ref}
     className={cn(
-      'flex min-h-[44px] h-[44px] w-full items-center justify-between rounded-lg backdrop-blur-sm px-3 py-2 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 select-none cursor-pointer transition-colors',
+      size === 'sm'
+        ? 'flex min-h-[34px] h-[34px] w-full items-center justify-between rounded-lg backdrop-blur-sm px-2.5 py-1 text-xs text-slate-900 dark:text-slate-100 placeholder:text-slate-400 select-none cursor-pointer transition-colors'
+        : 'flex min-h-[44px] h-[44px] w-full items-center justify-between rounded-lg backdrop-blur-sm px-3 py-2 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 select-none cursor-pointer transition-colors',
       'border border-black/[0.08] dark:border-white/[0.08] bg-white/70 dark:bg-slate-900/50',
       'hover:bg-white/90 dark:hover:bg-slate-900/70 hover:border-black/[0.12] dark:hover:border-white/[0.12]',
       'focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500/80 focus:bg-white dark:focus:bg-slate-900/80',
@@ -22,7 +24,7 @@ const SelectTrigger = React.forwardRef(({ className, children, ...props }, ref) 
   >
     {children}
     <SelectPrimitive.Icon asChild>
-      <ChevronDown className="h-4 w-4 opacity-50 ml-2 shrink-0 text-slate-400 dark:text-slate-500" />
+      <ChevronDown className={cn(size === 'sm' ? 'h-3.5 w-3.5' : 'h-4 w-4', 'opacity-50 ml-1.5 shrink-0 text-slate-400 dark:text-slate-500')} />
     </SelectPrimitive.Icon>
   </SelectPrimitive.Trigger>
 ));

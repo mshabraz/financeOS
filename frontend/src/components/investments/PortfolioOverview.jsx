@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import clsx from 'clsx';
 import LoadingSpinner from '../ui/LoadingSpinner';
+import { ChartTooltipContent } from '../ui/ChartTooltip';
 import { usePrivacy } from '../../context/PrivacyContext';
 import { fmtEur, fmtPct, fmtNative, fmtQty, fmtShortDate } from '../../utils/investmentFormat';
 import { privText } from '../../utils/displayFormat';
@@ -206,11 +207,15 @@ function AllocationChart({ allocations, view, onViewChange }) {
                   ))}
                 </Pie>
                 <Tooltip
-                  formatter={(v, name, props) => {
-                    const p = props.payload;
-                    if (p.isNative) return [fmtNative(v, p.currency), name];
-                    return [fmtEur(v), `${name} (${fmtPct(p.pct, { decimals: 2 })})`];
-                  }}
+                  content={
+                    <ChartTooltipContent
+                      valueFormatter={(v, name, props) => {
+                        const p = props.payload;
+                        if (p?.isNative) return fmtNative(v, p.currency);
+                        return `${fmtEur(v)} (${fmtPct(p?.pct, { decimals: 2 })})`;
+                      }}
+                    />
+                  }
                 />
               </PieChart>
             </ResponsiveContainer>
@@ -275,11 +280,13 @@ function PerformanceChart({ performance, period, onPeriodChange }) {
               <XAxis dataKey="date" tick={{ fontSize: 9 }} tickFormatter={(v) => v?.slice(5)} />
               <YAxis tick={{ fontSize: 9 }} tickFormatter={(v) => maskIfPrivacy(`€${(v / 1000).toFixed(0)}k`)} width={42} />
               <Tooltip
-                formatter={(v, name) => [
-                  fmtEur(v),
-                  name === 'investedCapital' || name === 'Cumulative buys' ? 'Cumulative buys' : 'Portfolio',
-                ]}
-                labelFormatter={(l) => l}
+                content={
+                  <ChartTooltipContent
+                    valueFormatter={(v) => fmtEur(v)}
+                    labelFormatter={(l) => l}
+                  />
+                }
+                cursor={{ stroke: '#6366f1', strokeWidth: 1, strokeDasharray: '3 3' }}
               />
               <Area type="monotone" dataKey="portfolioValue" name="Portfolio" stroke="#6366f1" fill="url(#pfGrad)" strokeWidth={2} />
               <Area type="monotone" dataKey="investedCapital" name="Cumulative buys" stroke="#94a3b8" fill="none" strokeWidth={1.5} strokeDasharray="4 4" />
@@ -507,7 +514,10 @@ function DividendsSection({ dividends }) {
               <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-700" />
               <XAxis dataKey="year" tick={{ fontSize: 10 }} />
               <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `€${v}`} />
-              <Tooltip formatter={(v) => fmtEur(v)} />
+              <Tooltip
+                content={<ChartTooltipContent valueFormatter={(v) => fmtEur(v)} />}
+                cursor={{ fill: 'currentColor', opacity: 0.05 }}
+              />
               <Bar dataKey="totalNet" name="Dividends" fill="#10b981" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
