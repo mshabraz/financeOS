@@ -207,11 +207,6 @@ export default function Analytics() {
   const totalIncome   = trend.data?.reduce((s, r) => s + (r.income   || 0), 0) ?? 0;
   const totalExpenses = trend.data?.reduce((s, r) => s + (r.expenses || 0), 0) ?? 0;
   const totalCatSpend = byCat.data?.reduce((s, r) => s + (r.total   || 0), 0) ?? 0;
-  const essentialPeriod = essentialMetrics.data?.period || {};
-  const fixedVariableRatio =
-    essentialPeriod.variable > 0
-      ? (essentialPeriod.essential || 0) / essentialPeriod.variable
-      : null;
   const loadError = trend.error || byCat.error || byIncome.error;
 
   if (loadError) {
@@ -239,7 +234,6 @@ export default function Analytics() {
       <div className="page-header">
         <div>
           <h1 className="page-title">Analytics</h1>
-          <p className="page-subtitle">Spending trends and category breakdowns</p>
         </div>
 
         {/* Period presets */}
@@ -278,8 +272,8 @@ export default function Analytics() {
         </div>
       </div>
 
-      {/* ── Period summary totals ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+      {/* ── Period summary totals & Runway ── */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {[
           { label: 'Net income',   value: totalIncome,   color: 'text-green-600' },
           { label: 'Net expenses', value: totalExpenses, color: 'text-red-500'   },
@@ -293,9 +287,6 @@ export default function Analytics() {
             {hint && <p className="text-[10px] text-gray-400 mt-1">{hint}</p>}
           </div>
         ))}
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
         <div className="card p-4">
           <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
             Income runway duration
@@ -319,25 +310,70 @@ export default function Analytics() {
             </>
           )}
         </div>
-        <div className="card p-4">
-          <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
-            Fixed vs variable expense ratio
-          </p>
-          {essentialMetrics.isLoading ? (
-            <p className="text-sm text-gray-400">Calculating...</p>
-          ) : essentialMetrics.isError ? (
-            <p className="text-sm text-red-500">
-              {essentialMetrics.error?.message || 'Could not load runway metrics'}
-            </p>
+      </div>
+
+      {/* ── Expense + income breakdowns side by side ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+
+        {/* Expenses by category */}
+        <div className="card p-5">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+              Expenses by category
+            </h2>
+            <span className="text-xs font-semibold text-red-500">{fmt(totalCatSpend)}</span>
+          </div>
+          {byCat.isLoading ? <LoadingSpinner /> : !byCat.data?.length ? (
+            <p className="text-sm text-gray-400 py-8 text-center">No expense data for this period</p>
           ) : (
-            <>
-              <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                {fixedVariableRatio == null ? 'N/A' : `${fixedVariableRatio.toFixed(2)} : 1`}
-              </p>
-              <p className="text-[11px] text-gray-400 mt-1">
-                Essential {essentialPeriod.essentialPct ?? 0}% ({fmt(essentialPeriod.essential || 0)}) vs discretionary {essentialPeriod.variablePct ?? 0}% ({fmt(essentialPeriod.variable || 0)}) for {periodLabel}
-              </p>
-            </>
+            <ResponsiveContainer width="100%" height={Math.max(180, byCat.data.length * 36)}>
+              <BarChart data={byCat.data} layout="vertical" margin={{ left: 100, right: 40 }}>
+                <CartesianGrid strokeDasharray="3 3" horizontal={false} className="stroke-gray-200 dark:stroke-gray-700" />
+                <XAxis type="number" tick={{ fontSize: 10 }} tickFormatter={(v) => `€${v}`} />
+                <YAxis
+                  type="category" dataKey="name" tick={{ fontSize: 11 }} width={95}
+                  tickFormatter={(v, i) => `${byCat.data?.[i]?.icon ?? ''} ${v}`}
+                />
+                <Tooltip formatter={(v, n, { payload }) => [fmt(v), payload?.name]} />
+                <Bar dataKey="total" name="Net" radius={[0, 4, 4, 0]} label={{ position: 'right', fontSize: 10, formatter: (v) => fmt(v) }}>
+                  {byCat.data?.map((entry, i) => (
+                    <Cell key={i} fill={entry.total < 0 ? '#64748b' : (entry.color ?? '#94a3b8')} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+        </div>
+
+        {/* Income by category */}
+        <div className="card p-5">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+              Income by category
+            </h2>
+            <span className="text-xs font-semibold text-green-600">
+              {fmt(byIncome.data?.reduce((s, r) => s + (r.total || 0), 0))}
+            </span>
+          </div>
+          {byIncome.isLoading ? <LoadingSpinner /> : !byIncome.data?.length ? (
+            <p className="text-sm text-gray-400 py-8 text-center">No income data for this period</p>
+          ) : (
+            <ResponsiveContainer width="100%" height={Math.max(180, (byIncome.data?.length ?? 1) * 36)}>
+              <BarChart data={byIncome.data} layout="vertical" margin={{ left: 100, right: 40 }}>
+                <CartesianGrid strokeDasharray="3 3" horizontal={false} className="stroke-gray-200 dark:stroke-gray-700" />
+                <XAxis type="number" tick={{ fontSize: 10 }} tickFormatter={(v) => `€${v}`} />
+                <YAxis
+                  type="category" dataKey="name" tick={{ fontSize: 11 }} width={95}
+                  tickFormatter={(v, i) => `${byIncome.data?.[i]?.icon ?? ''} ${v}`}
+                />
+                <Tooltip formatter={(v, n, { payload }) => [fmt(v), payload?.name]} />
+                <Bar dataKey="total" name="Net" radius={[0, 4, 4, 0]} label={{ position: 'right', fontSize: 10, formatter: (v) => fmt(v) }}>
+                  {byIncome.data?.map((e, i) => (
+                    <Cell key={i} fill={e.total < 0 ? '#64748b' : (e.color ?? '#10b981')} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
           )}
         </div>
       </div>
@@ -432,78 +468,6 @@ export default function Analytics() {
             </AreaChart>
           </ResponsiveContainer>
         )}
-      </div>
-
-      {/* ── Expense + income breakdowns side by side ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-
-        {/* Expenses by category */}
-        <div className="card p-5">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-              Expenses by category
-            </h2>
-            <span className="text-xs font-semibold text-red-500">{fmt(totalCatSpend)}</span>
-          </div>
-          <p className="text-xs text-gray-400 -mt-3 mb-4">
-            Net in each category: sum of debits minus sum of credits (e.g. your share after someone reimburses you).
-          </p>
-          {byCat.isLoading ? <LoadingSpinner /> : !byCat.data?.length ? (
-            <p className="text-sm text-gray-400 py-8 text-center">No expense data for this period</p>
-          ) : (
-            <ResponsiveContainer width="100%" height={Math.max(180, byCat.data.length * 36)}>
-              <BarChart data={byCat.data} layout="vertical" margin={{ left: 100, right: 40 }}>
-                <CartesianGrid strokeDasharray="3 3" horizontal={false} className="stroke-gray-200 dark:stroke-gray-700" />
-                <XAxis type="number" tick={{ fontSize: 10 }} tickFormatter={(v) => `€${v}`} />
-                <YAxis
-                  type="category" dataKey="name" tick={{ fontSize: 11 }} width={95}
-                  tickFormatter={(v, i) => `${byCat.data?.[i]?.icon ?? ''} ${v}`}
-                />
-                <Tooltip formatter={(v, n, { payload }) => [fmt(v), payload?.name]} />
-                <Bar dataKey="total" name="Net" radius={[0, 4, 4, 0]} label={{ position: 'right', fontSize: 10, formatter: (v) => fmt(v) }}>
-                  {byCat.data?.map((entry, i) => (
-                    <Cell key={i} fill={entry.total < 0 ? '#64748b' : (entry.color ?? '#94a3b8')} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          )}
-        </div>
-
-        {/* Income by category */}
-        <div className="card p-5">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-              Income by category
-            </h2>
-            <span className="text-xs font-semibold text-green-600">
-              {fmt(byIncome.data?.reduce((s, r) => s + (r.total || 0), 0))}
-            </span>
-          </div>
-          <p className="text-xs text-gray-400 -mt-3 mb-4">
-            Net in each category: sum of credits minus sum of debits (e.g. chargebacks reduce salary shown here).
-          </p>
-          {byIncome.isLoading ? <LoadingSpinner /> : !byIncome.data?.length ? (
-            <p className="text-sm text-gray-400 py-8 text-center">No income data for this period</p>
-          ) : (
-            <ResponsiveContainer width="100%" height={Math.max(180, (byIncome.data?.length ?? 1) * 36)}>
-              <BarChart data={byIncome.data} layout="vertical" margin={{ left: 100, right: 40 }}>
-                <CartesianGrid strokeDasharray="3 3" horizontal={false} className="stroke-gray-200 dark:stroke-gray-700" />
-                <XAxis type="number" tick={{ fontSize: 10 }} tickFormatter={(v) => `€${v}`} />
-                <YAxis
-                  type="category" dataKey="name" tick={{ fontSize: 11 }} width={95}
-                  tickFormatter={(v, i) => `${byIncome.data?.[i]?.icon ?? ''} ${v}`}
-                />
-                <Tooltip formatter={(v, n, { payload }) => [fmt(v), payload?.name]} />
-                <Bar dataKey="total" name="Net" radius={[0, 4, 4, 0]} label={{ position: 'right', fontSize: 10, formatter: (v) => fmt(v) }}>
-                  {byIncome.data?.map((e, i) => (
-                    <Cell key={i} fill={e.total < 0 ? '#64748b' : (e.color ?? '#10b981')} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          )}
-        </div>
       </div>
 
       {/* ── Budget Tracking ── */}

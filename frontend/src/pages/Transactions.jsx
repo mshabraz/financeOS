@@ -3,7 +3,8 @@ import { useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Search, Download, ChevronLeft, ChevronRight, Check, X,
-  Tag, Layers, AlertCircle, ChevronDown, ChevronUp, ChevronRight as ChevronRt, Copy, Upload, Trash2, Shield, ArrowUpDown, MoreHorizontal, FolderPlus,
+  Tag, Layers, AlertCircle, ChevronDown, ChevronUp, ChevronRight as ChevronRt, Copy, Upload, Trash2, ArrowUpDown, MoreHorizontal, FolderPlus,
+  Info, Landmark,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -49,6 +50,8 @@ import {
 import TransactionSourceBadges, { TransactionAmountDetail } from '../components/transactions/TransactionSourceBadges';
 import MerchantHoverCard from '../components/transactions/MerchantHoverCard';
 import CategoryBadge from '../components/ui/CategoryBadge';
+import { Badge } from '../components/ui/Badge';
+import { HoverCard, HoverCardTrigger, HoverCardContent } from '../components/ui/HoverCard';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 import TableSkeleton from '../components/ui/TableSkeleton';
 import EmptyState from '../components/ui/EmptyState';
@@ -59,7 +62,6 @@ import { toast } from '../components/ui/Sonner';
 import MonthFilterSelect from '../components/ui/MonthFilterSelect';
 import DatePicker from '../components/ui/DatePicker';
 import TransactionImportPanel from '../components/transactions/TransactionImportPanel';
-import DuplicateReviewPanel from '../components/transactions/DuplicateReviewPanel';
 import UserNoteField from '../components/transactions/UserNoteField';
 import { getMonthRange } from '../utils/dateFilters';
 import { usePrivacy } from '../context/PrivacyContext';
@@ -410,11 +412,10 @@ export default function Transactions() {
   const qc = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
   const tabParam = searchParams.get('tab');
-  const tab = tabParam === 'import' ? 'import' : tabParam === 'duplicates' ? 'duplicates' : 'list';
+  const tab = tabParam === 'import' ? 'import' : 'list';
   const setTab = (t) => {
     const next = new URLSearchParams(searchParams);
     if (t === 'import') next.set('tab', 'import');
-    else if (t === 'duplicates') next.set('tab', 'duplicates');
     else next.delete('tab');
     setSearchParams(next, { replace: true });
   };
@@ -751,7 +752,7 @@ export default function Transactions() {
 
       <PageHeader
         title="Transactions"
-        subtitle={tab === 'list' ? `${data?.total ?? 0} bank + Revolut · Revolut expenses counted at 50% in analytics` : tab === 'duplicates' ? 'Review possible duplicates before removing' : 'Import or export bank and Revolut CSV'}
+        subtitle={tab === 'import' ? 'Import or export bank and Revolut CSV' : undefined}
       >
         {tab === 'list' && (
           <button type="button" onClick={handleExport} className="btn-secondary gap-2 w-full sm:w-auto">
@@ -764,7 +765,6 @@ export default function Transactions() {
         <TabsList className="w-full sm:w-auto flex">
           {[
             { id: 'list', label: 'List' },
-            { id: 'duplicates', label: 'Duplicate review', icon: Shield },
             { id: 'import', label: 'Import / Export', icon: Upload },
           ].map(({ id, label, icon: Icon }) => (
             <TabsTrigger
@@ -781,8 +781,6 @@ export default function Transactions() {
 
       {tab === 'import' ? (
         <TransactionImportPanel />
-      ) : tab === 'duplicates' ? (
-        <DuplicateReviewPanel />
       ) : (
       <>
       {/* Filters */}
@@ -1013,6 +1011,43 @@ export default function Transactions() {
           )}
         </div>
       )}
+
+      {/* Real-time sync & transaction counter bar */}
+      <div className="flex flex-wrap items-center justify-between gap-2 px-1 text-xs">
+        <div className="flex items-center gap-2">
+          <Badge variant="outline" className="gap-1.5 py-1 px-2.5 font-normal">
+            <span className="font-semibold text-slate-900 dark:text-white tabular-nums">
+              {data?.total ?? 0}
+            </span>
+            <span className="text-slate-500 dark:text-slate-400">transactions</span>
+          </Badge>
+
+          <HoverCard openDelay={200}>
+            <HoverCardTrigger asChild>
+              <button
+                type="button"
+                className="inline-flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 transition-colors px-2 py-1 rounded-md hover:bg-black/[0.04] dark:hover:bg-white/[0.06] cursor-help"
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                <span>Bank + Revolut</span>
+                <Info size={12} className="text-slate-400" />
+              </button>
+            </HoverCardTrigger>
+            <HoverCardContent align="start" className="w-80 space-y-2 text-xs">
+              <div className="flex items-center gap-2 font-semibold text-slate-900 dark:text-white">
+                <Landmark size={14} className="text-brand-500" />
+                <span>Multi-Account Sync & Weighting</span>
+              </div>
+              <p className="text-slate-600 dark:text-slate-300 leading-relaxed">
+                Includes transactions from bank accounts and Revolut.
+              </p>
+              <div className="rounded-lg p-2 bg-black/[0.03] dark:bg-white/[0.04] border border-black/[0.05] dark:border-white/[0.05] text-[11px] text-slate-500 dark:text-slate-400">
+                Revolut personal expenses are counted at <strong>50% weight</strong> in analytics to reflect split living costs.
+              </div>
+            </HoverCardContent>
+          </HoverCard>
+        </div>
+      </div>
 
       {/* Mobile list */}
       <div className="md:hidden card overflow-hidden divide-y divide-gray-100 dark:divide-gray-800">

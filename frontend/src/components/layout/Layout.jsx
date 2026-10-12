@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import {
-  LayoutDashboard, ArrowDownUp, Tag, Moon, Sun, TrendingUp, LineChart, Hash, Settings, UsersRound, CalendarClock, ListTodo,
+  LayoutDashboard, ArrowDownUp, Tag, Moon, Sun, TrendingUp, LineChart, Settings,
   LogOut, MoreHorizontal, X, Eye, EyeOff,
 } from 'lucide-react';
 import { useTheme } from '../../hooks/useTheme';
@@ -14,30 +14,22 @@ import { Switch } from '../ui/Switch';
 
 const PRIMARY_NAV = [
   { to: '/',             icon: LayoutDashboard, label: 'Home' },
+  { to: '/investments',  icon: LineChart,       label: 'Invest' },
   { to: '/transactions', icon: ArrowDownUp,     label: 'Txns' },
   { to: '/analytics',    icon: TrendingUp,      label: 'Stats' },
 ];
 
 const MORE_NAV = [
-  { to: '/investments', icon: LineChart, label: 'Investments' },
-  { to: '/due',         icon: CalendarClock, label: 'Due & Owed' },
-  { to: '/tasks',       icon: ListTodo, label: 'Tasks' },
-  { to: '/shared',      icon: UsersRound, label: 'Shared' },
-  { to: '/tags',        icon: Hash,      label: 'Tags' },
-  { to: '/categories',  icon: Tag,       label: 'Categories' },
+  { to: '/categories',  icon: Tag,       label: 'Categories & Tags' },
   { to: '/settings',    icon: Settings,  label: 'Settings' },
 ];
 
 const DESKTOP_NAV = [
   { to: '/',             icon: LayoutDashboard, label: 'Dashboard' },
+  { to: '/investments',  icon: LineChart,       label: 'Investments' },
   { to: '/transactions', icon: ArrowDownUp,     label: 'Transactions' },
   { to: '/analytics',    icon: TrendingUp,      label: 'Analytics' },
-  { to: '/investments',  icon: LineChart,       label: 'Investments' },
-  { to: '/shared',       icon: UsersRound,      label: 'Shared Expenses' },
-  { to: '/due',          icon: CalendarClock,     label: 'Due & Owed' },
-  { to: '/tasks',        icon: ListTodo,          label: 'Tasks' },
-  { to: '/tags',         icon: Hash,            label: 'Tags' },
-  { to: '/categories',   icon: Tag,             label: 'Categories' },
+  { to: '/categories',   icon: Tag,             label: 'Categories & Tags' },
   { to: '/settings',     icon: Settings,        label: 'Settings' },
 ];
 

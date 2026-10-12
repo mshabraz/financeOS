@@ -13,14 +13,9 @@ import Login        from './pages/Login';
 import Dashboard    from './pages/Dashboard';
 import Transactions from './pages/Transactions';
 import Analytics    from './pages/Analytics';
-import Categories   from './pages/Categories';
+import CategoriesAndTags from './pages/CategoriesAndTags';
 import Settings     from './pages/Settings';
-import Tags         from './pages/Tags';
 import Investments from './pages/Investments';
-import SharedExpenses from './pages/SharedExpenses';
-import SharedExpenseEvent from './pages/SharedExpenseEvent';
-import Obligations from './pages/Obligations';
-import Tasks from './pages/Tasks';
 import LoadingSpinner from './components/ui/LoadingSpinner';
 import ErrorBoundary from './components/ui/ErrorBoundary';
 import { Toaster } from './components/ui/Sonner';
@@ -92,14 +87,13 @@ function AppRoutes() {
           <Route path="/revolut" element={<Navigate to="/transactions?tab=import" replace />} />
           <Route path="/investments"  element={<Investments />} />
           <Route path="/goals" element={<Navigate to="/investments?tab=planner&planner=tracking" replace />} />
-          <Route path="/tags"         element={<Tags />} />
-          <Route path="/categories"   element={<Categories />} />
+          <Route path="/categories"   element={<CategoriesAndTags />} />
+          <Route path="/tags"         element={<Navigate to="/categories?tab=tags" replace />} />
           <Route path="/settings"     element={<Settings />} />
-          <Route path="/shared"      element={<SharedExpenses />} />
-          <Route path="/shared/:eventId" element={<SharedExpenseEvent />} />
-          <Route path="/due"        element={<Obligations />} />
-          <Route path="/obligations" element={<Navigate to="/due" replace />} />
-          <Route path="/tasks"      element={<Tasks />} />
+          <Route path="/shared/*"     element={<Navigate to="/" replace />} />
+          <Route path="/due"          element={<Navigate to="/" replace />} />
+          <Route path="/obligations"  element={<Navigate to="/" replace />} />
+          <Route path="/tasks"        element={<Navigate to="/" replace />} />
           <Route path="*"            element={<Navigate to="/" replace />} />
         </Routes>
       </ErrorBoundary>

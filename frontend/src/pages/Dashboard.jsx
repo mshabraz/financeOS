@@ -1,16 +1,11 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useMemo, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { format } from 'date-fns';
+import { useQuery } from '@tanstack/react-query';
 import clsx from 'clsx';
 import {
-  getDashboardSummary, getMonthlyTrend,
-  getAssets, getBudgets, getSharedEvents,
-  getManualBalances, updateManualBalance, addManualBalance, deleteManualBalance,
+  getDashboardSummary, getMonthlyTrend, getAssets,
 } from '../api/client';
-import LoadingSpinner from '../components/ui/LoadingSpinner';
 import StatCardSkeleton from '../components/ui/StatCardSkeleton';
-import ConfirmDialog from '../components/ui/ConfirmDialog';
 import QueryErrorPanel from '../components/ui/QueryErrorPanel';
 import {
   Select,
@@ -22,21 +17,14 @@ import {
 import { usePrivacy } from '../context/PrivacyContext';
 import {
   currentPeriodValue, buildPeriodOptions, prevPeriodValue,
-  buildDashboardInsights, buildAttentionItems, insightsToAttentionItems,
 } from '../components/dashboard/dashboardUtils';
 import { buildDashboardSnapshot } from '../components/dashboard/dashboardSnapshot';
 import DashboardHero from '../components/dashboard/DashboardHero';
 import DashboardWealthPortfolio from '../components/dashboard/DashboardWealthPortfolio';
-import DashboardAttention from '../components/dashboard/DashboardAttention';
-import DashboardAssets from '../components/dashboard/DashboardAssets';
 import DashboardAllocationTracker from '../components/dashboard/DashboardAllocationTracker';
-
-const now = new Date();
-const currentMonth = format(now, 'yyyy-MM');
 
 export default function Dashboard() {
   usePrivacy();
-  const qc = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
 
   const periodType = useMemo(() => {
@@ -85,10 +73,6 @@ export default function Dashboard() {
     [periodType, setSearchParams]
   );
 
-  const [addingAsset, setAddingAsset] = useState(false);
-  const [newAssetForm, setNewAssetForm] = useState({ key: '', label: '', icon: '💵', amount: '' });
-  const [assetToDelete, setAssetToDelete] = useState(null);
-
   const periodOptions = useMemo(() => buildPeriodOptions(periodType), [periodType]);
   const prevPeriod = prevPeriodValue(periodType, periodValue);
 
@@ -102,89 +86,9 @@ export default function Dashboard() {
     enabled: !!prevPeriod,
   });
   const assets = useQuery({ queryKey: ['assets'], queryFn: getAssets, staleTime: 60_000 });
-  const manuals = useQuery({ queryKey: ['manualBalances'], queryFn: getManualBalances, staleTime: 60_000 });
   const monthlyTrend = useQuery({
     queryKey: ['monthlyTrend'],
     queryFn: () => getMonthlyTrend({ months: 12 }),
-  });
-  const budgets = useQuery({
-    queryKey: ['budgets', currentMonth],
-    queryFn: () => getBudgets(currentMonth),
-  });
-  const sharedEvents = useQuery({ queryKey: ['sharedEvents'], queryFn: getSharedEvents });
-
-  const invalidateAssets = () => {
-    qc.invalidateQueries({ queryKey: ['assets'] });
-    qc.invalidateQueries({ queryKey: ['manualBalances'] });
-  };
-
-  const updateMut = useMutation({
-    mutationFn: ({ key, amount, label }) => updateManualBalance(key, amount, label),
-    onMutate: async ({ key, amount, label }) => {
-      await qc.cancelQueries({ queryKey: ['manualBalances'] });
-      await qc.cancelQueries({ queryKey: ['assets'] });
-
-      const prevManuals = qc.getQueryData(['manualBalances']);
-      const prevAssets = qc.getQueryData(['assets']);
-
-      if (prevManuals && Array.isArray(prevManuals)) {
-        qc.setQueryData(['manualBalances'], prevManuals.map((m) =>
-          m.key === key ? { ...m, amount: parseFloat(amount), ...(label ? { label } : {}) } : m
-        ));
-      }
-      if (prevAssets?.manuals) {
-        qc.setQueryData(['assets'], {
-          ...prevAssets,
-          manuals: prevAssets.manuals.map((m) =>
-            m.key === key ? { ...m, amount: parseFloat(amount), ...(label ? { label } : {}) } : m
-          ),
-        });
-      }
-
-      return { prevManuals, prevAssets };
-    },
-    onError: (_err, _vars, context) => {
-      if (context?.prevManuals) qc.setQueryData(['manualBalances'], context.prevManuals);
-      if (context?.prevAssets) qc.setQueryData(['assets'], context.prevAssets);
-    },
-    onSettled: invalidateAssets,
-  });
-
-  const addMut = useMutation({
-    mutationFn: (data) => addManualBalance(data),
-    onSuccess: () => {
-      invalidateAssets();
-      setAddingAsset(false);
-      setNewAssetForm({ key: '', label: '', icon: '💵', amount: '' });
-    },
-  });
-
-  const deleteMut = useMutation({
-    mutationFn: (key) => deleteManualBalance(key),
-    onMutate: async (key) => {
-      await qc.cancelQueries({ queryKey: ['manualBalances'] });
-      await qc.cancelQueries({ queryKey: ['assets'] });
-
-      const prevManuals = qc.getQueryData(['manualBalances']);
-      const prevAssets = qc.getQueryData(['assets']);
-
-      if (prevManuals && Array.isArray(prevManuals)) {
-        qc.setQueryData(['manualBalances'], prevManuals.filter((m) => m.key !== key));
-      }
-      if (prevAssets?.manuals) {
-        qc.setQueryData(['assets'], {
-          ...prevAssets,
-          manuals: prevAssets.manuals.filter((m) => m.key !== key),
-        });
-      }
-
-      return { prevManuals, prevAssets };
-    },
-    onError: (_err, _vars, context) => {
-      if (context?.prevManuals) qc.setQueryData(['manualBalances'], context.prevManuals);
-      if (context?.prevAssets) qc.setQueryData(['assets'], context.prevAssets);
-    },
-    onSettled: invalidateAssets,
   });
 
   const trendData = useMemo(
@@ -213,54 +117,8 @@ export default function Dashboard() {
     [assets.data, portfolio, s, prevSummary.data, savingsRate],
   );
 
-  const insights = useMemo(
-    () =>
-      buildDashboardInsights({
-        summary: s,
-        prevSummary: prevSummary.data,
-        monthlyTrend: monthlyTrend.data,
-        budgets: budgets.data,
-        portfolio,
-        analytics: null,
-        goalsProgress: null,
-      }),
-    [s, prevSummary.data, monthlyTrend.data, budgets.data, portfolio],
-  );
-
-  const attention = useMemo(() => {
-    const actionItems = buildAttentionItems({
-      portfolio,
-      budgets: budgets.data,
-      sharedEvents: sharedEvents.data,
-      obligationsSummary: null,
-    });
-    const insightItems = insightsToAttentionItems(insights).filter(
-      (i) => !/portfolio|diversif|holding/i.test(`${i.title || ''} ${i.body || ''}`),
-    );
-    return [...actionItems, ...insightItems];
-  }, [portfolio, budgets.data, sharedEvents.data, insights]);
-
   const loadError = summary.error || assets.error;
   const heroLoading = summary.isLoading || assets.isLoading;
-
-  const handleAddAsset = () => {
-    const label = newAssetForm.label.trim();
-    if (!label) return;
-    const key =
-      newAssetForm.key.trim() ||
-      label
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, '_')
-        .replace(/^_|_$/g, '')
-        .slice(0, 40) ||
-      `asset_${Date.now()}`;
-    addMut.mutate({
-      key,
-      label,
-      icon: newAssetForm.icon || '💵',
-      amount: parseFloat(newAssetForm.amount) || 0,
-    });
-  };
 
   if (loadError) {
     return (
@@ -283,9 +141,6 @@ export default function Dashboard() {
       <header className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
         <div>
           <h1 className="page-title">Dashboard</h1>
-          <p className="page-subtitle">
-            Net worth and cash flow at a glance
-          </p>
         </div>
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
           <div className="flex bg-black/[0.04] dark:bg-white/[0.06] border border-black/[0.04] dark:border-white/[0.06] rounded-lg p-0.5 text-sm backdrop-blur-sm">
@@ -335,8 +190,6 @@ export default function Dashboard() {
         />
       )}
 
-      {attention.length > 0 && <DashboardAttention items={attention} />}
-
       <DashboardWealthPortfolio
         assets={assets.data}
         portfolio={portfolio}
@@ -345,34 +198,6 @@ export default function Dashboard() {
       />
 
       <DashboardAllocationTracker />
-
-      <DashboardAssets
-        assets={assets.data}
-        manuals={manuals.data ?? assets.data?.manuals}
-        isLoading={assets.isLoading || manuals.isLoading}
-        addingAsset={addingAsset}
-        setAddingAsset={setAddingAsset}
-        newAssetForm={newAssetForm}
-        setNewAssetForm={setNewAssetForm}
-        onUpdate={(key, amount, label) => updateMut.mutate({ key, amount, label })}
-        onAdd={handleAddAsset}
-        onDelete={(key) => {
-          const item = (manuals.data ?? assets.data?.manuals ?? []).find((m) => m.key === key) || { key, label: key };
-          setAssetToDelete(item);
-        }}
-      />
-
-      <ConfirmDialog
-        isOpen={!!assetToDelete}
-        title="Remove asset"
-        message={`Remove "${assetToDelete?.label || 'this asset'}" from net worth? This action cannot be undone.`}
-        confirmText="Remove"
-        onConfirm={() => {
-          if (assetToDelete?.key) deleteMut.mutate(assetToDelete.key);
-          setAssetToDelete(null);
-        }}
-        onCancel={() => setAssetToDelete(null)}
-      />
     </div>
   );
 }

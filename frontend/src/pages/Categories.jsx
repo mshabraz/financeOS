@@ -26,7 +26,7 @@ import { useUrlQueryState } from '../hooks/useUrlQueryState';
 import { suggestCategoryColor, harmonizeCategoryPalette } from '../utils/categoryColors';
 import clsx from 'clsx';
 
-export default function Categories() {
+export default function Categories({ hideHeader = false }) {
   const qc = useQueryClient();
 
   // Category form (add new)
@@ -223,10 +223,12 @@ export default function Categories() {
 
   return (
     <div className="space-y-6 max-w-4xl">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Categories & Rules</h1>
-        <p className="text-sm text-gray-500 dark:text-gray-400">Manage categories and auto-categorization rules</p>
-      </div>
+      {!hideHeader && (
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Categories & Rules</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400">Manage categories and auto-categorization rules</p>
+        </div>
+      )}
 
       {/* ── Categories ── */}
       <div className="card p-5">

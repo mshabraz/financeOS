@@ -75,12 +75,9 @@ export default function DashboardHero({
   if (!snapshot) return null;
 
   return (
-    <section className="card overflow-hidden" aria-labelledby="dash-snapshot-title">
+    <section className="card overflow-hidden" aria-label="Financial overview">
       <div className="px-4 sm:px-6 py-4 border-b border-black/[0.06] dark:border-white/[0.08] bg-gradient-to-r from-brand-500/8 via-transparent to-emerald-500/6">
-        <p id="dash-snapshot-title" className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">
-          Financial snapshot
-        </p>
-        <div className="mt-1 min-w-0">
+        <div className="min-w-0">
           <p className="text-[10px] font-medium uppercase tracking-wider text-gray-500">Net worth</p>
           <p className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 dark:text-white tabular-nums break-words [overflow-wrap:anywhere] leading-tight">
             {fmtEur(snapshot.netWorth)}

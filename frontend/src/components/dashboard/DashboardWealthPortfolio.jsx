@@ -53,9 +53,6 @@ export default function DashboardWealthPortfolio({
           <h2 id="assets-title" className="text-base font-semibold text-gray-900 dark:text-white">
             Assets
           </h2>
-          <p className="text-xs text-gray-500 mt-0.5">
-            How net worth is split across bank, Revolut, investments, and manual assets
-          </p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Link to="/investments?tab=holdings" className="btn-secondary text-xs">Holdings</Link>

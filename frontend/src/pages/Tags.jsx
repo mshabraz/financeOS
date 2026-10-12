@@ -27,7 +27,7 @@ const COLORS = [
   '#eab308','#06b6d4','#84cc16','#f43f5e','#8b5cf6',
 ];
 
-export default function Tags() {
+export default function Tags({ hideHeader = false }) {
   usePrivacy();
   const qc = useQueryClient();
   const [newName,  setNewName]  = useState('');
@@ -69,12 +69,14 @@ export default function Tags() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Tags</h1>
-        <p className="text-sm text-gray-500 dark:text-gray-400">
-          Label bank and Revolut transactions — trips, projects, events, tax purposes. Revolut amounts only appear when those rows are tagged.
-        </p>
-      </div>
+      {!hideHeader && (
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Tags</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            Label bank and Revolut transactions — trips, projects, events, tax purposes. Revolut amounts only appear when those rows are tagged.
+          </p>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
